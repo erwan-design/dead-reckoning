@@ -21,48 +21,126 @@
         color:rgba(233,224,232,.19);transition:opacity 1600ms ease}
   .hint.out{opacity:0!important}
 
-  /* ---- HUD: discrete chips down the right, menus that pop to the left ---- */
-  .rail{position:fixed;right:20px;top:50%;transform:translateY(-50%);z-index:6;
-      display:flex;flex-direction:column;align-items:flex-end;gap:4px;
+  /* ---- debug: every switch the HUD no longer carries, bottom left ---- */
+  .dbg{position:fixed;left:20px;bottom:20px;z-index:7;
+      display:flex;flex-direction:column;align-items:flex-start;gap:8px;
       opacity:0;transition:opacity 2400ms ease 800ms}
-  .rail.in{opacity:1}
-  /* what belongs together sits together: 4px inside a group, 26 between,
-     and a hairline in the gap so the reading is not left to proximity alone */
-  .rail .sp{height:26px;width:42px;flex:0 0 auto;pointer-events:none;
-      display:flex;align-items:center;justify-content:center}
-  .rail .sp::after{content:'';display:block;width:16px;height:1px;
-      background:rgba(206,224,236,.17)}
-  .slot{position:relative;display:flex;align-items:center;justify-content:flex-end}
-  .chip{position:relative;appearance:none;cursor:pointer;box-sizing:border-box;
-      width:42px;height:42px;padding:0;border-radius:999px;flex:0 0 auto;
-      display:flex;align-items:center;justify-content:center;
+  .dbg.in{opacity:1}
+  .dtog{appearance:none;cursor:pointer;box-sizing:border-box;
+      height:30px;padding:0 14px;border-radius:999px;
+      font:400 8.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.22em;text-transform:uppercase;color:rgba(224,233,240,.50);
       background:rgba(10,15,25,.42);
       -webkit-backdrop-filter:blur(16px) saturate(130%);backdrop-filter:blur(16px) saturate(130%);
       border:1px solid rgba(206,224,236,.13);
       box-shadow:0 10px 30px rgba(3,7,16,.34), inset 0 1px 0 rgba(255,255,255,.07);
+      transition:color 200ms ease,background 200ms ease}
+  .dtog:hover{color:rgba(243,249,252,.96);background:rgba(20,30,44,.60)}
+  .dbg.open .dtog{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.34)}
+  .dpan{order:-1;width:264px;box-sizing:border-box;padding:12px 12px 10px;border-radius:18px;
+      background:rgba(9,13,22,.58);
+      -webkit-backdrop-filter:blur(20px) saturate(130%);backdrop-filter:blur(20px) saturate(130%);
+      border:1px solid rgba(206,224,236,.14);
+      box-shadow:0 20px 50px rgba(3,7,16,.46), inset 0 1px 0 rgba(255,255,255,.06);
+      opacity:0;pointer-events:none;transform:translateY(8px) scale(.98);transform-origin:bottom left;
+      transition:opacity 200ms ease,transform 340ms cubic-bezier(.28,.9,.2,1)}
+  .dbg.open .dpan{opacity:1;pointer-events:auto;transform:none}
+  .dpan h5{margin:0 0 5px 4px;font:400 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing:.30em;text-transform:uppercase;color:rgba(224,233,240,.28)}
+  .dpan h5 + .drow{margin-bottom:10px}
+  .drow{display:flex;flex-wrap:wrap;gap:3px}
+  .drow button{appearance:none;cursor:pointer;white-space:nowrap;box-sizing:border-box;
+      height:26px;padding:0 10px;border-radius:999px;border:1px solid rgba(206,224,236,.10);
+      background:rgba(255,255,255,.03);
+      font:400 8px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.14em;text-transform:uppercase;color:rgba(224,233,240,.48);
+      transition:color 180ms ease,background 180ms ease,border-color 180ms ease}
+  .drow button:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.09)}
+  .drow button.on{color:rgba(170,242,224,.98);background:rgba(157,240,220,.13);
+      border-color:rgba(157,240,220,.34)}
+  .drow button.na{opacity:.24;pointer-events:none}
+  .drow button.danger{color:rgba(255,124,104,.66);border-color:rgba(255,124,104,.16)}
+  .drow button.danger:hover{color:rgba(255,166,146,.98);background:rgba(255,104,84,.13)}
+  /* ---- two boards, one above the other ---- */
+  .srule{position:fixed;left:0;right:0;top:50%;height:1px;z-index:5;pointer-events:none;
+      background:linear-gradient(90deg,rgba(206,224,236,0),rgba(206,224,236,.22) 12%,
+                 rgba(206,224,236,.22) 88%,rgba(206,224,236,0));
+      opacity:0;transition:opacity 500ms ease}
+  #rhead{font:400 21px/1.15 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.14em;color:rgba(190,246,230,.90);font-variant-numeric:tabular-nums}
+  #rhead s{text-decoration:none;color:rgba(233,224,232,.26);padding:0 2px}
+  #rheadl{color:rgba(233,224,232,.26);letter-spacing:.30em}
+  #rstat{display:grid;grid-template-rows:auto auto;grid-auto-flow:column;
+      gap:1px 18px;justify-content:end;text-align:right}
+  #rstat .v{color:rgba(240,232,238,.76);letter-spacing:.10em;font-variant-numeric:tabular-nums}
+  #rstat .k{color:rgba(233,224,232,.26)}
+  #rbar{display:flex;justify-content:flex-end;align-items:center;gap:11px}
+  #rbar .segs{display:flex;gap:3px}
+  #rbar .segs i{display:block;width:14px;height:4px;border-radius:2px;
+      background:rgba(233,224,232,.14)}
+  #rbar .segs i.on{background:rgba(168,240,224,.62)}
+  #rbar .v{color:rgba(240,232,238,.70);font-variant-numeric:tabular-nums}
+  #rtrk{display:grid;grid-template-columns:auto auto auto;gap:1px 15px;justify-content:end}
+  #rtrk span{white-space:nowrap}
+  #rtrk .k{color:rgba(233,224,232,.26)}
+  #rtrk .c{color:rgba(168,240,224,.62);letter-spacing:.18em}
+  #rtrk .s{text-align:right;font-variant-numeric:tabular-nums}
+  #rtrk .done{color:rgba(255,176,120,.70)}
+  .half{position:fixed;left:26px;top:22px;z-index:5;pointer-events:none;user-select:none;
+      font:400 10px/1.95 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.235em;text-transform:uppercase;color:rgba(233,224,232,.30);
+      text-shadow:0 0 22px rgba(8,10,20,.9);opacity:0;transition:opacity 500ms ease}
+  body.split .srule, body.split .half{opacity:1}
+  /* nothing to press on the upper board: the HUD and the readout go below.
+     The column is taller than half a screen, so it folds into two rather
+     than shrinking the buttons. */
+  /* the utilities sit at the head of the lower board, the manoeuvres at its foot */
+  #util{top:22px;transform:none;gap:6px}
+  #rail{top:auto;bottom:22px;transform:none}
+  body.split #util{top:calc(50% + 22px)}
+  body.split .rd{top:22px;left:auto;right:26px;text-align:right}
+  .half.b{top:calc(50% + 22px)}
+  .half b{display:block;color:rgba(240,232,238,.62);letter-spacing:.34em}
+  .half .ln{display:block}
+  .half i{font-style:normal;color:rgba(168,240,224,.5)}
+  body.split .hint{display:none}
+
+  /* ---- HUD: lone actions are a disc, related ones share one capsule ---- */
+  .rail{position:fixed;right:20px;top:50%;transform:translateY(-50%);z-index:6;
+      display:flex;flex-direction:column;align-items:center;gap:14px;
+      opacity:0;transition:opacity 2400ms ease 800ms}
+  .rail.in{opacity:1}
+  .cap{position:relative;display:flex;flex-direction:column;align-items:center;
+      width:46px;padding:3px 0;box-sizing:border-box;border-radius:999px;
+      background:rgba(10,15,25,.42);
+      -webkit-backdrop-filter:blur(16px) saturate(130%);backdrop-filter:blur(16px) saturate(130%);
+      border:1px solid rgba(206,224,236,.13);
+      box-shadow:0 10px 30px rgba(3,7,16,.34), inset 0 1px 0 rgba(255,255,255,.07)}
+  /* a hairline between neighbours, inset so it never reaches the capsule edge */
+  .cap > * + *::before{content:'';position:absolute;left:9px;right:9px;top:0;height:1px;
+      background:rgba(206,224,236,.11);pointer-events:none}
+  .slot{position:relative;display:flex;align-items:center;justify-content:center}
+  .chip{position:relative;appearance:none;background:none;border:0;cursor:pointer;
+      width:40px;height:40px;padding:0;border-radius:999px;flex:0 0 auto;
+      display:flex;align-items:center;justify-content:center;
       color:rgba(224,233,240,.52);
-      transition:color 200ms ease,background 200ms ease,border-color 200ms ease,transform 220ms ease}
-  .chip:hover{color:rgba(243,249,252,.96);background:rgba(20,30,44,.60);transform:translateX(-3px)}
-  .chip:active{transform:translateX(-3px) translateY(.5px)}
+      transition:color 200ms ease,background 200ms ease}
+  .chip:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.08)}
+  .chip:active{background:rgba(255,255,255,.13)}
   .chip svg{width:16px;height:16px;display:block;stroke:currentColor;fill:none;
       stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;opacity:.94}
   .chip .i1{display:none}
   .chip.on .i0{display:none}
   .chip.on .i1{display:block}
-  .chip.on{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.40);
-      background:rgba(16,38,42,.58);
-      box-shadow:0 10px 30px rgba(3,7,16,.34),0 0 20px rgba(157,240,220,.17),inset 0 1px 0 rgba(255,255,255,.09)}
-  .chip.on svg{filter:drop-shadow(0 0 5px rgba(157,240,220,.8))}
-  .chip.hot.on{color:rgba(255,190,134,.98);border-color:rgba(255,160,90,.42);
-      background:rgba(46,26,16,.58);
-      box-shadow:0 10px 30px rgba(3,7,16,.34),0 0 20px rgba(255,150,70,.18),inset 0 1px 0 rgba(255,255,255,.09)}
+  .chip.on{color:rgba(170,242,224,.98);background:rgba(157,240,220,.13)}
+  .chip.on svg{filter:drop-shadow(0 0 5px rgba(157,240,220,.85))}
+  .chip.hot.on{color:rgba(255,190,134,.98);background:rgba(255,150,70,.15)}
   .chip.hot.on svg{filter:drop-shadow(0 0 5px rgba(255,150,70,.85))}
   .chip.danger{color:rgba(255,124,104,.62)}
-  .chip.danger:hover{color:rgba(255,166,146,.98);background:rgba(46,20,18,.58);
-      border-color:rgba(255,124,104,.30)}
-  .chip.na{opacity:.26;pointer-events:none}
+  .chip.danger:hover{color:rgba(255,166,146,.98);background:rgba(255,104,84,.13)}
+  .chip.na{opacity:.24;pointer-events:none}
   /* name tag, so an icon-only HUD still says what it is */
-  .chip::after{content:attr(data-l);position:absolute;right:calc(100% + 10px);top:50%;
+  .chip::after{content:attr(data-l);position:absolute;right:calc(100% + 14px);top:50%;
       transform:translate(6px,-50%);opacity:0;pointer-events:none;white-space:nowrap;
       font:400 8.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       letter-spacing:.20em;text-transform:uppercase;color:rgba(236,245,249,.92);
@@ -72,9 +150,9 @@
       transition:opacity 160ms ease,transform 260ms cubic-bezier(.3,.9,.2,1)}
   .chip:hover::after{opacity:1;transform:translate(0,-50%)}
   .slot.open .chip::after{opacity:0}
-  .slot.open .chip{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.34)}
+  .slot.open .chip{color:rgba(170,242,224,.98);background:rgba(157,240,220,.10)}
   /* the menu itself */
-  .pop{position:absolute;right:calc(100% + 10px);top:50%;
+  .pop{position:absolute;right:calc(100% + 14px);top:50%;
       transform:translate(10px,-50%) scale(.96);transform-origin:right center;
       opacity:0;pointer-events:none;
       display:flex;flex-direction:column;gap:3px;padding:6px;border-radius:20px;
@@ -95,53 +173,75 @@
   .pop svg{width:14px;height:14px;flex:0 0 auto;display:block;stroke:currentColor;fill:none;
       stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;opacity:.92}
   .pop em{font-style:normal;width:15px;text-align:center;flex:0 0 auto;letter-spacing:.06em}
-  @media (max-height:680px){ .chip{width:36px;height:36px}
-      .rail{gap:3px} .rail .sp{height:18px;width:36px} .chip svg{width:14px;height:14px} }
+  @media (max-height:680px){ .cap{width:40px} .chip{width:34px;height:34px}
+      .rail{gap:10px} .chip svg{width:14px;height:14px} }
   @media (max-width:760px){ .rd{font-size:8.5px;letter-spacing:.14em;left:14px;top:14px}
       .hint{display:none} .rail{right:10px} }
 </style>
 <canvas id="c"></canvas>
 <div class="rd" id="rl">
   <b>Dead Reckoning</b>
-  <div class="ln"><span id="rtf">Task Force Meridian</span> &nbsp;&middot;&nbsp; Plot 7&#8209;North &middot; Calder Shelf</div>
+  <div class="ln"><span id="rtf">Task Force Meridian</span> &nbsp;&middot;&nbsp; Plot 7&#8209;North</div>
   <span class="gap"></span>
-  <div class="ln" id="rcond">05:12 local &middot; swell 1.1m &middot; vis 14km &middot; wind 040/06</div>
-  <div class="ln">Salvos <span id="rsal">07</span> &middot; miss <span id="rmis">07</span> &middot; <i>struck <span id="rstr">00</span></i> &middot; <span id="rsta">solution held</span></div>
+  <div id="rhead"></div>
+  <div class="ln" id="rheadl">Hulls resolved</div>
+  <span class="gap"></span>
+  <div id="rstat"></div>
+  <span class="gap"></span>
+  <div id="rtrk"></div>
+  <span class="gap"></span>
+  <div id="rbar"></div>
 </div>
-<div class="rail in-a" id="rail">
-  <button class="chip" data-a="plot" data-l="Own plot">
-    <svg class="i0" viewBox="0 0 14 14" aria-hidden="true"><path d="M1.9 8.9h10.2l-1.5 2.6H3.4z"/><path d="M4.6 8.9V6.2h4.1v2.7"/><path d="M6.6 6.2V3.3"/></svg>
-    <svg class="i1" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 2.4h9.2v9.2H2.4z"/><path d="M2.4 7h9.2M7 2.4v9.2"/><circle cx="9.4" cy="4.7" r="1.15"/></svg>
-  </button>
-  <span class="sp"></span>
-  <button class="chip" data-a="radar" data-l="Radar"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.3"/><path d="M7 7V1.7"/><path d="M7 7l4.6 2.6"/></svg></button>
-  <button class="chip" data-a="con" data-l="Contacts"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="4.4" cy="9.4" r="1.5"/><path d="M7.3 6.6a4.1 4.1 0 0 1 0 5.6"/><path d="M9.7 4.2a7.4 7.4 0 0 1 0 10.4"/></svg></button>
-  <button class="chip" data-a="rings" data-l="Impacts"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="1.9"/><circle cx="7" cy="7" r="5.2"/></svg></button>
-  <button class="chip hot" data-a="hit" data-l="Strike"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="1.7"/><path d="M7 1.9v1.9M7 10.2v1.9M1.9 7h1.9M10.2 7h1.9"/></svg></button>
-  <span class="sp"></span>
-  <button class="chip" data-a="fire" data-l="Missile"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 11.4 11.4 2.6"/><path d="M7.6 2.6h3.8v3.8"/><path d="m5.2 8.4 1.6 1.6"/></svg></button>
-  <button class="chip" data-a="cat" data-l="Catapult"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.8v10.4"/><path d="M1.8 7.7 7 5.9l5.2 1.8"/><path d="M4.5 11.5 7 10.7l2.5.8"/></svg></button>
-  <button class="chip" data-a="tor" data-l="Torpedo"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.9 7c0 1-1.6 1.8-3.4 1.8S5.1 8 5.1 7s1.6-1.8 3.4-1.8S11.9 6 11.9 7z"/><path d="M5.1 5.6 3.7 4.4M5.1 8.4 3.7 9.6"/><circle cx="1.9" cy="7" r=".65"/></svg></button>
-  <button class="chip" data-a="sink" data-l="Sink"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.9v5.5"/><path d="M4.5 5.2 7 7.7l2.5-2.5"/><path d="M1.9 10.7c1.3-1 2.2-1 3.4 0s2.1 1 3.4 0 2.1-1 3.4 0"/></svg></button>
-  <button class="chip danger" data-a="reset" data-l="Reset"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M11.7 1.8v3H8.8"/></svg></button>
-  <span class="sp"></span>
-  <div class="slot">
-    <div class="pop">
-      <button data-e="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 10.3h10.4l-1.6 2.2H3.4z"/><path d="M7 9.9V1.7"/><path d="M6.4 3.4 3.6 9.9h2.8z"/><path d="M7.6 4.2l2.9 5.7H7.6z"/></svg>Galleon</button>
-      <button data-e="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.9 8.3a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.7 10.2 4 12.2M7.3 10.2l-.7 2M9.9 10.2l-.7 2"/></svg>Squall</button>
-      <button data-e="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</button>
-    </div>
-    <button class="chip" data-pop="scene" data-l="Scene"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.9 9.9h10.2"/><path d="M4.2 9.9a2.8 2.8 0 0 1 5.6 0"/><path d="M7 2.9v1.7M3.3 4.4l1.2 1.2M10.7 4.4 9.5 5.6"/></svg></button>
+<div class="rail in-a" id="util">
+  <div class="cap">
+    <button class="chip" data-a="snd" data-l="Sound"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 5.3h2.2L7.6 3v8L4.8 8.7H2.6z"/><path d="M9.9 5.3a3.1 3.1 0 0 1 0 3.4"/></svg></button>
   </div>
-  <div class="slot">
+  <div class="cap">
+    <div class="slot">
     <div class="pop">
-      <button data-cam="0"><em>01</em>Cam 01</button>
-      <button data-cam="1"><em>02</em>Cam 02</button>
-      <button data-cam="2"><em>03</em>Cam 03</button>
+    <button data-cam="0"><em>01</em>Cam 01</button>
+    <button data-cam="1"><em>02</em>Cam 02</button>
+    <button data-cam="2"><em>03</em>Cam 03</button>
     </div>
     <button class="chip" data-pop="cam" data-l="Camera"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.1 4.7h2.4l1-1.5h3l1 1.5h2.4v6.3H2.1z"/><circle cx="7" cy="7.8" r="1.9"/></svg></button>
+    </div>
   </div>
-  <button class="chip" data-a="snd" data-l="Sound"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 5.3h2.2L7.6 3v8L4.8 8.7H2.6z"/><path d="M9.9 5.3a3.1 3.1 0 0 1 0 3.4"/></svg></button>
+</div>
+<div class="rail in-a" id="rail">
+  <div class="cap">
+    <button class="chip" data-a="fire" data-l="Missile"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 11.4 11.4 2.6"/><path d="M7.6 2.6h3.8v3.8"/><path d="m5.2 8.4 1.6 1.6"/></svg></button>
+    <button class="chip" data-a="cat" data-l="Catapult"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.8v10.4"/><path d="M1.8 7.7 7 5.9l5.2 1.8"/><path d="M4.5 11.5 7 10.7l2.5.8"/></svg></button>
+    <button class="chip" data-a="tor" data-l="Torpedo"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.9 7c0 1-1.6 1.8-3.4 1.8S5.1 8 5.1 7s1.6-1.8 3.4-1.8S11.9 6 11.9 7z"/><path d="M5.1 5.6 3.7 4.4M5.1 8.4 3.7 9.6"/><circle cx="1.9" cy="7" r=".65"/></svg></button>
+    <button class="chip" data-a="sink" data-l="Sink"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.9v5.5"/><path d="M4.5 5.2 7 7.7l2.5-2.5"/><path d="M1.9 10.7c1.3-1 2.2-1 3.4 0s2.1 1 3.4 0 2.1-1 3.4 0"/></svg></button>
+    <button class="chip danger" data-a="reset" data-l="Reset"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M11.7 1.8v3H8.8"/></svg></button>
+  </div>
+</div>
+<div class="dbg in-a" id="dbg">
+  <div class="dpan">
+    <h5>Layers</h5><div class="drow">
+      <button data-a="radar">Radar</button><button data-a="con">Contacts</button><button data-a="rings">Impacts</button><button data-a="hit">Strike</button><button data-a="fleet">Fleet</button>
+    </div>
+    <h5>Boards</h5><div class="drow">
+      <button data-a="split">Two boards</button>
+    </div>
+    <h5>Scene</h5><div class="drow">
+      <button data-e="0">Galleon</button><button data-e="1">Squall</button><button data-e="2">Night</button>
+    </div>
+    <h5>Camera</h5><div class="drow">
+      <button data-cam="0">Cam 01</button><button data-cam="1">Cam 02</button><button data-cam="2">Cam 03</button>
+    </div>
+    <h5>Manoeuvres</h5><div class="drow">
+      <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="sink">Sink</button><button data-a="snd">Sound</button><button class="danger" data-a="reset">Reset</button>
+    </div>
+  </div>
+  <button class="dtog" id="dtog">Debug</button>
+</div>
+<div class="srule"></div>
+<div class="half a">Enemy plot</div>
+<div class="half b">
+  <b>Own plot</b>
+  <div class="ln" id="rcond">05:12 local &middot; swell 1.1m &middot; vis 14km &middot; wind 040/06</div>
+  <div class="ln">Salvos <span id="rsal">07</span> &middot; <i>struck <span id="rstr">00</span></i> &middot; <span id="rsta">solution held</span></div>
 </div>
 <div class="rd hint" id="hint">drag orbit &middot; scroll range &middot; shift-drag pan &middot; r reset</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.1/three.min.js"></script>
@@ -2052,7 +2152,9 @@ function addLabel(txt, gx, gz){
   m.position.copy(p); m.rotation.y = AD.gridRot; m.scale.z = 3.3;
   labels.add(m);
 }
-for(let i=0;i<10;i++){ addLabel(LETTERS[i], i+0.5, -0.72); addLabel(String(i+1), -0.72, i+0.5); }
+/* the eye reads the plot from the left, so A is the leftmost column */
+const colLetter = gx => LETTERS[9 - Math.max(0, Math.min(9, Math.floor(gx)))];
+for(let i=0;i<10;i++){ addLabel(colLetter(i), i+0.5, -0.72); addLabel(String(i+1), -0.72, i+0.5); }
 
 /* ============================================================
    WAKES — foam that rides the same swell as the water
@@ -2522,31 +2624,36 @@ const CUR = {};
 for(const f of ENV_V) CUR[f] = ENVS[1]['_'+f].clone();
 for(const f of ENV_S) CUR[f] = ENVS[1][f];
 
-function pushEnv(){
-  SH.uSunCol.value.copy(CUR.sunCol);
-  SH.uZenith.value.copy(CUR.zenith);
-  SH.uMidSky.value.copy(CUR.midSky);
-  SH.uHaze.value.copy(CUR.haze);
-  SH.uHazeWarm.value.copy(CUR.hazeWarm);
-  SH.uDeep.value.copy(CUR.deep);
-  waterUnis.uShoal.value.copy(CUR.shoal);
-  waterUnis.uShad.value.copy(CUR.shad);
-  waterUnis.uFoam.value.copy(CUR.foam);
-  matComp.uniforms.uShadow.value.copy(CUR.gradeLo);
-  matComp.uniforms.uHigh.value.copy(CUR.gradeHi);
-  SH.uFogStart.value = CUR.fogStart;
-  SH.uFogDist.value  = CUR.fogDist;
-  SH.uSwell.value    = CUR.swell;
-  SH.uNight.value    = CUR.night;
-  matComp.uniforms.uExp.value = CUR.exp;
-  waterUnis.uF0.value    = CUR.f0;
-  waterUnis.uFExp.value  = CUR.fexp;
-  waterUnis.uSheen.value = CUR.sheen;
-  waterUnis.uGridI.value = CUR.gridI;
-  const ce = Math.cos(CUR.sunEl);
-  SH.uSunDir.value.set(Math.sin(CUR.sunAz)*ce, Math.sin(CUR.sunEl), Math.cos(CUR.sunAz)*ce);
+function applyEnv(E){
+  SH.uSunCol.value.copy(E.sunCol);
+  SH.uZenith.value.copy(E.zenith);
+  SH.uMidSky.value.copy(E.midSky);
+  SH.uHaze.value.copy(E.haze);
+  SH.uHazeWarm.value.copy(E.hazeWarm);
+  SH.uDeep.value.copy(E.deep);
+  waterUnis.uShoal.value.copy(E.shoal);
+  waterUnis.uShad.value.copy(E.shad);
+  waterUnis.uFoam.value.copy(E.foam);
+  matComp.uniforms.uShadow.value.copy(E.gradeLo);
+  matComp.uniforms.uHigh.value.copy(E.gradeHi);
+  SH.uFogStart.value = E.fogStart;
+  SH.uFogDist.value  = E.fogDist;
+  SH.uSwell.value    = E.swell;
+  SH.uNight.value    = E.night;
+  matComp.uniforms.uExp.value = E.exp;
+  waterUnis.uF0.value    = E.f0;
+  waterUnis.uFExp.value  = E.fexp;
+  waterUnis.uSheen.value = E.sheen;
+  waterUnis.uGridI.value = E.gridI;
+  const ce = Math.cos(E.sunEl);
+  SH.uSunDir.value.set(Math.sin(E.sunAz)*ce, Math.sin(E.sunEl), Math.cos(E.sunAz)*ce);
   SH.uSunXZ.value.set(-SH.uSunDir.value.x/SH.uSunDir.value.y, -SH.uSunDir.value.z/SH.uSunDir.value.y);
 }
+function pushEnv(){ applyEnv(CUR); }
+/* the tactical plot is always read after dark, whatever the weather below */
+const NIGHT = {};
+for(const f of ENV_V) NIGHT[f] = ENVS[2]['_'+f];
+for(const f of ENV_S) NIGHT[f] = ENVS[2][f];
 function stepEnv(dt){
   const T = ENVS[ANIM.env], k = 1 - Math.exp(-dt*0.80);
   for(const f of ENV_V) CUR[f].lerp(T['_'+f], k);
@@ -2561,9 +2668,11 @@ function shipNamed(n){ return SHIPS.find(x => x.name === n && x.era === ANIM.era
 
 function shotList(){
   if(!SHOTS) SHOTS = [
-    { az:HOME.az, el:HOME.el, dist:HOME.dist, t:HOME.tgt.clone() },
+    /* the key-art angle exactly, brought in and centred on the plot */
+    { az:HOME.az, el:0.380, dist:400, t:new T.Vector3(12, -52, 5) },
     { az:2.24, el:0.048, dist:340, t:new T.Vector3(-30, 6, 20) },
-    { az:3.05, el:1.06,  dist:610, t:new T.Vector3(0, 0, 0) }
+    /* straight down on the plot, framed to sit dead centre in its half */
+    { az:3.05, el:1.06,  dist:560, t:new T.Vector3(0, -70, 0) }
   ];
   return SHOTS;
 }
@@ -2580,7 +2689,7 @@ function shot(i){
 const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
 const SINK_DUR = 11.0;
 const SALVO_DUR = 9.0;
-const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:false, rings:false, ringsK:0, con:false, plot:0, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, env:1, envK:0 };
+const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, plot:0, split:true, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, env:1, envK:0 };
 
 function setStrike(on){
   if(on && ANIM.fireGoal < 0.5){ FX.splash.material.uniforms.uT0.value = tt; boom(FIRE, 0.30);
@@ -2773,11 +2882,12 @@ function updateFX(dt){
   /* detonation */
   updateDebris(dt);
   sndFrame(dt, tt);
-  waterUnis.uRadarA.value = (waterUnis.uRadarA.value + dt*0.42) % 6.2831853;
+  waterUnis.uRadarA.value = (waterUnis.uRadarA.value + dt*_RAD_W) % 6.2831853;
   const rk = 1 - Math.exp(-dt*2.4);
   waterUnis.uRadarI.value += ((ANIM.radar ? 0.20 : 0.0) - waterUnis.uRadarI.value)*rk;
   ANIM.ringsK += ((ANIM.rings ? 1 : 0) - ANIM.ringsK)*(1 - Math.exp(-dt*3.2));
-  waterUnis.uConI.value += ((ANIM.con ? 1 : 0) - waterUnis.uConI.value)*(1 - Math.exp(-dt*3.0));
+  ANIM.conK += ((ANIM.con ? 1 : 0) - ANIM.conK)*(1 - Math.exp(-dt*3.0));
+  if(!ANIM.split) waterUnis.uConI.value = ANIM.conK;
   const showM = ANIM.fleet && ANIM.era === 0, showS = ANIM.fleet && ANIM.era === 1;
   for(let i=0;i<HIDEABLE.length;i++)  HIDEABLE[i].visible  = showM;
   for(let i=0;i<HIDEABLE2.length;i++) HIDEABLE2[i].visible = showS;
@@ -3075,21 +3185,58 @@ function sndFrame(dt, tt){
 }
 
 /* ---------- controls ---------- */
-const railEl = document.getElementById('rail');
+const railEl = document.getElementById('rail'), utilEl = document.getElementById('util'),
+      dbgEl = document.getElementById('dbg');
 const rStr = document.getElementById('rstr'), rSta = document.getElementById('rsta'),
       rCond = document.getElementById('rcond'), rSal = document.getElementById('rsal'),
-      rMis = document.getElementById('rmis'), rTf = document.getElementById('rtf');
+      rTf = document.getElementById('rtf'),
+      rTrk = document.getElementById('rtrk'), rHead = document.getElementById('rhead'),
+      rStat = document.getElementById('rstat'), rBar = document.getElementById('rbar');
+
+/* how fast the beam turns, in radians a second */
+const _RAD_W = 0.42;
+
+/* WHAT THE UPPER BOARD KNOWS. Nothing here moves on its own: every figure
+   is a fact about the engagement, and it only changes when something does. */
+function plotReadout(){
+  const pad = v => String(v).padStart(2, '0');
+  const total = CON_GROUPS.length;
+  const sunk  = CON_GROUPS.filter(g => g.hit.every(Boolean)).length;
+  const sqTot = CON_GROUPS.reduce((a, g) => a + g.cells.length, 0);
+  const sqHit = CON_GROUPS.reduce((a, g) => a + g.hit.filter(Boolean).length, 0);
+  const miss  = MISSM.length, salvos = miss + sqHit;
+
+  rHead.innerHTML = pad(sunk) + '<s>/</s>' + pad(total);
+  rStat.innerHTML = [['Salvos', pad(salvos)], ['Hits', pad(sqHit)], ['Miss', pad(miss)],
+                     ['Accuracy', Math.round(100*sqHit/Math.max(1, salvos)) + '%']]
+    .map(([k, v]) => '<span class="v">' + v + '</span><span class="k">' + k + '</span>').join('');
+
+  const cells = [];
+  for(let i=0;i<total;i++){
+    const g = CON_GROUPS[i], done = g.hit.every(Boolean), sq = [];
+    for(let c=0;c<g.cells.length;c++) if(g.hit[c])
+      sq.push(colLetter(g.cells[c][0]) + (g.cells[c][1] + 1));
+    cells.push('<span class="k">Track ' + pad(i+1) + '</span>');
+    cells.push('<span class="c">' + sq.join(' ') + '</span>');
+    cells.push('<span class="' + (done ? 'done' : '') + '">' + (done ? 'sunk' : 'held') + '</span>');
+  }
+  rTrk.innerHTML = cells.join('');
+
+  let segs = '';
+  for(let i=0;i<sqTot;i++) segs += '<i' + (i < sqHit ? ' class="on"' : '') + '></i>';
+  rBar.innerHTML = '<span class="k">Squares struck</span><span class="segs">' + segs
+                 + '</span><span class="v">' + pad(sqHit) + ' / ' + pad(sqTot) + '</span>';
+}
 function refreshUI(){
   const burning = ANIM.fireGoal > 0.5, sinking = ANIM.sink >= 0, flying = ANIM.mis >= 0,
         cating = ANIM.cat >= 0, running = ANIM.tor >= 0;
   /* struck counts hulls that carry a scar, not manoeuvres in flight */
   rStr.textContent = String(DMG.length).padStart(2, '0');
   rSal.textContent = String(7 + (burning?1:0) + (sinking?1:0)).padStart(2, '0');
-  rMis.textContent = '07';
-  const L = 'ABCDEFGHIJ';
-  const CELL = L[Math.floor(POS.cruiser[0])] + (Math.floor(POS.cruiser[1]) + 1);
+  /* the readout must name the same squares the sea does */
+  const CELL = colLetter(POS.cruiser[0]) + (Math.floor(POS.cruiser[1]) + 1);
   const cs = (ANIM.ship || shipNamed('escort')).cells;
-  const SPAN = L[cs[0]] + (cs[1] + 1) + '\u2013' + L[cs[2] - 1] + cs[3];
+  const SPAN = colLetter(cs[2] - 1) + (cs[1] + 1) + '\u2013' + colLetter(cs[0]) + cs[3];
   rSta.textContent = running && !ANIM.torHit ? 'torpedo running'
                    : running ? 'target hit'
                    : cating ? 'aircraft away'
@@ -3106,29 +3253,31 @@ function refreshUI(){
                      })()
                    : 'solution held';
   rCond.innerHTML = ENVS[ANIM.env].cond;
+  plotReadout();
   rTf.textContent = ANIM.era === 1 ? 'Line of Battle' : 'Task Force Meridian';
   /* one pass over the HUD: every control lights from the state it reports */
-  for(const b of railEl.querySelectorAll('button')){
+  for(const b of document.querySelectorAll('#rail button, #util button, #dbg button')){
     const d = b.dataset;
+    if(d.pop === 'act'){
+      b.classList.toggle('on', flying || cating || running || sinking);
+      continue;
+    }
     if(d.pop !== undefined) continue;
     if(d.cam !== undefined){ b.classList.toggle('on', +d.cam === ANIM.shot); continue; }
     if(d.e   !== undefined){ b.classList.toggle('on', +d.e   === ANIM.env);  continue; }
     const a = d.a;
-    if(a === 'plot'){
-      b.classList.toggle('on', ANIM.plot === 1);
-      b.dataset.l = ANIM.plot === 1 ? 'Enemy plot' : 'Own plot';
-      continue;
-    }
     /* she has no flight deck in 1680 */
     /* no flight deck and no boat in 1680 */
     b.classList.toggle('na', (a === 'cat' || a === 'tor') && ANIM.era === 1);
-    b.classList.toggle('on', (a === 'hit' && burning) || (a === 'sink' && sinking)
-                          || (a === 'fire' && flying) || (a === 'cat' && cating) || (a === 'tor' && running)
-                          || (a === 'radar' && ANIM.radar) || (a === 'con' && ANIM.con) || (a === 'rings' && ANIM.rings)
-                          || (a === 'snd' && ANIM.snd));
+    b.classList.toggle('on', (a === 'sink' && sinking) || (a === 'fire' && flying)
+                          || (a === 'cat' && cating) || (a === 'tor' && running)
+                          || (a === 'snd' && ANIM.snd) || (a === 'hit' && burning)
+                          || (a === 'radar' && ANIM.radar) || (a === 'con' && ANIM.con)
+                          || (a === 'rings' && ANIM.rings) || (a === 'fleet' && ANIM.fleet)
+                          || (a === 'split' && ANIM.split));
   }
 }
-function closePops(){ for(const s of railEl.querySelectorAll('.slot')) s.classList.remove('open'); }
+function closePops(){ for(const s of document.querySelectorAll('.slot')) s.classList.remove('open'); }
 function onCtl(e){
   const b = e.target.closest('button'); if(!b) return;
   /* a chip that owns a menu just opens it */
@@ -3145,6 +3294,7 @@ function onCtl(e){
       /* the hulls are not the same hulls, so nothing carries over */
       setStrike(false); setSink(false); clearDamage();
       ANIM.mis = -1; ANIM.cat = -1; ANIM.bomb = -1; ANIM.tor = -1;
+      setStrike(true);
       if(CAT.bomb) CAT.bomb.visible = false;
       CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0,0,0);
       for(const t of CAT.trails) t.material.uniforms.uFade.value = 0;
@@ -3155,35 +3305,35 @@ function onCtl(e){
   if(b.dataset.cam !== undefined){ closePops(); shot(+b.dataset.cam); hideHint(); return; }
   /* the plot chip decides whether her own hulls are on the board:
      own = the formation as she lies, enemy = an empty sea and what the beam finds */
-  if(b.dataset.a === 'plot'){
-    ANIM.plot = ANIM.plot ? 0 : 1;
-    ANIM.fleet = ANIM.plot === 0;
-    ANIM.con = ANIM.plot === 1;
-    /* each plot brings up what belongs to it: the enemy board is a reading
-       exercise, her own is the formation as she lies, one hull burning */
-    ANIM.rings = true;
-    if(ANIM.plot === 1){ ANIM.radar = true; setStrike(false); }
-    else { ANIM.radar = false; setStrike(true); }
-    refreshUI(); hideHint(); return;
-  }
   const a = b.dataset.a;
   if(a === 'snd'){ ANIM.snd = !ANIM.snd; sndOn(ANIM.snd); }
   if(a === 'radar') ANIM.radar = !ANIM.radar;
-  /* returns are nothing without a beam to find them */
-  if(a === 'con'){ ANIM.con = !ANIM.con; if(ANIM.con) ANIM.radar = true; }
+  if(a === 'con')   ANIM.con   = !ANIM.con;
   if(a === 'rings') ANIM.rings = !ANIM.rings;
+  if(a === 'fleet') ANIM.fleet = !ANIM.fleet;
+  if(a === 'hit')   setStrike(!(ANIM.fireGoal > 0.5));
+  if(a === 'split'){
+    ANIM.split = !ANIM.split;
+    document.body.classList.toggle('split', ANIM.split);
+    if(!ANIM.split) fit();
+  }
   if(a === 'fire') launch();
   if(a === 'cat' && ANIM.era === 0) catapult();
   if(a === 'tor' && ANIM.era === 0) torpedo();
-  if(a === 'hit')  setStrike(!(ANIM.fireGoal > 0.5));
   if(a === 'sink') setSink(ANIM.sink < 0);
-  if(a === 'reset'){ setStrike(false); setSink(false); clearDamage();
-    ANIM.con = false; ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
+  if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true);
+    ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
     if(ANIM.cat >= 0){ ANIM.cat = -1; CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0,0,0);
       for(const t of CAT.trails) t.material.uniforms.uFade.value = 0; } }
   refreshUI(); hideHint();
 }
 railEl.addEventListener('click', onCtl);
+utilEl.addEventListener('click', onCtl);
+dbgEl.addEventListener('click', e => {
+  const t = e.target.closest('button');
+  if(t && t.id === 'dtog'){ dbgEl.classList.toggle('open'); return; }
+  onCtl(e);
+});
 pushEnv(); refreshUI();
 
 /* ============================================================
@@ -3273,7 +3423,9 @@ function clampGoal(){
   GOAL.dist = Math.min(Math.max(GOAL.dist, LIM.dist[0]), LIM.dist[1]);
   GOAL.tgt.x = Math.min(Math.max(GOAL.tgt.x, -LIM.span), LIM.span);
   GOAL.tgt.z = Math.min(Math.max(GOAL.tgt.z, -LIM.span), LIM.span);
-  GOAL.tgt.y = Math.min(Math.max(GOAL.tgt.y, -20), 260);
+  /* the board cameras aim well under the waterline to cancel the look-up
+     the key-art framing applies, so the floor has to let them through */
+  GOAL.tgt.y = Math.min(Math.max(GOAL.tgt.y, -140), 260);
 }
 function freeCam(){ if(ANIM.shot !== -1){ ANIM.shot = -1; ANIM.glide = 0; refreshUI(); } }
 function orbit(dx, dy){ freeCam(); GOAL.az -= dx*0.0027; GOAL.el -= dy*0.0021; clampGoal(); }
@@ -3286,7 +3438,7 @@ function pan(dx, dy){
   clampGoal();
 }
 function dolly(f){ freeCam(); GOAL.dist *= f; clampGoal(); }
-function goHome(){ ANIM.shot = 0; ANIM.glide = 2.6; GOAL.az = HOME.az; GOAL.el = HOME.el; GOAL.dist = HOME.dist; GOAL.tgt.copy(HOME.tgt); }
+function goHome(){ shot(0); ANIM.glide = 2.6; }
 
 canvas.style.touchAction = 'none';
 canvas.addEventListener('pointerdown', e => {
@@ -3340,6 +3492,51 @@ let hintT = null;
 function hideHint(){ if(hintEl && !hintT) hintT = setTimeout(() => hintEl.classList.add('out'), 900); }
 setTimeout(hideHint, 11000);
 
+/* plant the camera on a board and bring everything that follows the eye
+   along with it: the sky, the dense water patch, the shading position */
+const _bt = new T.Vector3(), _liveP = new T.Vector3(), _liveQ = new T.Quaternion();
+function boardCam(S){
+  const ce = Math.cos(S.el), ds = S.dist*frameScale;
+  _bt.copy(S.t);
+  camera.position.set(_bt.x + Math.sin(S.az)*ce*ds,
+                      _bt.y + Math.sin(S.el)*ds,
+                      _bt.z + Math.cos(S.az)*ce*ds);
+  camera.position.y = Math.max(camera.position.y, 7.5);
+  _bt.y += 26*Math.min(ds/AD.camDist, 1.15);
+  camera.lookAt(_bt);
+  skyMesh.position.copy(camera.position);
+  const wx = Math.round((camera.position.x - Math.sin(S.az)*300)/8)*8;
+  const wz = Math.round((camera.position.z - Math.cos(S.az)*300)/8)*8;
+  water.position.set(wx, 0, wz); farSea.position.set(wx, 0, wz);
+  SH.uWC.value.set(wx, wz);
+  SH.uCam.value.copy(camera.position);
+}
+
+/* dress the scene for one board or the other, then draw it */
+function board(enemy){
+  applyEnv(enemy ? NIGHT : CUR);
+  const on = !enemy && ANIM.fleet;
+  const showM = on && ANIM.era === 0, showS = on && ANIM.era === 1;
+  for(let i=0;i<HIDEABLE.length;i++)  HIDEABLE[i].visible  = showM;
+  for(let i=0;i<HIDEABLE2.length;i++) HIDEABLE2[i].visible = showS;
+  FX.farSmoke.visible = showM;
+  /* the beam and its returns belong to the enemy plot */
+  waterUnis.uConI.value   = enemy ? ANIM.conK : 0;
+  waterUnis.uRadarI.value = (enemy && ANIM.radar) ? 0.20 : 0;
+  /* the burning hull belongs to her own */
+  const f = enemy ? 0 : ANIM.fire;
+  waterUnis.uFireI.value = f;
+  waterUnis.uHitCell.value.z = f;
+  FX.fireSmoke.visible = !enemy;
+  FX.fireGlow.visible = !enemy;
+  /* hull shadows go with the hulls */
+  for(let i=0;i<OCC.length;i++){
+    const o = OCC[i];
+    if(o.era !== ANIM.era) continue;
+    occB[o.i].w = on ? o.op : 0;
+  }
+}
+
 function fit(){
   renderer.setSize(innerWidth, innerHeight, false);
   const asp = innerWidth/innerHeight;
@@ -3352,6 +3549,16 @@ function fit(){
   sizeTargets();
 }
 addEventListener('resize', fit, {passive:true});
+/* she opens folded: the plot above, her own board below on the key-art angle */
+document.body.classList.add('split');
+{ const S = shotList()[0];
+  CAM.az = GOAL.az = S.az; CAM.el = GOAL.el = S.el; CAM.dist = GOAL.dist = S.dist;
+  CAM.tgt.copy(S.t); GOAL.tgt.copy(S.t); ANIM.shot = 0; }
+/* one hull is alight on her own board from the first frame. Set directly:
+   setStrike() stamps the splash with the clock, which does not exist yet. */
+ANIM.fireGoal = 1;
+scar(shipNamed('cruiser'), FIRE, 15.0);
+refreshUI();
 fit();
 
 /* ============================================================
@@ -3445,7 +3652,40 @@ function frame(now){
 
   renderer.setRenderTarget(rtScene);
   renderer.clear();
-  renderer.render(scene, camera);
+  if(ANIM.split){
+    /* THE TWO BOARDS. One scene, rendered twice into the same target with
+       the state swapped between passes: above, the enemy plot with nothing
+       on it but what the beam has found; below, her own formation. */
+    const W = rtScene.width, H = rtScene.height, Hh = Math.floor(H*0.5);
+    const asp = W/Hh;
+    /* the eye as the loop left it — that is the lower board's */
+    _liveP.copy(camera.position); _liveQ.copy(camera.quaternion);
+    const lwx = SH.uWC.value.x, lwz = SH.uWC.value.y;
+    camera.aspect = asp; camera.updateProjectionMatrix();
+    renderer.setScissorTest(true);
+    for(let pass2 = 0; pass2 < 2; pass2++){
+      const enemy = pass2 === 0;
+      board(enemy);
+      /* the plot is always read from overhead; her own board is wherever you fly */
+      if(enemy) boardCam(shotList()[2]);
+      else {
+        camera.position.copy(_liveP); camera.quaternion.copy(_liveQ);
+        skyMesh.position.copy(_liveP);
+        water.position.set(lwx, 0, lwz); farSea.position.set(lwx, 0, lwz);
+        SH.uWC.value.set(lwx, lwz); SH.uCam.value.copy(_liveP);
+      }
+      const y = enemy ? H - Hh : 0;
+      renderer.setViewport(0, y, W, Hh);
+      renderer.setScissor(0, y, W, Hh);
+      renderer.render(scene, camera);
+    }
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, W, H);
+    renderer.setScissor(0, 0, W, H);
+    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  } else {
+    renderer.render(scene, camera);
+  }
 
   matBright.uniforms.tD.value = rtScene.texture;
   pass(matBright, rtB1);
