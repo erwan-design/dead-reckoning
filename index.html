@@ -422,49 +422,49 @@
       background:linear-gradient(90deg,rgba(206,224,236,0),rgba(206,224,236,.22) 12%,
                  rgba(206,224,236,.22) 88%,rgba(206,224,236,0));
       opacity:0;transition:opacity 500ms ease}
-  /* ---- the command panel: a real instrument, not a caption ---- */
-  #rl{font-size:9px;letter-spacing:.15em;line-height:1.8;text-align:left!important}
-  #rl b{display:inline}
-  #rl .k{color:rgba(233,224,232,.46)}
-  #rl .v{color:rgba(240,232,238,.80);font-variant-numeric:tabular-nums}
-  #rl .hd{margin:0 4px 7px;text-align:left}
-  .pan{display:flex;align-items:stretch;box-sizing:border-box;border-radius:16px;
+  /* ---- THE INSTRUMENT MOVES TO THE GUTTERS ----
+     Seen from straight above, the plot is 404 wide in a 744 half: 170 either
+     side that the board never reaches. A bar across the foot sat 36px over
+     the bottom row of the grid; two columns in that dead space cover nothing.
+     Everything here is a fact about the engagement in progress — it changes
+     only when something on the board does. */
+  #rl{position:absolute;left:0;right:0;top:0;height:50%;z-index:5;
+      pointer-events:none;font-size:9px;letter-spacing:.15em;line-height:1.8;
+      text-align:left!important}
+  #rl .k{color:rgba(233,224,232,.50)}
+  #rl .v{color:rgba(240,232,238,.82);font-variant-numeric:tabular-nums}
+  .col{position:absolute;top:84px;width:120px;display:flex;flex-direction:column;gap:8px}
+  .col.l{left:22px}
+  .col.r{right:22px}
+  .pan{box-sizing:border-box;padding:11px 12px 12px;border-radius:14px;
       background:rgba(9,13,22,.46);
       -webkit-backdrop-filter:blur(18px) saturate(130%);backdrop-filter:blur(18px) saturate(130%);
       border:1px solid rgba(206,224,236,.13);
       box-shadow:0 16px 44px rgba(3,7,16,.40), inset 0 1px 0 rgba(255,255,255,.06)}
-  .pan > div{padding:10px 14px;align-content:center}
-  .pan > div + div{border-left:1px solid rgba(206,224,236,.09)}
-  /* each block keeps its own inner layout; only the widths are negotiated here */
-  .pan .f-fleet{flex:0 0 auto;display:flex;flex-direction:column;justify-content:center}
-  .pan .f-trk{flex:1 1 auto}
-  .pan .f-gun{flex:0 0 auto;min-width:184px}
-  .pan svg{width:13px;height:13px;flex:0 0 auto;display:block;stroke:currentColor;fill:none;
-      stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+  .pan h6{margin:0 0 8px;font:400 7.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing:.26em;text-transform:uppercase;color:rgba(224,233,240,.42)}
+  .pan svg{width:12px;height:12px;flex:0 0 auto;display:block;stroke:currentColor;fill:none;
+      stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
 
-  /* fleet block */
-  .fl1{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .fl2{display:flex;align-items:center;gap:7px;margin-top:6px;color:rgba(233,224,232,.46)}
+  /* what is left of them */
+  .fl1{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .fl2{display:flex;align-items:center;gap:6px;margin-top:7px;color:rgba(233,224,232,.50)}
   .segs{display:flex;gap:2px}
   .segs i{display:block;width:12px;height:4px;border-radius:2px;background:rgba(233,224,232,.13)}
   .segs i.on{background:rgba(168,240,224,.66);box-shadow:0 0 6px rgba(157,240,220,.32)}
+  .col .segs i{width:9px}
 
-  /* contact rows */
-  .trk{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:3px 9px}
-  .trk .c{color:rgba(168,240,224,.66);letter-spacing:.16em}
-  .trk .st{text-align:right;color:rgba(233,224,232,.50)}
-  .trk .sunk, .trk .sunk + span, .trk .sunk ~ .st{color:rgba(255,176,120,.78)}
+  /* every contact the beam has held, two lines each in a column this narrow */
+  .tr{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:1px 7px}
+  .tr + .tr{margin-top:7px;padding-top:7px;border-top:1px solid rgba(206,224,236,.08)}
+  .tr .c{grid-column:2 / 4;color:rgba(168,240,224,.70);letter-spacing:.16em}
+  .tr .st{text-align:right;color:rgba(233,224,232,.50)}
+  .tr.sunk span, .tr.sunk .c, .tr.sunk .st{color:rgba(255,176,120,.78)}
 
-  /* gunnery block */
-  .gun{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 6px;text-align:center}
-  .gun .g{display:flex;align-items:center;justify-content:center;gap:6px;
-      color:rgba(240,232,238,.80);font-variant-numeric:tabular-nums}
-  .gun .k{text-align:center;font-size:8px;letter-spacing:.22em}
-  #rtrk span{white-space:nowrap}
-  #rtrk .k{color:rgba(233,224,232,.46)}
-  #rtrk .c{color:rgba(168,240,224,.62);letter-spacing:.18em}
-  #rtrk .s{text-align:right;font-variant-numeric:tabular-nums}
-  #rtrk .done{color:rgba(255,176,120,.70)}
+  /* how her shooting has gone */
+  .gun{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:7px 8px}
+  .gun .v{text-align:right}
+  .gun .k{font-size:7.5px;letter-spacing:.22em;text-transform:uppercase}
   .half{position:absolute;left:26px;top:22px;z-index:5;pointer-events:none;user-select:none;
       font:400 10px/1.95 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       letter-spacing:.235em;text-transform:uppercase;color:rgba(236,228,235,.48);
@@ -587,11 +587,12 @@
 <div id="stage">
 <canvas id="c"></canvas>
 <div class="rd" id="rl">
-  <div class="hd"><b>Dead Reckoning</b><span class="k"> &middot; <span id="rtf">Task Force Meridian</span></span></div>
-  <div class="pan">
-    <div class="f-fleet" id="rfleet"></div>
-    <div class="f-trk trk" id="rtrk"></div>
-    <div class="f-gun gun" id="rstat"></div>
+  <div class="col l">
+    <div class="pan" id="rfleet"></div>
+    <div class="pan" id="rtrk"></div>
+  </div>
+  <div class="col r">
+    <div class="pan gun" id="rstat"></div>
   </div>
 </div>
 <div class="rail in-a" id="util">
@@ -782,6 +783,7 @@
 <div class="srule"></div>
 <div class="half a">
   <b>Own plot</b>
+  <div class="ln" id="rtf">Task Force Meridian</div>
   <div class="ln" id="rown"></div>
   <div class="ln" id="rsta">solution held</div>
 </div>
@@ -3766,30 +3768,33 @@ function plotReadout(){
   let segs = '';
   for(let i=0;i<sqTot;i++) segs += '<i' + (i < sqHit ? ' class="on"' : '') + '></i>';
   rFleet.innerHTML =
-    '<div class="fl1"><span class="k">Enemy fleet</span>'
-    + '<span class="segs">' + segs + '</span>'
+    '<h6>Enemy fleet</h6>'
+    + '<div class="fl1"><span class="segs">' + segs + '</span>'
     + '<span class="v">' + pad(sqHit) + '/' + pad(sqTot) + '</span></div>'
-    + '<div class="fl2">' + svg('sunk') + '<span class="v">' + pad(sunk) + ' / ' + pad(total)
+    + '<div class="fl2">' + svg('sunk') + '<span class="v">' + pad(sunk) + '/' + pad(total)
     + '</span><span class="k">hulls sunk</span></div>';
 
-  const rows = [];
+  /* every contact the beam has held: two lines each, the cells under the name */
+  const rows = ['<h6>Tracks</h6>'];
   for(let i=0;i<total;i++){
     const g = CON_GROUPS[i], done = g.hit.every(Boolean), sq = [];
     for(let c=0;c<g.cells.length;c++) if(g.hit[c])
       sq.push(colLetter(g.cells[c][0]) + (g.cells[c][1] + 1));
-    rows.push('<span class="' + (done ? 'sunk' : '') + '">' + svg(done ? 'sunk' : 'hull') + '</span>');
-    rows.push('<span class="k">Track ' + pad(i+1) + '</span>');
-    rows.push('<span class="c">' + sq.join(' ') + '</span>');
-    rows.push('<span class="st">' + (done ? 'sunk' : 'held') + '</span>');
+    rows.push('<div class="tr' + (done ? ' sunk' : '') + '">'
+      + svg(done ? 'sunk' : 'hull')
+      + '<span class="k">' + pad(i+1) + '</span>'
+      + '<span class="st">' + (done ? 'sunk' : 'held') + '</span>'
+      + '<span class="c">' + (sq.join(' ') || '\u2014') + '</span></div>');
   }
   rTrk.innerHTML = rows.join('');
 
-  rStat.innerHTML =
-    ['aim', 'hit', 'pct'].map((ic, i) =>
-      '<span class="g">' + svg(ic) + [pad(salvos), pad(sqHit),
-      Math.round(100*sqHit/Math.max(1, salvos)) + '%'][i] + '</span>').join('')
-    + ['Salvos', 'Hits', 'Accuracy'].map(k => '<span class="k">' + k + '</span>').join('');
+  rStat.innerHTML = '<h6>Gunnery</h6>'
+    + [['aim', pad(salvos), 'Salvos'], ['hit', pad(sqHit), 'Hits'],
+       ['pct', Math.round(100*sqHit/Math.max(1, salvos)) + '%', 'Accuracy']]
+      .map(r => svg(r[0]) + '<span class="v">' + r[1] + '</span><span class="k">' + r[2] + '</span>')
+      .join('');
 }
+
 function refreshUI(){
   const burning = ANIM.fireGoal > 0.5, sinking = ANIM.sink >= 0, flying = ANIM.mis >= 0,
         cating = ANIM.cat >= 0, running = ANIM.tor >= 0;
@@ -4262,6 +4267,8 @@ setTimeout(hideHint, 11000);
 /* plant the camera on a board and bring everything that follows the eye
    along with it: the sky, the dense water patch, the shading position */
 const _bt = new T.Vector3(), _liveP = new T.Vector3(), _liveQ = new T.Quaternion();
+/* how far the upper board stands back from Cam 04's own framing */
+const PLOT_BACK = 1.45;
 function boardCam(S){
   const ce = Math.cos(S.el), ds = S.dist*frameScale;
   _bt.copy(S.t);
@@ -4445,8 +4452,15 @@ function frame(now){
       const enemy = ANIM.half ? ANIM.halfEnemy : (pass2 === 1);
       board(enemy);
       /* in half mode the live rig is already the plan view the screen asked
-         for, so the fixed board camera must not take it back */
-      if(enemy && !ANIM.half) boardCam(shotList()[3]);
+         for, so the fixed board camera must not take it back.
+         Cam 04 framed flush, 617 wide in a 744 half — nothing could stand
+         beside it. Pulled back by PLOT_BACK the plot reads 425 across and
+         opens a gutter each side that the instrument lives in. The preset
+         itself is untouched: this is the upper board's framing, not Cam 04's. */
+      if(enemy && !ANIM.half){
+        const S4 = shotList()[3];
+        boardCam({ az:S4.az, el:S4.el, dist:S4.dist*PLOT_BACK, t:S4.t });
+      }
       else {
         camera.position.copy(_liveP); camera.quaternion.copy(_liveQ);
         skyMesh.position.copy(_liveP);
