@@ -117,11 +117,11 @@
   <button class="chip" data-a="radar" data-l="Radar"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.3"/><path d="M7 7V1.7"/><path d="M7 7l4.6 2.6"/></svg></button>
   <button class="chip" data-a="con" data-l="Contacts"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="4.4" cy="9.4" r="1.5"/><path d="M7.3 6.6a4.1 4.1 0 0 1 0 5.6"/><path d="M9.7 4.2a7.4 7.4 0 0 1 0 10.4"/></svg></button>
   <button class="chip" data-a="rings" data-l="Impacts"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="1.9"/><circle cx="7" cy="7" r="5.2"/></svg></button>
-  <button class="chip" data-a="snd" data-l="Sound"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 5.3h2.2L7.6 3v8L4.8 8.7H2.6z"/><path d="M9.9 5.3a3.1 3.1 0 0 1 0 3.4"/></svg></button>
+  <button class="chip hot" data-a="hit" data-l="Strike"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="1.7"/><path d="M7 1.9v1.9M7 10.2v1.9M1.9 7h1.9M10.2 7h1.9"/></svg></button>
   <span class="sp"></span>
   <button class="chip" data-a="fire" data-l="Missile"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 11.4 11.4 2.6"/><path d="M7.6 2.6h3.8v3.8"/><path d="m5.2 8.4 1.6 1.6"/></svg></button>
   <button class="chip" data-a="cat" data-l="Catapult"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.8v10.4"/><path d="M1.8 7.7 7 5.9l5.2 1.8"/><path d="M4.5 11.5 7 10.7l2.5.8"/></svg></button>
-  <button class="chip hot" data-a="hit" data-l="Strike"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="1.7"/><path d="M7 1.9v1.9M7 10.2v1.9M1.9 7h1.9M10.2 7h1.9"/></svg></button>
+  <button class="chip" data-a="tor" data-l="Torpedo"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.9 7c0 1-1.6 1.8-3.4 1.8S5.1 8 5.1 7s1.6-1.8 3.4-1.8S11.9 6 11.9 7z"/><path d="M5.1 5.6 3.7 4.4M5.1 8.4 3.7 9.6"/><circle cx="1.9" cy="7" r=".65"/></svg></button>
   <button class="chip" data-a="sink" data-l="Sink"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.9v5.5"/><path d="M4.5 5.2 7 7.7l2.5-2.5"/><path d="M1.9 10.7c1.3-1 2.2-1 3.4 0s2.1 1 3.4 0 2.1-1 3.4 0"/></svg></button>
   <button class="chip danger" data-a="reset" data-l="Reset"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M11.7 1.8v3H8.8"/></svg></button>
   <span class="sp"></span>
@@ -141,6 +141,7 @@
     </div>
     <button class="chip" data-pop="cam" data-l="Camera"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.1 4.7h2.4l1-1.5h3l1 1.5h2.4v6.3H2.1z"/><circle cx="7" cy="7.8" r="1.9"/></svg></button>
   </div>
+  <button class="chip" data-a="snd" data-l="Sound"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 5.3h2.2L7.6 3v8L4.8 8.7H2.6z"/><path d="M9.9 5.3a3.1 3.1 0 0 1 0 3.4"/></svg></button>
 </div>
 <div class="rd hint" id="hint">drag orbit &middot; scroll range &middot; shift-drag pan &middot; r reset</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.1/three.min.js"></script>
@@ -401,6 +402,7 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
   uniform float uRadarA, uRadarI, uRadarRad;
   /* contacts: xy = cell, z = its bearing from the plot centre, w = how well it reaches */
   uniform vec4  uCon[NCON];
+  uniform float uConS[NCON];
   uniform vec3  uConCol;
   uniform float uConI, uConTau;
   uniform vec3 uHitCell;
@@ -476,26 +478,29 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
       col += uGridCol*sweep*mix(0.35, 1.0, facing)*inside;
       col += uGridCol*(gA*uGridI + pip*uGridI*(1.15 + uRadarI*(15.0*edge + 5.5*phos)));
 
-      /* returns on the plot: a square only exists while the beam is on it,
-         then bleeds off the phosphor a few seconds later */
-      if(uConI > 0.003 && uRadarI > 0.002){
+      /* THE STRUCK SQUARES. Every square you have put a round into on a hull
+         you cannot see: it exists only while the beam is on it, then bleeds
+         off the phosphor. Once every square of a hull has been struck she is
+         resolved, and from then on she stays on the plot in her own right. */
+      if(uConI > 0.003){
         vec2 cf = floor(gc);
         for(int i=0;i<NCON;i++){
           if(uCon[i].w < 0.0) break;
           if(abs(cf.x - uCon[i].x) > 0.5 || abs(cf.y - uCon[i].y) > 0.5) continue;
+          float st = uConS[i];
           float bh = mod(uRadarA - uCon[i].z, 6.2831853);
           float hot = exp(-bh*7.0);
-          float bleed = exp(-bh/uConTau);
-          float k = max(hot, bleed*0.62)*uCon[i].w*uConI*uRadarI*5.0*inside;
+          float beam = max(hot, exp(-bh/uConTau)*0.62)*uCon[i].w*uRadarI*5.0;
+          float k = mix(beam, 0.80 + 0.20*sin(uTime*1.9), st)*uConI*inside;
           vec2 cq = fract(gc), eq = abs(cq - 0.5)*2.0;
           float mq = max(eq.x, eq.y);
-          float fillq = (1.0 - smoothstep(0.26, 1.0, mq))*0.17;
+          float fillq = (1.0 - smoothstep(0.26, 1.0, mq))*mix(0.17, 0.22, st);
           float bordq = exp(-pow((1.0 - mq)/0.080, 2.0));
           float corq  = bordq*smoothstep(0.28, 0.76, min(eq.x, eq.y));
-          /* and a ping that opens out of the middle as the beam goes over */
+          /* the ping only makes sense on a square the beam has just found */
           float rq = length(cq - 0.5)*2.0;
-          float ping = exp(-pow((rq - (1.0 - hot)*1.05)/0.17, 2.0))*hot;
-          col += uConCol*(fillq + corq*2.2 + ping*1.1)*k*mix(0.4, 1.0, facing);
+          float ping = exp(-pow((rq - (1.0 - hot)*1.05)/0.17, 2.0))*hot*(1.0 - st);
+          col += mix(uConCol, uFireCol, st)*(fillq + corq*2.2 + ping*1.1)*k*mix(0.4, 1.0, facing);
         }
       }
 
@@ -607,6 +612,7 @@ const waterUnis = U({
   uRadarI :{value:0.0},
   uRadarRad:{value:248.0},
   uCon    :{value:Array.from({length:NCON}, () => new T.Vector4(0, 0, 0, -1))},
+  uConS   :{value:new Array(NCON).fill(0)},
   uConCol :{value:Cs(0xa6ffe6, 1.0)},
   uConI   :{value:0.0},
   uConTau :{value:1.05},
@@ -1867,6 +1873,47 @@ const MIS = { grp:null, trail:null, A:new T.Vector3(), B:new T.Vector3(), H:58, 
   ];
 }
 
+/* ---- 5c. a torpedo : out of the boat's forward tubes, running shallow ---- */
+const TOR_DUR = 7.4;
+const TOR = { grp:null, A:new T.Vector3(), B:new T.Vector3(), trails:[],
+              tmp:new T.Vector3(), tmp2:new T.Vector3() };
+{
+  const sp = cellW(POS.sub[0], POS.sub[1]);
+  TOR.A.copy(sp).setY(0.5).add(new T.Vector3(0, 0, 34).applyAxisAngle(new T.Vector3(0,1,0), YAW_Z));
+  TOR.B.set(ESC.pos.x, 0.5, ESC.pos.z);
+
+  const bm = shipMat({kind:'accent', lift:1.22});
+  const nm = shipMat({kind:'mark', lift:1.05});
+  const g = new T.Group();
+  g.add(new T.Mesh(roundedBox(1.35, 1.35, 7.2, 0.64, 14), bm));
+  const nose = new T.Mesh(roundedBox(1.15, 1.15, 1.9, 0.55, 12), nm);
+  nose.position.z = 4.0; g.add(nose);
+  /* four small fins on the axis, the same cruciform as the round */
+  const TFIN = slab([[0.30,-0.62],[0.30,0.34],[1.05,0.10],[1.05,-0.44]], 0.12, 0.04);
+  for(let i=0;i<4;i++){
+    const h = new T.Group(); h.rotation.z = i*Math.PI/2;
+    const f = new T.Mesh(TFIN, bm); f.position.set(0, -0.02, -2.9);
+    h.add(f); g.add(h);
+  }
+  g.visible = false; scene.add(g); TOR.grp = g;
+
+  /* A straight run would go through the carrier, which sits on D7-G7.
+     So she is set to pass astern of her and hook up onto the escort —
+     arc-length parametrised, so she holds her speed all the way round. */
+  const WP = [[1.50, 9.13], [5.20, 9.05], [8.55, 8.15], [9.85, 6.45], [9.00, 4.50]];
+  const TPATH = new T.CatmullRomCurve3(WP.map(([gx, gz]) => cellW(gx, gz, 0.5)),
+                                       false, 'centripetal', 0.5);
+  TOR.at = (t, out) => { TPATH.getPointAt(Math.max(0, Math.min(1, t)), out); return out; };
+  const run = [];
+  for(let i=0;i<=200;i++) run.push(TOR.at(i/200, new T.Vector3()));
+  TOR.trails = [
+    ribbon(run, {w:1.9, grow:4.2, life:1.00, seed:2.1, i:0.50,
+                 drift:[0.30, 1.05, -0.25], tint:0xdff2ee, order:7}),
+    ribbon(run, {w:0.72, grow:1.5, life:0.52, seed:7.7, i:0.80,
+                 drift:[0.16, 0.42, -0.12], tint:0xf6fffd, tintI:1.15, order:9, add:true})
+  ];
+}
+
 /* ---- 6. survey posts : the plot made physical, and the source of the rake ---- */
 {
   const bm = shipMat({kind:'sup', lift:1.15, spec:0.30, shin:90, rim:0.22, hide:0});
@@ -1936,18 +1983,32 @@ const MIS = { grp:null, trail:null, A:new T.Vector3(), B:new T.Vector3(), H:58, 
    CONTACTS — a formation nobody has laid eyes on. The plot will
    not admit a square exists until the beam is actually on it.
    ============================================================ */
-const CON_GROUPS = [ [[3,0],[3,1],[3,2]], [[7,7],[8,7]], [[0,8],[0,9]] ];
-{
+/* Three hulls out there, and what we have managed to put into them.
+   hit[] runs with cells[]: only a square we have struck goes on the plot. */
+const CON_GROUPS = [
+  { cells:[[3,0],[3,1],[3,2]], hit:[true, false, true] },   /* three squares, two struck */
+  { cells:[[7,7],[8,7]],       hit:[true, false] },         /* two squares, one struck */
+  { cells:[[0,8],[0,9]],       hit:[true, true] }           /* two for two: resolved */
+];
+function pushContacts(){
   const ss = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a)/(b - a))); return t*t*(3 - 2*t); };
-  const R = waterUnis.uRadarRad.value, U4 = waterUnis.uCon.value;
+  const R = waterUnis.uRadarRad.value, U4 = waterUnis.uCon.value, US = waterUnis.uConS.value;
   let k = 0;
-  for(const g of CON_GROUPS) for(const [cx, cz] of g){
-    const w = cellW(cx + 0.5, cz + 0.5);
-    /* bearing from the plot centre, so the shader needs no trig of its own */
-    U4[k++].set(cx, cz, Math.atan2(w.z, w.x), 1 - ss(R*0.80, R, Math.hypot(w.x, w.z)));
+  for(const g of CON_GROUPS){
+    const done = g.hit.every(Boolean);
+    for(let c=0;c<g.cells.length;c++){
+      if(!g.hit[c] || k >= NCON) continue;
+      const [cx, cz] = g.cells[c];
+      const w = cellW(cx + 0.5, cz + 0.5);
+      /* bearing from the plot centre, so the shader needs no trig of its own */
+      U4[k].set(cx, cz, Math.atan2(w.z, w.x), 1 - ss(R*0.80, R, Math.hypot(w.x, w.z)));
+      US[k] = done ? 1 : 0;
+      k++;
+    }
   }
-  for(; k < NCON; k++) U4[k].set(0, 0, 0, -1);
+  for(; k < NCON; k++){ U4[k].set(0, 0, 0, -1); US[k] = 0; }
 }
+pushContacts();
 
 /* ============================================================
    COORDINATES — painted on the sea, stretched for the eye that reads them
@@ -2277,6 +2338,9 @@ function updateDebris(dt){
       drift:[0.34,-0.15], n:30, i:0.0, dark:0x1d1e2c, lit:0xbba0a4, order:11});
     w.frustumCulled = false; DMGW.push(w);
   }
+  FX.torBlow = smokeColumn({pos:new T.Vector3(TOR.A.x, 0.8, TOR.A.z), h:12, size:2.6, spread:8,
+    speed:0.44, once:true, burst:5, birth0:0.0, birthSpan:0.20, out:0.44, hold:0.22, rise:0.40,
+    drift:[0.10,-0.05], n:52, i:0.26, add:true, dark:0x7f9fb4, lit:0xe6f4fa, order:13});
   FX.sinkSmoke = smokeColumn({pos:new T.Vector3(ESC.pos.x, 4, ESC.pos.z), h:70, size:4.4, spread:4, speed:0.040,
     drift:[0.34,-0.16], n:44, i:0.0, dark:0x2b2c3c, lit:0xc8b0b2, order:11});
   FX.catSteam = smokeColumn({pos:CAT.world.clone(), h:15, size:3.0, spread:8, speed:0.60, once:true, burst:9,
@@ -2516,7 +2580,7 @@ function shot(i){
 const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
 const SINK_DUR = 11.0;
 const SALVO_DUR = 9.0;
-const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:false, rings:false, ringsK:0, con:false, plot:0, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, env:1, envK:0 };
+const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:false, rings:false, ringsK:0, con:false, plot:0, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, env:1, envK:0 };
 
 function setStrike(on){
   if(on && ANIM.fireGoal < 0.5){ FX.splash.material.uniforms.uT0.value = tt; boom(FIRE, 0.30);
@@ -2537,6 +2601,16 @@ function launch(){
   marks[11].w = 0;
   FX.launch.material.uniforms.uT0.value = tt;
   if(sail) boom(MIS.A, 0.34); else hiss(MIS.A, 0.30, 260, 2600, 1.1, 0.8);
+  refreshUI();
+}
+function torpedo(){
+  setSink(false);
+  ANIM.tor = 0; ANIM.torHit = false;
+  for(const t of TOR.trails){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
+  marks[14].w = marks[15].w = 0;
+  /* the boat blows her tube: air, not flame */
+  FX.torBlow.material.uniforms.uT0.value = tt;
+  hiss(TOR.A, 0.30, 1800, 300, 1.1, 0.9);
   refreshUI();
 }
 const CAT_DUR = 21.0;
@@ -2661,6 +2735,40 @@ function updateFX(dt){
     w.uI.value = 0.17*d.k;
   }
   for(let i=DMG.length;i<NDMG;i++) DMGW[i].material.uniforms.uI.value = 0;
+
+  /* the torpedo run: straight, shallow, and the sea boils over her */
+  if(ANIM.tor >= 0){
+    ANIM.tor = Math.min(1, ANIM.tor + dt/TOR_DUR);
+    const u = ANIM.tor, fp = Math.min(u/0.80, 1);
+    const fade = u < 0.80 ? Math.min(1, u*11) : Math.max(0, 1 - (u - 0.80)/0.20);
+    for(const t of TOR.trails){ t.material.uniforms.uProg.value = fp; t.material.uniforms.uFade.value = fade; }
+    if(u < 0.80){
+      TOR.grp.visible = true;
+      TOR.grp.position.copy(TOR.at(fp, TOR.tmp));
+      TOR.grp.lookAt(TOR.at(Math.min(1, fp + 0.02), TOR.tmp2));
+      /* she runs under, riding the swell: only the top of her casing cuts
+         the surface, and the sea closes over her in the troughs */
+      TOR.grp.position.y = waterY(TOR.grp.position.x, TOR.grp.position.z, tt) - 0.45;
+      /* the boil she drags on the surface, right above her */
+      marks[14].set(TOR.grp.position.x, TOR.grp.position.z, 9.2, Math.min(1, u*8));
+    } else {
+      if(!ANIM.torHit){
+        ANIM.torHit = true; TOR.grp.visible = false; marks[14].w = 0;
+        FX.misSplash.material.uniforms.uT0.value = tt;
+        FX.hitFlash.material.uniforms.uOrigin.value.set(0, 0, 0);
+        FX.hitFlash.material.uniforms.uT0.value = tt;
+        boom(TOR.B, 0.44);
+        setSink(true); CINE.hold = 1.8; CINE.init = false; refreshUI();
+      }
+      const a = Math.min(1, (u - 0.80)/0.20);
+      marks[15].set(TOR.B.x, TOR.B.z, 9 + 42*a, (1-a)*(1-a));
+    }
+    if(u >= 1){ ANIM.tor = -1; refreshUI(); }
+  } else {
+    if(TOR.grp.visible) TOR.grp.visible = false;
+    marks[14].w = marks[15].w = 0;
+    for(const t of TOR.trails) t.material.uniforms.uFade.value = 0;
+  }
 
   /* detonation */
   updateDebris(dt);
@@ -2933,8 +3041,10 @@ function sndFrame(dt, tt){
 
   /* a round in the air, tracked and dopplered */
   const flying = ANIM.mis >= 0 && ANIM.mis < 0.62;
-  setVoice(SND.misN, flying ? MIS.grp.position : null, 0.34, dt, 'mis', flying ? 420 : 0);
-  setVoice(SND.misT, flying ? MIS.grp.position : null, 0.13, dt, 'mis', flying ? 96 : 0);
+  const running = !flying && ANIM.tor >= 0 && ANIM.tor < 0.80;
+  const wsrc = flying ? MIS.grp.position : (running ? TOR.grp.position : null);
+  setVoice(SND.misN, wsrc, flying ? 0.34 : 0.24, dt, 'mis', flying ? 420 : (running ? 240 : 0));
+  setVoice(SND.misT, wsrc, flying ? 0.13 : 0.11, dt, 'mis', flying ? 96 : (running ? 150 : 0));
 
   /* the aircraft on the stroke and climbing out */
   const air = ANIM.cat >= 0;
@@ -2971,7 +3081,7 @@ const rStr = document.getElementById('rstr'), rSta = document.getElementById('rs
       rMis = document.getElementById('rmis'), rTf = document.getElementById('rtf');
 function refreshUI(){
   const burning = ANIM.fireGoal > 0.5, sinking = ANIM.sink >= 0, flying = ANIM.mis >= 0,
-        cating = ANIM.cat >= 0;
+        cating = ANIM.cat >= 0, running = ANIM.tor >= 0;
   /* struck counts hulls that carry a scar, not manoeuvres in flight */
   rStr.textContent = String(DMG.length).padStart(2, '0');
   rSal.textContent = String(7 + (burning?1:0) + (sinking?1:0)).padStart(2, '0');
@@ -2980,14 +3090,20 @@ function refreshUI(){
   const CELL = L[Math.floor(POS.cruiser[0])] + (Math.floor(POS.cruiser[1]) + 1);
   const cs = (ANIM.ship || shipNamed('escort')).cells;
   const SPAN = L[cs[0]] + (cs[1] + 1) + '\u2013' + L[cs[2] - 1] + cs[3];
-  rSta.textContent = cating ? 'aircraft away'
+  rSta.textContent = running && !ANIM.torHit ? 'torpedo running'
+                   : running ? 'target hit'
+                   : cating ? 'aircraft away'
                    : flying && !ANIM.misHit ? 'salvo away'
                    : flying ? 'target hit'
                    : sinking && ANIM.sink > 0.9 ? ('lost ' + SPAN)
                    : sinking ? ('going down ' + SPAN)
                    : burning ? ('hit ' + CELL + ' \u00b7 burning')
                    : DMG.length ? (DMG.length + ' hull' + (DMG.length>1?'s':'') + ' damaged')
-                   : ANIM.con ? (CON_GROUPS.length + ' returns \u00b7 unresolved')
+                   : ANIM.con ? (() => {
+                       const done = CON_GROUPS.filter(g => g.hit.every(Boolean)).length;
+                       const hits = CON_GROUPS.reduce((a, g) => a + g.hit.filter(Boolean).length, 0);
+                       return hits + ' struck \u00b7 ' + done + ' of ' + CON_GROUPS.length + ' resolved';
+                     })()
                    : 'solution held';
   rCond.innerHTML = ENVS[ANIM.env].cond;
   rTf.textContent = ANIM.era === 1 ? 'Line of Battle' : 'Task Force Meridian';
@@ -3004,9 +3120,10 @@ function refreshUI(){
       continue;
     }
     /* she has no flight deck in 1680 */
-    b.classList.toggle('na', a === 'cat' && ANIM.era === 1);
+    /* no flight deck and no boat in 1680 */
+    b.classList.toggle('na', (a === 'cat' || a === 'tor') && ANIM.era === 1);
     b.classList.toggle('on', (a === 'hit' && burning) || (a === 'sink' && sinking)
-                          || (a === 'fire' && flying) || (a === 'cat' && cating)
+                          || (a === 'fire' && flying) || (a === 'cat' && cating) || (a === 'tor' && running)
                           || (a === 'radar' && ANIM.radar) || (a === 'con' && ANIM.con) || (a === 'rings' && ANIM.rings)
                           || (a === 'snd' && ANIM.snd));
   }
@@ -3027,7 +3144,7 @@ function onCtl(e){
     if(era !== ANIM.era){
       /* the hulls are not the same hulls, so nothing carries over */
       setStrike(false); setSink(false); clearDamage();
-      ANIM.mis = -1; ANIM.cat = -1; ANIM.bomb = -1;
+      ANIM.mis = -1; ANIM.cat = -1; ANIM.bomb = -1; ANIM.tor = -1;
       if(CAT.bomb) CAT.bomb.visible = false;
       CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0,0,0);
       for(const t of CAT.trails) t.material.uniforms.uFade.value = 0;
@@ -3042,7 +3159,11 @@ function onCtl(e){
     ANIM.plot = ANIM.plot ? 0 : 1;
     ANIM.fleet = ANIM.plot === 0;
     ANIM.con = ANIM.plot === 1;
-    if(ANIM.plot === 1) ANIM.radar = true;
+    /* each plot brings up what belongs to it: the enemy board is a reading
+       exercise, her own is the formation as she lies, one hull burning */
+    ANIM.rings = true;
+    if(ANIM.plot === 1){ ANIM.radar = true; setStrike(false); }
+    else { ANIM.radar = false; setStrike(true); }
     refreshUI(); hideHint(); return;
   }
   const a = b.dataset.a;
@@ -3053,10 +3174,11 @@ function onCtl(e){
   if(a === 'rings') ANIM.rings = !ANIM.rings;
   if(a === 'fire') launch();
   if(a === 'cat' && ANIM.era === 0) catapult();
+  if(a === 'tor' && ANIM.era === 0) torpedo();
   if(a === 'hit')  setStrike(!(ANIM.fireGoal > 0.5));
   if(a === 'sink') setSink(ANIM.sink < 0);
   if(a === 'reset'){ setStrike(false); setSink(false); clearDamage();
-    ANIM.con = false; ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1;
+    ANIM.con = false; ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
     if(ANIM.cat >= 0){ ANIM.cat = -1; CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0,0,0);
       for(const t of CAT.trails) t.material.uniforms.uFade.value = 0; } }
   refreshUI(); hideHint();
@@ -3086,6 +3208,13 @@ function cineUpdate(dt){
     want = (age > 1.1 && u < 0.88) ? 1 : 0;
     if(u < 0.615){ obj = MIS.grp; D = 30; H = 7.5; S = 6.5; L = 70; }
     else look = MIS.B;
+  } else if(ANIM.tor >= 0){
+    const u = ANIM.tor;
+    age = u*TOR_DUR;
+    want = (age > 1.0 && u < 0.93) ? 1 : 0;
+    /* low and close: a torpedo is only worth watching from the water */
+    if(u < 0.80){ obj = TOR.grp; D = 26; H = 4.0; S = 5.0; L = 60; }
+    else look = TOR.B;
   } else if(ANIM.cat >= 0){
     const u = ANIM.cat;
     age = u*CAT_DUR;
