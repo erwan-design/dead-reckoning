@@ -480,7 +480,9 @@
   body.split #util{top:calc(50% + 22px)}
   /* the command panel lies along the foot of the upper board */
   body.split .rd{top:auto;bottom:calc(50% + 18px);left:26px;right:26px;text-align:left}
-  .half.b{top:calc(50% + 22px)}
+  /* enemy above, her own below: the board the hand works is the one nearest
+     the controls, and it is the one the orbit rig drives */
+  .half.a{top:calc(50% + 22px)}
   /* whose board this is, said plainly: friendly reads teal, hostile reads amber */
   .half b{position:relative;display:block;padding-left:15px;margin-bottom:3px;
       font-size:12px;letter-spacing:.36em;color:rgba(168,240,224,.90)}
@@ -4425,7 +4427,9 @@ function frame(now){
   if(ANIM.split){
     /* THE TWO BOARDS. One scene, rendered twice into the same target with
        the state swapped between passes: above, the enemy plot with nothing
-       on it but what the beam has found; below, her own formation. */
+       on it but what the beam has found, held on a fixed plan view; below,
+       her own formation, on the orbit rig — the board nearest the hand is
+       the one the hand moves. */
     const W = rtScene.width, H = rtScene.height, Hh = Math.floor(H*0.5);
     const asp = W/Hh;
     /* the eye as the loop left it — that is the lower board's */
@@ -4449,7 +4453,9 @@ function frame(now){
         water.position.set(lwx, 0, lwz); farSea.position.set(lwx, 0, lwz);
         SH.uWC.value.set(lwx, lwz); SH.uCam.value.copy(_liveP);
       }
-      const y = (enemy && !ANIM.half) ? 0 : H - Hh;
+      /* viewport y counts from the bottom: H - Hh is the upper half. The
+         single-pass screens always take the upper half. */
+      const y = (ANIM.half || enemy) ? H - Hh : 0;
       renderer.setViewport(0, y, W, Hh);
       renderer.setScissor(0, y, W, Hh);
       renderer.render(scene, camera);
