@@ -23,6 +23,16 @@ python3 -m http.server 4747
 
 puis http://localhost:4747
 
+## Les trois fichiers
+
+| | |
+|---|---|
+| `index.html` | Le jeu. Un seul fichier, three.js depuis un CDN, six écrans accessibles depuis le menu *Screens*. |
+| `design-system.html` | Le langage de l'app — surfaces, encres, les deux camps, contrôles, mouvement. Toute valeur qui y figure est celle qui tourne. |
+| `rules-of-engagement.html` | La logique de jeu v1 : chaque coque est une batterie, un tour en une touche, expliqué sur une partie jouée coup par coup. |
+
+Les trois s'ouvrent directement dans un navigateur, sans build.
+
 ## Ce qu'il y a dedans
 
 **Un seul fichier HTML**, `index.html`, et three.js chargé depuis un CDN. Rien d'autre.

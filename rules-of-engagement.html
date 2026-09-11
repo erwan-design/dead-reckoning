@@ -1,0 +1,631 @@
+<title>Règles d'engagement</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  :root{
+    /* le fond et le verre de l'app, pour que ce document tienne dans son monde */
+    --ground:   #0a0d14;
+    --raise:    #11161f;
+    --stroke:   rgba(198,216,230,.13);
+    --stroke-2: rgba(198,216,230,.07);
+
+    /* des neutres tirés vers le sarcelle, jamais un gris plat */
+    --ink-1: #f1eef4;
+    --ink-2: #b4c0ca;
+    --ink-3: #7c8894;
+    --ink-4: #5a646e;
+
+    /* les deux camps, exactement comme le jeu les peint */
+    --mine:      #9df0dc;
+    --mine-dim:  rgba(157,240,220,.13);
+    --mine-line: rgba(157,240,220,.40);
+    --theirs:      #ffba80;
+    --theirs-dim:  rgba(255,150,70,.14);
+    --theirs-line: rgba(255,186,128,.42);
+
+    --display: 'Barlow Condensed', 'Helvetica Neue', Arial, sans-serif;
+    --body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  /* un seul monde visuel, assumé : l'écran de commandement qu'il documente */
+  html{background:var(--ground)}
+  body{margin:0;background:var(--ground);color:var(--ink-2);
+    font:400 15px/1.72 var(--body);-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  ::selection{background:var(--mine-dim);color:var(--ink-1)}
+  :focus-visible{outline:2px solid var(--mine);outline-offset:3px}
+
+  .wrap{max-width:1000px;margin:0 auto;padding:0 32px 120px}
+  .col{max-width:66ch}
+  /* la prose garde sa justification ; les données sortent sur toute la largeur,
+     pour que la table et le journal ne défilent jamais sur un écran normal */
+  .scroll, .plots, .log, .later{width:min(936px, calc(100vw - 64px))}
+  @media (max-width:640px){
+    .wrap{padding:0 20px 72px}
+    .scroll, .plots, .log, .later{width:min(936px, calc(100vw - 40px))}
+  }
+
+  /* ---- bandeau de tête ---- */
+  header{padding:72px 0 36px;border-bottom:1px solid var(--stroke);margin-bottom:52px}
+  .eyebrow{font:600 12px/1 var(--mono);letter-spacing:.34em;text-transform:uppercase;
+    color:var(--mine);margin-bottom:22px}
+  h1{margin:0;font:700 clamp(44px,7.6vw,80px)/.92 var(--display);letter-spacing:.005em;
+    text-transform:uppercase;color:var(--ink-1);text-wrap:balance}
+  .standfirst{margin:22px 0 0;max-width:58ch;font-size:17px;line-height:1.66;color:var(--ink-2)}
+  .meta{margin-top:26px;display:flex;flex-wrap:wrap;gap:8px 26px;
+    font:400 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-4)}
+  .meta b{font-weight:400;color:var(--ink-3)}
+
+  /* ---- rythme des sections : numérotées parce que c'est un exposé ordonné ---- */
+  section{margin-top:64px}
+  h2{margin:0 0 6px;display:flex;align-items:baseline;gap:16px;
+    font:600 clamp(25px,3.2vw,33px)/1.14 var(--display);letter-spacing:.01em;
+    text-transform:uppercase;color:var(--ink-1);text-wrap:balance}
+  h2 span{flex:0 0 auto;font:400 12px/1 var(--mono);letter-spacing:.16em;color:var(--mine);
+    transform:translateY(-2px)}
+  h2 + p{margin-top:14px}
+  h3{margin:38px 0 10px;font:600 18px/1.3 var(--display);letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ink-1)}
+  p{margin:0 0 18px}
+  p + p{margin-top:-2px}
+  strong{color:var(--ink-1);font-weight:600}
+  code{font:400 .88em/1 var(--mono);letter-spacing:.04em;color:var(--ink-1);
+    background:rgba(198,216,230,.07);padding:2px 5px;border-radius:4px}
+
+  /* la thèse, au poids qu'elle porte */
+  .thesis{margin:0;padding:26px 0 26px 26px;border-left:2px solid var(--mine);
+    font:400 clamp(19px,2.4vw,23px)/1.5 var(--body);color:var(--ink-1);max-width:52ch}
+  .thesis b{font-weight:600;color:var(--mine)}
+
+  /* ---- la table des batteries : des données, donc du chiffre et de la largeur ---- */
+  .scroll{overflow-x:auto;margin:26px 0 0;
+    border:1px solid var(--stroke);border-radius:4px;background:var(--raise)}
+  table{border-collapse:collapse;width:100%;min-width:640px}
+  th,td{text-align:left;padding:13px 16px;border-bottom:1px solid var(--stroke-2);
+    vertical-align:top}
+  thead th{font:400 10px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;
+    color:var(--ink-4);padding-top:15px;padding-bottom:12px;
+    border-bottom:1px solid var(--stroke)}
+  tbody tr:last-child td{border-bottom:0}
+  td.hull{font:600 15px/1.3 var(--display);letter-spacing:.05em;text-transform:uppercase;
+    color:var(--ink-1);white-space:nowrap}
+  td.hull i{display:block;font-style:normal;font:400 11px/1.5 var(--mono);letter-spacing:.1em;
+    text-transform:none;color:var(--ink-4);margin-top:3px}
+  td.num{font:400 14px/1.5 var(--mono);color:var(--ink-2);font-variant-numeric:tabular-nums;
+    white-space:nowrap}
+  td.d{font-size:14px;line-height:1.6;color:var(--ink-2);min-width:230px}
+  .ready{display:inline-block;font:400 10px/1 var(--mono);letter-spacing:.14em;
+    text-transform:uppercase;padding:5px 8px;border-radius:3px;white-space:nowrap;
+    color:var(--ink-3);background:rgba(198,216,230,.06);border:1px solid var(--stroke-2)}
+  .ready.hot{color:var(--mine);background:var(--mine-dim);border-color:var(--mine-line)}
+
+  /* ---- schémas de plot ---- */
+  .plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;
+    margin-top:30px}
+  .plot{border:1px solid var(--stroke);border-radius:4px;background:var(--raise);
+    padding:20px 20px 18px}
+  .plot h4{margin:0 0 4px;font:600 14px/1.3 var(--display);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ink-1)}
+  .plot p{margin:0 0 16px;font-size:13px;line-height:1.6;color:var(--ink-3)}
+  .plot svg{display:block;width:100%;height:auto}
+  .legend{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px 16px;
+    font:400 10px/1.6 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4)}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;
+    vertical-align:-1px}
+
+  /* ---- le journal de partie : une suite, donc numérotée et alternée ---- */
+  .log{margin-top:30px;border:1px solid var(--stroke);border-radius:4px;
+    background:var(--raise);overflow:hidden}
+  .turn{display:grid;grid-template-columns:56px 66px 1fr;gap:0 18px;align-items:start;
+    padding:14px 18px;border-bottom:1px solid var(--stroke-2);position:relative}
+  .turn:last-child{border-bottom:0}
+  .turn::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--mine)}
+  .turn.t::before{background:var(--theirs)}
+  .turn.pivot{background:rgba(255,150,70,.055)}
+  .n{font:400 11px/1.7 var(--mono);letter-spacing:.1em;color:var(--ink-4);
+    font-variant-numeric:tabular-nums}
+  .who{font:600 11px/1.7 var(--display);letter-spacing:.2em;text-transform:uppercase;
+    color:var(--mine)}
+  .turn.t .who{color:var(--theirs)}
+  .act{font-size:14.5px;line-height:1.62;color:var(--ink-2)}
+  .act b{color:var(--ink-1);font-weight:600}
+  .act .cell{font:400 13px/1 var(--mono);letter-spacing:.08em;color:var(--ink-1);
+    background:rgba(198,216,230,.08);padding:2px 6px;border-radius:3px;white-space:nowrap}
+  .act .hit{color:var(--mine);font-weight:600}
+  .act .miss{color:var(--ink-4)}
+  .act .down{color:var(--theirs);font-weight:600}
+  .act em{display:block;margin-top:5px;font-style:normal;font-size:13px;line-height:1.55;
+    color:var(--ink-4)}
+  @media (max-width:600px){
+    .turn{grid-template-columns:40px 1fr;gap:0 14px}
+    .who{grid-column:2;margin-bottom:2px}
+    .act{grid-column:2}
+  }
+
+  /* ---- la chronologie d'un échange : une horloge, donc des temps alignés ---- */
+  .beats{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:0;
+    width:min(936px, calc(100vw - 64px))}
+  .beats li{display:grid;grid-template-columns:76px 150px 1fr;gap:0 22px;
+    padding:13px 0;border-top:1px solid var(--stroke-2);align-items:baseline;position:relative}
+  .beats li:last-child{border-bottom:1px solid var(--stroke-2)}
+  .beats .at{font:400 12px/1.5 var(--mono);letter-spacing:.06em;color:var(--mine);
+    font-variant-numeric:tabular-nums}
+  .beats li.them .at{color:var(--theirs)}
+  .beats li.rest .at{color:var(--ink-4)}
+  .beats .what{font:600 13px/1.5 var(--display);letter-spacing:.09em;text-transform:uppercase;
+    color:var(--ink-1)}
+  .beats .why{font-size:14px;line-height:1.6;color:var(--ink-2)}
+  .beats .why em{font-style:normal;color:var(--ink-4)}
+  @media (max-width:640px){
+    .beats{width:auto}
+    .beats li{grid-template-columns:66px 1fr;gap:0 16px}
+    .beats .what{grid-column:2} .beats .why{grid-column:2;margin-top:4px}
+  }
+
+  /* ---- une liste simple, qui porte une conséquence ---- */
+  .conseq{list-style:none;margin:24px 0 0;padding:0;display:grid;gap:0}
+  .conseq li{display:grid;grid-template-columns:210px 1fr;gap:0 22px;padding:15px 0;
+    border-top:1px solid var(--stroke-2);align-items:baseline}
+  .conseq li:last-child{border-bottom:1px solid var(--stroke-2)}
+  .conseq b{font:600 14px/1.4 var(--display);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-1)}
+  .conseq span{font-size:14.5px;line-height:1.62}
+  .conseq .cost{color:var(--theirs)}
+  @media (max-width:600px){ .conseq li{grid-template-columns:1fr;gap:5px} }
+
+  /* ---- la ligne de coupe : ce que la v1 ne fait pas ---- */
+  .later{margin-top:26px;display:grid;gap:1px;background:var(--stroke-2);
+    border:1px solid var(--stroke);border-radius:4px;overflow:hidden}
+  .later div{background:var(--raise);padding:16px 18px}
+  .later h5{margin:0 0 5px;font:600 13px/1.3 var(--display);letter-spacing:.1em;
+    text-transform:uppercase;color:var(--ink-2)}
+  .later p{margin:0;font-size:13.5px;line-height:1.6;color:var(--ink-4)}
+
+  footer{margin-top:76px;padding-top:24px;border-top:1px solid var(--stroke);
+    font:400 11px/1.8 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-4)}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Dead Reckoning &middot; logique de jeu v1</div>
+  <h1>Règles<br>d'engagement</h1>
+  <p class="standfirst">Un tour prend une touche et environ quatre secondes. Chaque coque de la
+  flotte est une arme autant qu'une cible — c'est ce qui rend une perte douloureuse.</p>
+  <div class="meta">
+    <span>Plateau <b>10 &times; 10</b></span>
+    <span>Flotte <b>5 coques &middot; 14 cases</b></span>
+    <span>Échange <b>≈4 s</b></span>
+    <span>Partie <b>20 à 30 tours</b></span>
+  </div>
+</header>
+
+<div class="col">
+
+<section>
+  <h2><span>01</span>L'idée unique</h2>
+  <p class="thesis">Chaque coque tire un coup par tour. <b>Deux d'entre elles font mieux
+  lorsqu'elles sont prêtes.</b> Couler une coque, c'est lui retirer ce qu'elle savait faire.</p>
+  <p>Tout ce qui suit n'est que cette phrase, déroulée. C'est le plus petit corps de règles qui
+  réponde d'un seul coup aux trois questions posées : ce que chaque bateau apporte, ce que sa
+  perte coûte, et pourquoi les coups s'enchaînent vite.</p>
+  <p>La bataille navale classique rend la flotte passive : cinq formes qui se cachent sur une
+  grille en attendant d'être trouvées. Ici, ces mêmes cinq formes sont l'arsenal. L'adversaire
+  ne marque pas seulement des points — <strong>il désarme</strong>, une capacité après l'autre,
+  et cela se voit sur son propre plateau.</p>
+</section>
+
+<section>
+  <h2><span>02</span>Le tour</h2>
+  <p>Une touche sur le plot adverse. Pas de confirmation, pas de bandeau « à vous de jouer »,
+  pas de menu entre deux coups.</p>
+  <p>La touche <em>est</em> l'engagement : le tir part de la coque la plus proche capable de le
+  faire, l'impact se résout sur le plateau du haut, et six dixièmes de seconde plus tard la
+  riposte est déjà en l'air au-dessus du sien. On est de nouveau la main en moins de quatre
+  secondes.</p>
+  <p>C'est là toute la raison pour laquelle le jeu paraît rapide. Les jeux du store ne vont pas
+  vite parce que leurs animations sont courtes — ils vont vite parce que <strong>rien ne
+  s'intercale entre la décision et le résultat.</strong> Chaque étape de confirmation, chaque
+  carte de tour, chaque menu d'arme à ouvrir, c'est une seconde pleine de temps mort, et un
+  joueur la sent passer.</p>
+
+  <h3>Ce qui se passe après la touche</h3>
+  <p>Le détail au battement près, parce que c'est lui qui fait ou défait le rythme. Les temps
+  sont comptés depuis le doigt qui se lève.</p>
+  <ul class="beats">
+    <li><span class="at">0,00 s</span><span class="what">La case s'allume</span>
+      <span class="why">Sous le doigt, immédiatement, avant que quoi que ce soit d'autre ne
+      démarre. <em>C'est le seul accusé de réception : le joueur doit savoir que son geste est
+      passé sans attendre de voir le résultat.</em></span></li>
+    <li><span class="at">0,00 s</span><span class="what">Les pastilles s'éteignent</span>
+      <span class="why">Plus rien n'est touchable jusqu'à la fin de l'échange. <em>Pas de
+      confirmation à donner : c'est la touche qui engage.</em></span></li>
+    <li><span class="at">0,20 s</span><span class="what">Le tir part</span>
+      <span class="why">La coque la plus proche est choisie et le projectile quitte le plateau
+      du bas — arc de missile, avion qui quitte le pont, ou torpille qui entre dans
+      l'eau.</span></li>
+    <li><span class="at">1,40 s</span><span class="what">Il franchit la couture</span>
+      <span class="why">Il sort de la moitié basse par le haut et réapparaît en descente dans la
+      moitié haute, au-dessus de la case visée. <em>Voir le coup traverser est ce qui relie les
+      deux moitiés ; comment on l'obtient est expliqué plus bas.</em></span></li>
+    <li><span class="at">1,60 s</span><span class="what">L'impact</span>
+      <span class="why">L'onde éclot sur le plot adverse et la case tranche :
+      <strong>touché</strong> ou <strong>manqué</strong>. Pour la frappe aérienne, les trois
+      cases tranchent ensemble.</span></li>
+    <li><span class="at">1,90 s</span><span class="what">Le relevé suit</span>
+      <span class="why">Les colonnes latérales se mettent à jour : salves, coups au but,
+      précision. Si c'était la dernière case d'une coque, elle est annoncée coulée et le
+      registre de droite la passe en ambre.</span></li>
+    <li class="rest"><span class="at">2,20 s</span><span class="what">Un temps</span>
+      <span class="why">Rien. <em>Trois dixièmes de silence : c'est cette pause qui fait
+      atterrir le résultat. Sans elle, la riposte marche sur le coup précédent.</em></span></li>
+    <li class="them"><span class="at">2,40 s</span><span class="what">Leur tir entre</span>
+      <span class="why">Sur notre plateau, venant d'au-delà de l'horizon. <em>On ne voit jamais
+      le bateau qui tire — leur flotte est cachée, et il serait faux de la montrer au moment
+      où elle tire.</em></span></li>
+    <li class="them"><span class="at">3,40 s</span><span class="what">Leur impact</span>
+      <span class="why">Si c'est touché, la coque prend sa brûlure et la garde jusqu'à la fin de
+      la partie.</span></li>
+    <li><span class="at">3,80 s</span><span class="what">Les pastilles se rallument</span>
+      <span class="why">La main revient. Les rechargements ont avancé d'un tour.</span></li>
+  </ul>
+
+  <h3>Les deux cas qu'il faut avoir tranchés</h3>
+  <p><strong>Une case déjà jouée ne répond pas.</strong> Elle n'est pas touchable, donc on ne
+  peut pas gâcher un tour par maladresse. C'est la seule protection dont un jeu à une touche a
+  besoin — mieux qu'une boîte de confirmation, qui coûterait une seconde à chaque tour pour
+  éviter une erreur toutes les vingt parties.</p>
+  <p><strong>On ne peut pas annuler.</strong> La touche engage. En échange, elle n'a jamais à
+  être confirmée — et c'est ce marché-là qui achète les quatre secondes.</p>
+</section>
+
+<section>
+  <h2><span>03</span>Les cinq batteries</h2>
+  <p>Trois coques portent un canon ordinaire. Deux portent mieux. Cela fait deux règles à
+  apprendre, pas cinq — et les deux époques partagent les mêmes emplacements, donc la mécanique
+  ne change jamais.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Coque</th><th>Cases</th><th>Batterie</th><th>Effet</th><th>Disponible</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="hull">Porte-avions<i>vaisseau de ligne</i></td>
+          <td class="num">4</td>
+          <td class="num">Frappe aérienne</td>
+          <td class="d">Trois cases en ligne. On désigne celle du milieu ; une pastille bascule
+            la ligne entre l'horizontale et la verticale. Les cases hors plateau sont perdues :
+            c'est un mauvais coup près des bords.</td>
+          <td><span class="ready hot">tous les 4 tours</span></td>
+        </tr>
+        <tr>
+          <td class="hull">Sous-marin<i>ketch</i></td>
+          <td class="num">2</td>
+          <td class="num">Torpille</td>
+          <td class="d">On désigne une case du bord. Elle remonte la ligne vers l'intérieur et
+            prend la première coque rencontrée, aussi loin soit-elle. Une voie vide est un franc
+            raté — et signale que toute la voie est libre.</td>
+          <td><span class="ready hot">tous les 3 tours</span></td>
+        </tr>
+        <tr>
+          <td class="hull">Destroyer<i>galion</i></td>
+          <td class="num">3</td>
+          <td class="num">Canon</td>
+          <td class="d">Une case.</td>
+          <td><span class="ready">chaque tour</span></td>
+        </tr>
+        <tr>
+          <td class="hull">Croiseur<i>flûte</i></td>
+          <td class="num">3</td>
+          <td class="num">Canon</td>
+          <td class="d">Une case.</td>
+          <td><span class="ready">chaque tour</span></td>
+        </tr>
+        <tr>
+          <td class="hull">Escorteur<i>pinasse</i></td>
+          <td class="num">2</td>
+          <td class="num">Canon</td>
+          <td class="d">Une case.</td>
+          <td><span class="ready">chaque tour</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="plots">
+    <div class="plot">
+      <h4>Frappe aérienne</h4>
+      <p>Désignée en <code>F7</code>, posée à l'horizontale. Trois cases d'un coup, et les deux
+      qu'on ne visait pas sont celles qui trouvent le reste de la coque.</p>
+      <div id="p1"></div>
+      <div class="legend">
+        <span><i style="background:var(--mine)"></i>Empreinte</span>
+        <span><i style="background:var(--theirs)"></i>Touché</span>
+      </div>
+    </div>
+    <div class="plot">
+      <h4>Torpille</h4>
+      <p>Lancée du bord en <code>J7</code>. Elle remonte vers l'ouest et prend la première chose
+      dans la voie — ici <code>G7</code>, trois cases plus loin.</p>
+      <div id="p2"></div>
+      <div class="legend">
+        <span><i style="background:var(--mine)"></i>Course</span>
+        <span><i style="background:var(--theirs)"></i>Touché</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span>04</span>Quel bateau tire</h2>
+  <p><strong>Jamais au hasard.</strong> Un lanceur tiré au sort casserait la seule chose sur
+  laquelle un joueur doit pouvoir compter : que le tir demandé soit le tir obtenu.</p>
+  <p>Le canon part de <strong>la coque survivante la plus proche de la case visée</strong>,
+  mesurée sur son propre plateau. C'est déterministe, cela ne demande aucune interface, et cela
+  dit une chose qu'aucune règle ne saurait énoncer : à mesure que les coques coulent, les tirs
+  partent de plus loin. L'animation annonce que la flotte s'amincit avant n'importe quel
+  compteur.</p>
+  <p>Les deux spéciales partent toujours de leur propre bateau, parce qu'elles <em>sont</em> ce
+  bateau. La frappe quitte le pont du porte-avions. La torpille quitte le sous-marin.</p>
+</section>
+
+<section>
+  <h2><span>05</span>Rechargement, pas munitions</h2>
+  <p>Compter des obus, c'est de la comptabilité : cela demande au joueur de suivre un nombre, et
+  cela finit par une arme perdue pour une raison que personne n'a vue arriver. Un rechargement ne
+  demande rien. La pastille est allumée ou elle ne l'est pas.</p>
+  <p>Le décompte se fait en <em>ses propres</em> tours, et les deux spéciales sont prêtes au
+  premier — l'ouverture est donc déjà un vrai choix. Le rythme s'installe tout seul : la plupart
+  des tours on tire au canon, et tous les trois ou quatre tours on a quelque chose qui vaut la
+  peine d'être dépensé.</p>
+</section>
+
+<section>
+  <h2><span>06</span>Quand une des siennes coule</h2>
+  <p>C'est la question qui donne sa colonne vertébrale au système, et la réponse est la même pour
+  les cinq coques : <strong>on perd ce que cette coque savait faire.</strong> Définitivement —
+  pas de réparation, pas de remplacement.</p>
+  <ul class="conseq">
+    <li><b>Porte-avions</b><span class="cost">Plus de frappe aérienne, pour le reste de la
+      partie.</span></li>
+    <li><b>Sous-marin</b><span class="cost">Plus de torpille, pour le reste de la
+      partie.</span></li>
+    <li><b>Destroyer, croiseur, escorteur</b><span>Une position de tir en moins. On tire toujours
+      chaque tour — le coup part simplement de plus loin.</span></li>
+  </ul>
+  <p style="margin-top:24px">On ne peut jamais se retrouver sans rien faire. Toute coque encore
+  à flot tire son canon, donc la partie n'a ni tour mort ni bouton « passer ». S'il ne reste plus
+  rien pour tirer, c'est qu'il ne reste plus rien, et la partie est déjà jouée.</p>
+  <p>Cela donne aussi quelque chose à vouloir à l'adversaire. Une fois qu'il a trouvé une coque
+  de quatre cases, il ne court plus après des points — il essaie de retirer la frappe aérienne
+  avant qu'elle ne serve.</p>
+</section>
+
+<section>
+  <h2><span>07</span>Ce que fait l'adversaire</h2>
+  <p>Les mêmes cinq coques, les mêmes deux spéciales, les mêmes rechargements. Aucun tir de
+  faveur, aucun coup d'œil sur le plateau. Ce qui le rend crédible tient en un basculement :</p>
+  <h3>En recherche</h3>
+  <p>Sans touche non résolue, il tire <strong>une case sur deux</strong>, en damier. Comme la
+  plus petite coque fait deux cases, ce motif ne peut pas manquer un bateau tout en coûtant
+  moitié moins de coups. C'est la façon réellement correcte de fouiller une grille de bataille
+  navale, et cela se lit comme une méthode plutôt que comme de la chance.</p>
+  <h3>En chasse</h3>
+  <p>Dès qu'il tient une touche non résolue, il tire sur les cases qui la jouxtent. Deux touches
+  alignées et il suit la ligne jusqu'au bout. Il dépense la frappe aérienne pendant la chasse —
+  trois cases sur l'axe qu'il a trouvé — et la torpille pendant la recherche, dans une voie qu'il
+  n'a jamais entamée.</p>
+  <p>Cela fait une trentaine de lignes de logique, et cela battra la plupart des joueurs
+  distraits sans jamais rien faire qu'on puisse qualifier de déloyal.</p>
+</section>
+
+<section>
+  <h2><span>08</span>Où se branchent les animations</h2>
+  <p>Les trois projectiles existent déjà, et tous les trois atterrissent déjà au bon endroit.</p>
+  <ul class="conseq">
+    <li><b>Canon</b><span>L'arc du missile, lancé depuis la coque la plus proche.</span></li>
+    <li><b>Frappe aérienne</b><span>La catapulte : l'avion quitte le pont du porte-avions,
+      traverse, et lâche.</span></li>
+    <li><b>Torpille</b><span>La course immergée, juste sous la surface — la seule qui reste à
+      plat et traverse donc la couture horizontalement.</span></li>
+    <li><b>Une touche sur son plateau</b><span>La brûlure, qui persiste jusqu'à la fin de la
+      partie.</span></li>
+    <li><b>La dernière case d'une coque</b><span>Le naufrage.</span></li>
+  </ul>
+  <h3>Voir le coup traverser</h3>
+  <p>C'est le geste qui vend l'échange : le projectile quitte notre grille en bas, et on le voit
+  se poser sur la grille adverse en haut. Il faut savoir une chose avant de le coder.</p>
+  <p>Les deux moitiés ne sont pas deux plateaux. <strong>C'est le même plateau, au même endroit
+  du monde, rendu deux fois</strong> — une passe habillée en flotte au soleil, l'autre en plot
+  de nuit. La grille est tracée dans le shader de l'eau ; basculer d'une moitié à l'autre ne
+  change que des visibilités et des uniformes. Un projectile ne peut donc pas voler « de l'une
+  à l'autre » : il n'y a qu'une seule place.</p>
+  <p>Deux façons de l'obtenir quand même, et elles ne coûtent pas la même chose.</p>
+  <ul class="conseq">
+    <li><b>La fenêtre par passe</b><span>Un seul projectile, une seule trajectoire, mais chaque
+      caméra ne le dessine que pendant sa moitié du vol : la passe basse le laisse monter puis
+      l'efface, la passe haute le fait apparaître en descente au-dessus de la case visée. Il
+      franchit la couture entre les deux moitiés dans le bon sens et au bon moment — l'œil lit
+      une trajectoire continue. Coût : un uniforme d'opacité posé dans <code>board()</code>,
+      comme tout le reste. <em>C'est la v1.</em></span></li>
+    <li><b>Deux plateaux réels</b><span>Poser le plot adverse ailleurs dans le monde, à un
+      millier d'unités, et braquer la caméra haute dessus. Le projectile traverse alors pour de
+      bon et chaque caméra attrape naturellement sa moitié. Coût : la grille vit dans le shader
+      de l'eau et suppose une seule origine ; les occulteurs, les échos et les marques aussi.
+      C'est une journée de travail, pas une ligne.</span></li>
+  </ul>
+  <p style="margin-top:24px">La seconde route donne quelque chose que la première n'aura jamais :
+  deux <em>endroits</em> au lieu d'un endroit montré deux fois. Aujourd'hui les deux moitiés
+  partagent la même mer et les mêmes sillages, et c'est le contraste jour / nuit qui porte à lui
+  seul la charge de les distinguer. Elle vaut d'être faite — mais après que le jeu tourne.</p>
+</section>
+
+<section>
+  <h2><span>09</span>Une partie, coup par coup</h2>
+  <p>Six échanges, une quarantaine de secondes de jeu. Notre flotte est posée sur le plateau du
+  bas ; la leur reste inconnue sur celui du haut.</p>
+
+  <div class="log">
+    <div class="turn"><span class="n">1</span><span class="who">Nous</span><span class="act">
+      Canon en <span class="cell">F6</span>. Le destroyer est le plus proche, l'arc part donc de
+      lui. <span class="miss">Manqué.</span></span></div>
+    <div class="turn t"><span class="n">1</span><span class="who">Eux</span><span class="act">
+      Canon en <span class="cell">D4</span>. <span class="miss">Manqué.</span>
+      <em>En recherche — la case tombe sur leur damier.</em></span></div>
+
+    <div class="turn"><span class="n">2</span><span class="who">Nous</span><span class="act">
+      Canon en <span class="cell">F7</span>. <span class="hit">Touché.</span>
+      <em>Quelque chose est là. Ni laquelle, ni sa longueur — cela n'arrive qu'au moment où elle
+      coule.</em></span></div>
+    <div class="turn t"><span class="n">2</span><span class="who">Eux</span><span class="act">
+      Canon en <span class="cell">H2</span>. <span class="hit">Touché</span> — notre
+      porte-avions. <em>Il commence à brûler, et il continue.</em></span></div>
+
+    <div class="turn"><span class="n">3</span><span class="who">Nous</span><span class="act">
+      <b>Torpille.</b> On la lance du bord en <span class="cell">J7</span> ; elle remonte vers
+      l'ouest et prend <span class="cell">G7</span>. <span class="hit">Touché.</span>
+      <em>Deux cases sur la ligne 7. La coque est posée à l'horizontale — cela vaut plus que la
+      touche elle-même.</em></span></div>
+    <div class="turn t"><span class="n">3</span><span class="who">Eux</span><span class="act">
+      Canon en <span class="cell">G2</span>, à côté de leur touche. <span class="hit">Touché.</span>
+      <em>Ils ont cessé de chercher. Notre porte-avions est à deux sur quatre, et ils connaissent
+      son axe.</em></span></div>
+
+    <div class="turn"><span class="n">4</span><span class="who">Nous</span><span class="act">
+      Canon en <span class="cell">E7</span>. <span class="hit">Touché.</span> Trois à
+      l'horizontale.</span></div>
+    <div class="turn t pivot"><span class="n">4</span><span class="who">Eux</span><span class="act">
+      <b>Frappe aérienne</b> de <span class="cell">F2</span> à <span class="cell">H2</span>.
+      Deux de plus au but. <span class="down">Porte-avions coulé.</span>
+      <em>Nous venons de perdre la frappe aérienne pour le reste de la partie — et elle était
+      prête au tour suivant.</em></span></div>
+
+    <div class="turn"><span class="n">5</span><span class="who">Nous</span><span class="act">
+      Canon en <span class="cell">D7</span>. <span class="hit">Touché.</span>
+      <span class="down">Coque au fond</span> — quatre cases, <span class="cell">D7</span> à
+      <span class="cell">G7</span>. <em>Leur porte-avions. Leur frappe aérienne disparaît
+      aussi.</em></span></div>
+    <div class="turn t"><span class="n">5</span><span class="who">Eux</span><span class="act">
+      Canon en <span class="cell">C5</span>. <span class="miss">Manqué.</span>
+      <em>Plus rien d'irrésolu sur notre plateau : ils reprennent le damier.</em></span></div>
+
+    <div class="turn"><span class="n">6</span><span class="who">Nous</span><span class="act">
+      <b>Torpille</b>, de nouveau prête. On l'envoie dans la ligne 3 depuis le bord est. Elle
+      traverse toute la largeur sans rien rencontrer. <span class="miss">Manqué.</span>
+      <em>Dix cases écartées d'un seul coup. Un raté qui achète une ligne n'est pas un tour
+      perdu.</em></span></div>
+  </div>
+
+  <p style="margin-top:26px">Deux bâtiments de premier rang sont au fond en six échanges, et
+  chaque camp a perdu son arme la plus lourde. Aucun des deux joueurs n'a ouvert un menu.</p>
+</section>
+
+<section>
+  <h2><span>10</span>Écarté de la v1</h2>
+  <p>Chacune de ces idées est bonne et chacune coûte du rythme. Elles sont listées pour être
+  ajoutées délibérément, plutôt que par glissement.</p>
+  <div class="later">
+    <div>
+      <h5>L'écran de déploiement, enfin utile</h5>
+      <p>La météo et l'heure de quart existent déjà et ne changent rien. Le grain cloue les
+      avions au pont : pas de frappe du tout. Le banc de brume retient le résultat du tir pendant
+      un tour. La nuit réduit de moitié ce que le plot révèle. C'est la profondeur la moins chère
+      du projet, puisque l'interface est déjà construite.</p>
+    </div>
+    <div>
+      <h5>Les deux autres batteries</h5>
+      <p>Le missile du croiseur annonçant un relèvement sur une touche ; le sonar de l'escorteur
+      balayant un carré de deux sur deux et révélant sans endommager. Les deux sont bonnes. Les
+      deux font cinq règles au lieu de deux à la première partie d'un joueur.</p>
+    </div>
+    <div>
+      <h5>L'époque à voile comme jeu à part entière</h5>
+      <p>Bordée du galion, brûlot de la flûte, mortier du ketch. Les mêmes cinq emplacements, un
+      caractère différent dans chacun. À faire une fois la série moderne éprouvée — pas avant,
+      sinon on équilibre deux jeux à la fois.</p>
+    </div>
+    <div>
+      <h5>Déplacer les coques, les munitions, la réparation</h5>
+      <p>Les trois transforment une partie de deux minutes en partie de dix. Si c'est le jeu
+      qu'on veut à terme, c'est un autre jeu, et il mérite d'être conçu comme tel.</p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>Dead Reckoning &middot; règles d'engagement &middot; v1 &middot; cinq coques, une touche, quatre secondes</footer>
+</div>
+
+<script>
+/* Les deux schémas de plot. La grille 10 × 10 est générée plutôt qu'écrite à la
+   main, pour que la géométrie des cases, les repères du bord et les marques
+   sortent tous de la même échelle. */
+(function(){
+  var COLS = 'ABCDEFGHIJ';
+  function grid(host, opts){
+    var C = 24, PAD = 15, W = C*10 + PAD, H = C*10 + PAD;
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + opts.alt + '">';
+    for(var x = 0; x < 10; x++) for(var y = 0; y < 10; y++){
+      s += '<rect x="' + (PAD + x*C) + '" y="' + (y*C) + '" width="' + C + '" height="' + C +
+           '" fill="rgba(157,240,220,.035)" stroke="rgba(157,240,220,.16)" stroke-width="1"/>';
+    }
+    /* la coque posée sous le tir, connue seulement là où elle a été touchée */
+    (opts.hull || []).forEach(function(c){
+      s += '<rect x="' + (PAD + c[0]*C + 3) + '" y="' + (c[1]*C + 3) + '" width="' + (C-6) +
+           '" height="' + (C-6) + '" rx="3" fill="rgba(198,216,230,.07)" ' +
+           'stroke="rgba(198,216,230,.20)" stroke-width="1"/>';
+    });
+    /* l'empreinte du tir, ou la course de la torpille */
+    (opts.mark || []).forEach(function(c){
+      s += '<rect x="' + (PAD + c[0]*C + 2) + '" y="' + (c[1]*C + 2) + '" width="' + (C-4) +
+           '" height="' + (C-4) + '" rx="3" fill="rgba(157,240,220,.20)" ' +
+           'stroke="#9df0dc" stroke-width="1.4"/>';
+    });
+    /* les cases réellement prises */
+    (opts.hit || []).forEach(function(c){
+      s += '<rect x="' + (PAD + c[0]*C + 2) + '" y="' + (c[1]*C + 2) + '" width="' + (C-4) +
+           '" height="' + (C-4) + '" rx="3" fill="rgba(255,150,70,.34)" ' +
+           'stroke="#ffba80" stroke-width="1.6"/>';
+      var cx = PAD + c[0]*C + C/2, cy = c[1]*C + C/2;
+      s += '<path d="M' + (cx-4) + ' ' + (cy-4) + 'L' + (cx+4) + ' ' + (cy+4) +
+           'M' + (cx+4) + ' ' + (cy-4) + 'L' + (cx-4) + ' ' + (cy+4) +
+           '" stroke="#ffba80" stroke-width="1.6" stroke-linecap="round" fill="none"/>';
+    });
+    /* la trace de la torpille, du bord jusqu'à ce qui l'a arrêtée */
+    if(opts.run){
+      var r = opts.run, y0 = r.row*C + C/2;
+      s += '<path d="M' + (PAD + r.from*C + C) + ' ' + y0 + 'H' + (PAD + r.to*C + C/2) +
+           '" stroke="#9df0dc" stroke-width="1.6" stroke-dasharray="4 3" fill="none" ' +
+           'stroke-linecap="round"/>';
+      s += '<path d="M' + (PAD + r.to*C + C*0.86) + ' ' + (y0-4) + 'L' + (PAD + r.to*C + C/2) +
+           ' ' + y0 + 'L' + (PAD + r.to*C + C*0.86) + ' ' + (y0+4) +
+           '" stroke="#9df0dc" stroke-width="1.6" fill="none" stroke-linejoin="round"/>';
+    }
+    /* le bord : lettres en pied, chiffres à gauche */
+    for(var i = 0; i < 10; i++){
+      s += '<text x="' + (PAD + i*C + C/2) + '" y="' + (C*10 + 11) +
+           '" fill="#5a646e" font-size="8" font-family="ui-monospace,Menlo,monospace" ' +
+           'letter-spacing="1" text-anchor="middle">' + COLS[i] + '</text>';
+      s += '<text x="' + (PAD - 6) + '" y="' + (i*C + C/2 + 3) +
+           '" fill="#5a646e" font-size="8" font-family="ui-monospace,Menlo,monospace" ' +
+           'text-anchor="end">' + (i+1) + '</text>';
+    }
+    host.innerHTML = s + '</svg>';
+  }
+
+  /* la ligne 7 porte l'indice 6 ; la coque est posée de D7 à G7 */
+  var hull = [[3,6],[4,6],[5,6],[6,6]];
+  grid(document.getElementById('p1'), {
+    alt: 'Frappe aérienne posée de E7 à G7, deux cases touchées',
+    hull: hull, mark: [[4,6],[5,6],[6,6]], hit: [[4,6],[6,6]]
+  });
+  grid(document.getElementById('p2'), {
+    alt: 'Course de torpille vers l’ouest dans la ligne 7 depuis le bord, touchant G7',
+    hull: hull, run: { row:6, from:9, to:6 }, hit: [[6,6]]
+  });
+})();
+</script>
