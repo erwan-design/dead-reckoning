@@ -35,7 +35,14 @@
   .scr{position:absolute;inset:0;z-index:8;pointer-events:none;
       opacity:0;transition:opacity 760ms ease}
   .scr.on{opacity:1;pointer-events:auto}
-  .scr *{pointer-events:auto}
+  /* pointer-events is inherited: a screen that is off already denies its own
+     children. Handing them `auto` back made every hidden screen's controls
+     catch clicks over the visible one — the title's loading block and the
+     split deployment's action were both sitting on the after-action answers.
+     Visibility keeps the faded-out screen out of hit-testing and out of the
+     accessibility tree as well; it flips only once the fade has finished. */
+  .scr{visibility:hidden;transition:opacity 760ms ease, visibility 0s linear 760ms}
+  .scr.on{visibility:visible;transition:opacity 760ms ease, visibility 0s}
 
   /* attract: the key art, and the least type that will carry it */
   #scr-attract{display:flex;align-items:flex-start;padding:60px 56px 0}
@@ -207,7 +214,27 @@
       font:400 13px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       letter-spacing:.30em;text-transform:uppercase;color:rgba(244,238,242,.88)}
   .dsplit .ghd{margin:20px 0 8px}
-  .dsplit .go{margin-top:auto;width:100%;justify-content:center}
+  .dsplit > .go{margin-top:auto;width:100%;justify-content:center}
+  /* the after-action panel says more in the same half: every vertical
+     measure comes down, and the figures lose a little of their padding */
+  .osplit{text-align:center;padding:20px 26px 62px}
+  /* an auto margin at each end rather than one at the foot: the slack is
+     split above the block and above the answers instead of pooling into a
+     single hole under the figures */
+  .osplit .kick{margin-top:auto}
+  .osplit .vd{margin-top:16px}
+  .osplit .vd b{font-size:36px}
+  .osplit .vd i{max-width:126px}
+  .osplit .aout{margin-top:18px;font-size:18px;line-height:1.5}
+  .osplit .asub{margin-top:12px}
+  .osplit .astats{margin-top:24px}
+  .osplit .astats > div{padding:13px 8px 13px}
+  .osplit .astats svg{margin-bottom:10px}
+  .osplit .astats .n{font-size:18px}
+  .osplit .astats .l{margin-top:7px}
+  .osplit .arow{margin-top:auto;padding-top:24px}
+  .plab.hostile{color:rgba(255,186,128,.92)}
+  .plab.hostile::before{box-shadow:0 0 10px rgba(255,150,70,.7)}
 
   /* ---- after action: the one screen that asks a question ---- */
   #scr-over{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -231,10 +258,10 @@
       font:400 40px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       letter-spacing:.30em;text-indent:.30em;text-transform:uppercase;
       color:rgba(190,251,238,.98);text-shadow:0 0 22px rgba(157,240,220,.26)}
-  #scr-over.lose .vd b{color:rgba(255,199,155,.98);text-shadow:0 0 22px rgba(255,168,104,.26)}
-  #scr-over.lose .vd i{background:linear-gradient(90deg, rgba(255,186,128,0), rgba(255,186,128,.60))}
-  #scr-over.lose .vd i + b + i{background:linear-gradient(270deg, rgba(255,186,128,0), rgba(255,186,128,.60))}
-  #scr-over.lose .kick{color:rgba(255,196,150,.86)}
+  .lose .vd b{color:rgba(255,199,155,.98);text-shadow:0 0 22px rgba(255,168,104,.26)}
+  .lose .vd i{background:linear-gradient(90deg, rgba(255,186,128,0), rgba(255,186,128,.60))}
+  .lose .vd i + b + i{background:linear-gradient(270deg, rgba(255,186,128,0), rgba(255,186,128,.60))}
+  .lose .kick{color:rgba(255,196,150,.86)}
   .aout{margin-top:22px;font:400 21px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       letter-spacing:.20em;text-transform:uppercase;color:rgba(246,241,244,.92);
       text-shadow:0 0 40px rgba(8,10,20,.9)}
@@ -248,7 +275,7 @@
   .vflash{position:absolute;left:0;right:0;top:-26px;height:170px;pointer-events:none;
       background:radial-gradient(60% 100% at 50% 50%, rgba(157,240,220,.30), rgba(157,240,220,0) 72%);
       opacity:0}
-  #scr-over.lose .vflash{background:radial-gradient(60% 100% at 50% 50%,
+  .lose .vflash{background:radial-gradient(60% 100% at 50% 50%,
       rgba(255,186,128,.28), rgba(255,186,128,0) 72%)}
   .anim .kick   {animation:vrise  520ms cubic-bezier(.2,.9,.25,1)  60ms both}
   .anim .vd b   {animation:vsettle 880ms cubic-bezier(.16,.9,.24,1) 180ms both}
@@ -564,6 +591,31 @@
     <button class="chip danger" data-a="reset" data-l="Reset"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M11.7 1.8v3H8.8"/></svg></button>
   </div>
 </div>
+<div class="scr" id="scr-over2">
+  <div class="dtop">
+    <div class="plab hostile">Enemy plot<em>Record of the engagement</em></div>
+    <div class="pstat">Salvos <b data-o="s1">24</b><br>Hits <b data-o="s2">11</b><br><span data-o="s3">46% accuracy</span></div>
+  </div>
+  <div class="dsplit osplit">
+    <div class="vflash"></div>
+    <div class="kick">Action complete</div>
+    <div class="vd"><i></i><b data-o="word">You win</b><i></i></div>
+    <div class="aout" data-o="line">Enemy fleet struck from the plot</div>
+    <div class="asub" data-o="sub">Plot 7&#8209;North &middot; 18 min 42 s &middot; last hit J&#8239;9</div>
+    <div class="astats">
+      <div><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4.6 5.1h4.1l2.7 1.9-2.7 1.9H4.6z"/><path d="M2.6 5.5 3.8 7 2.6 8.5"/></svg><span class="n" data-s="salvos">24</span><span class="l">Salvos</span></div>
+      <div><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="4.3"/><path d="M7 1.4v2.3M7 10.3v2.3M1.4 7h2.3M10.3 7h2.3"/><circle cx="7" cy="7" r=".9"/></svg><span class="n" data-s="hits">11</span><span class="l">Hits</span></div>
+      <div><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 10.4a5.7 5.7 0 1 1 10.4 0"/><path d="M7 9.9 9.8 5.7"/></svg><span class="n" data-s="acc">46%</span><span class="l">Accuracy</span></div>
+      <div><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.7v5.6"/><path d="M4.5 5 7 7.5 9.5 5"/><path d="M1.9 10.8c1.3-1 2.2-1 3.4 0s2.1 1 3.4 0 2.1-1 3.4 0"/></svg><span class="n" data-s="sunk">05</span><span class="l">Hulls sunk</span></div>
+      <div><svg class="warmi" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 8.7h9.2l-1.6 2.2H4z"/><path d="M5.3 3.1l3.4 3.4M8.7 3.1 5.3 6.5"/></svg><span class="n warm" data-s="lost">02</span><span class="l">Lost</span></div>
+      <div><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 7h10"/><path d="M2 4.9v4.2M12 4.9v4.2"/></svg><span class="n" data-s="range">07</span><span class="l">Longest shot, cells</span></div>
+    </div>
+    <div class="arow">
+      <button class="go prim" data-scr="play">Fight it again <i>&#8594;</i></button>
+      <button class="go ghost" data-scr="setup">Change the orders</button>
+    </div>
+  </div>
+</div>
 <div class="brand in-a" id="brand"><b>Dead<br> Reckoning</b><span>A naval command exercise &middot; Plot 7&#8209;North</span></div>
 <div class="scr" id="scr-attract">
   <div class="load" id="load">
@@ -647,9 +699,9 @@
   <div class="aa">
     <div class="vflash"></div>
     <div class="kick">Action complete</div>
-    <div class="vd"><i></i><b id="vword">You win</b><i></i></div>
-    <div class="aout" id="aline">Enemy fleet struck from the plot</div>
-    <div class="asub" id="asub">Plot 7&#8209;North &middot; 18 min 42 s &middot; last hit J&#8239;9</div>
+    <div class="vd"><i></i><b data-o="word">You win</b><i></i></div>
+    <div class="aout" data-o="line">Enemy fleet struck from the plot</div>
+    <div class="asub" data-o="sub">Plot 7&#8209;North &middot; 18 min 42 s &middot; last hit J&#8239;9</div>
     <div class="astats">
       <div><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4.6 5.1h4.1l2.7 1.9-2.7 1.9H4.6z"/><path d="M2.6 5.5 3.8 7 2.6 8.5"/></svg><span class="n" data-s="salvos">24</span><span class="l">Salvos</span></div>
       <div><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="4.3"/><path d="M7 1.4v2.3M7 10.3v2.3M1.4 7h2.3M10.3 7h2.3"/><circle cx="7" cy="7" r=".9"/></svg><span class="n" data-s="hits">11</span><span class="l">Hits</span></div>
@@ -672,6 +724,7 @@
       <button data-scr="play"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.3 2.5h9.4v3.6H2.3z"/><path d="M2.3 7.9h9.4v3.6H2.3z"/></svg>Battle</button>
       <button data-scr="setup2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 2.5h9.2v3.3H2.4z"/><path d="M2.4 8.2h9.2v3.3H2.4z"/><path d="M4.4 9.9h5.2"/></svg>Deployment split</button>
       <button data-scr="over"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 2.4h8.8v6.2H2.6z"/><path d="M5.1 11.6h3.8"/><path d="M7 8.6v3"/><path d="M4.9 5.4 6.4 6.9l2.7-2.7"/></svg>After action</button>
+      <button data-scr="over2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 2.5h9.2v3.3H2.4z"/><path d="M2.4 8.2h9.2v3.3H2.4z"/><path d="M4.8 9.9l1.3 1.3 2.6-2.6"/></svg>After action split</button>
     </div>
   </div>
   <button class="dtog" id="ntog">Screens</button>
@@ -3153,7 +3206,7 @@ function shot(i){
 const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
 const SINK_DUR = 11.0;
 const SALVO_DUR = 9.0;
-const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, won:true, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, env:1, envK:0 };
+const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, env:1, envK:0 };
 
 function setStrike(on){
   if(on && ANIM.fireGoal < 0.5){ FX.splash.material.uniforms.uT0.value = tt; boom(FIRE, 0.30);
@@ -3778,7 +3831,7 @@ function onCtl(e){
   }
   if(b.dataset.won !== undefined){
     ANIM.won = +b.dataset.won === 1;
-    overUI(); if(SCREEN === 'over') overPlay();
+    overUI(); if(SCREEN === 'over' || SCREEN === 'over2') overPlay(SCREEN);
     refreshUI(); hideHint(); return;
   }
   if(b.dataset.e !== undefined){
@@ -3832,7 +3885,8 @@ function onCtl(e){
 const SCR = { attract: document.getElementById('scr-attract'),
               setup:   document.getElementById('scr-setup'),
               setup2:  document.getElementById('scr-setup2'),
-              over:    document.getElementById('scr-over') };
+              over:    document.getElementById('scr-over'),
+              over2:   document.getElementById('scr-over2') };
 /* DEPLOYMENT. Everything on this card but the theatre is written down and not
    yet obeyed: the orders exist, the engagement does not read them. The theatre
    is the exception because the sea behind the card is the real one. */
@@ -3892,19 +3946,28 @@ const OVER = {
           sub:'Plot 7&#8209;North &middot; 26 min 08 s &middot; last loss C&#8239;4',
           s:{ salvos:'31', hits:'07', acc:'23%', sunk:'02', lost:'05', range:'06' } }
 };
-const overEl = document.getElementById('scr-over');
+const OVER_PANELS = ['scr-over', 'scr-over2'];
 function overUI(){
   const O = ANIM.won ? OVER.win : OVER.lose;
-  overEl.classList.toggle('lose', !ANIM.won);
-  document.getElementById('vword').textContent = O.word;
-  document.getElementById('aline').innerHTML   = O.line;
-  document.getElementById('asub').innerHTML    = O.sub;
-  for(const n of overEl.querySelectorAll('[data-s]')) n.textContent = O.s[n.dataset.s];
+  for(const id of OVER_PANELS){
+    const root = document.getElementById(id); if(!root) continue;
+    root.classList.toggle('lose', !ANIM.won);
+    const o = k => root.querySelector('[data-o="' + k + '"]');
+    if(o('word')) o('word').textContent = O.word;
+    if(o('line')) o('line').innerHTML   = O.line;
+    if(o('sub'))  o('sub').innerHTML    = O.sub;
+    /* the plan view carries the same three figures at its shoulder */
+    if(o('s1')) o('s1').textContent = O.s.salvos;
+    if(o('s2')) o('s2').textContent = O.s.hits;
+    if(o('s3')) o('s3').textContent = O.s.acc + ' accuracy';
+    for(const n of root.querySelectorAll('[data-s]')) n.textContent = O.s[n.dataset.s];
+  }
 }
 /* a CSS animation does not replay on its own: the class has to leave and
    come back, with a reflow in between, or nothing restarts */
-function overPlay(){
-  overEl.classList.remove('anim'); void overEl.offsetWidth; overEl.classList.add('anim');
+function overPlay(name){
+  const el = document.getElementById(name === 'over2' ? 'scr-over2' : 'scr-over');
+  el.classList.remove('anim'); void el.offsetWidth; el.classList.add('anim');
 }
 let _goT = 0;
 /* the button is a button and nothing more: it says so, rather than pretending */
@@ -3921,22 +3984,28 @@ function setupCtl(b){
   return false;
 }
 let SCREEN = 'attract';
-const SCREENS = ['attract', 'setup', 'setup2', 'play', 'over'];
+const SCREENS = ['attract', 'setup', 'setup2', 'play', 'over', 'over2'];
 function setScreen(name, quiet){
   if(SCREENS.indexOf(name) < 0) name = 'attract';
   SCREEN = name;
   /* each screen has its own address, so any of them can be opened on its own */
   if(!quiet && location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
   for(const k in SCR) SCR[k].classList.toggle('on', k === name);
-  document.body.classList.remove('s-attract', 's-setup', 's-setup2', 's-play', 's-over');
+  document.body.classList.remove('s-attract', 's-setup', 's-setup2', 's-play',
+                                's-over', 's-over2');
   document.body.classList.add('s-' + name);
   const play = name === 'play';
   /* the split deployment shows one board, not two: the lower half is a panel,
      so the second pass would render straight under something opaque */
-  const half = name === 'setup2';
+  const half = name === 'setup2' || name === 'over2';
+  /* the deployment half shows her own formation; the after-action half shows
+     the plot that was worked — the record, not the fleet */
+  ANIM.halfEnemy = name === 'over2';
   /* the beam and its returns are instruments of the engagement: the title
      and deployment screens show the sea, not the plot being worked */
-  ANIM.radar = play; ANIM.con = play;
+  const after = name === 'over' || name === 'over2';
+  /* the beam is an instrument of the engagement; its returns outlive it */
+  ANIM.radar = play; ANIM.con = play || after;
   /* nothing has been fired at a formation still being laid out */
   const laying = name === 'setup' || name === 'setup2';
   ANIM.fireGoal = laying ? 0 : 1;
@@ -3960,9 +4029,13 @@ function setScreen(name, quiet){
     GOAL.az = AD.gridRot + Math.PI; GOAL.el = 1.545; GOAL.dist = 645;
     GOAL.tgt.set(0, -21, 27); ANIM.glide = 3.4; ANIM.shot = -1;
   } else if(name === 'over'){
-    overUI(); overPlay();
+    overUI(); overPlay(name);
     GOAL.az = AD.camAz - 0.30; GOAL.el = AD.camEl + 0.10; GOAL.dist = 600;
     GOAL.tgt.set(0, -30, 0); ANIM.glide = 3.4; ANIM.shot = -1; clampGoal();
+  } else if(name === 'over2'){
+    overUI(); overPlay(name);
+    GOAL.az = AD.gridRot + Math.PI; GOAL.el = 1.545; GOAL.dist = 645;
+    GOAL.tgt.set(0, -21, 27); ANIM.glide = 3.4; ANIM.shot = -1;
   } else shot(0);
   refreshUI();
 }
@@ -4324,16 +4397,18 @@ function frame(now){
     const passes = ANIM.half ? 1 : 2;
     for(let pass2 = 0; pass2 < passes; pass2++){
       /* her own formation above, the plot below where the hand is */
-      const enemy = pass2 === 1;
+      const enemy = ANIM.half ? ANIM.halfEnemy : (pass2 === 1);
       board(enemy);
-      if(enemy) boardCam(shotList()[3]);
+      /* in half mode the live rig is already the plan view the screen asked
+         for, so the fixed board camera must not take it back */
+      if(enemy && !ANIM.half) boardCam(shotList()[3]);
       else {
         camera.position.copy(_liveP); camera.quaternion.copy(_liveQ);
         skyMesh.position.copy(_liveP);
         water.position.set(lwx, 0, lwz); farSea.position.set(lwx, 0, lwz);
         SH.uWC.value.set(lwx, lwz); SH.uCam.value.copy(_liveP);
       }
-      const y = enemy ? 0 : H - Hh;
+      const y = (enemy && !ANIM.half) ? 0 : H - Hh;
       renderer.setViewport(0, y, W, Hh);
       renderer.setScissor(0, y, W, Hh);
       renderer.render(scene, camera);
