@@ -194,11 +194,11 @@
 
   /* ---- after action: the one screen that asks a question ---- */
   #scr-over{display:flex;flex-direction:column;align-items:center;justify-content:center;
-      padding:0 44px;text-align:center}
+      padding:0 26px;text-align:center}
   #scr-over::before{content:'';position:absolute;inset:0;pointer-events:none;
       background:radial-gradient(120% 78% at 50% 42%, rgba(5,8,14,.62) 0%,
                  rgba(5,8,14,.86) 55%, rgba(4,6,12,.95) 100%)}
-  .aa{position:relative;width:100%;max-width:520px}
+  .aa{position:relative;width:100%}
   .kick{font:400 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.34em;
       text-transform:uppercase;color:rgba(168,240,224,.86);
       text-shadow:0 1px 2px rgba(4,7,13,.95)}
@@ -217,13 +217,17 @@
       border-left:1px solid rgba(206,224,236,.08)}
   .astats div:nth-child(-n+3){border-top:0}
   .astats div:nth-child(3n+1){border-left:0}
+  .astats svg{display:block;width:17px;height:17px;margin:0 auto 12px;
+      stroke:currentColor;fill:none;stroke-width:1.2;stroke-linecap:round;
+      stroke-linejoin:round;color:rgba(224,233,240,.44)}
+  .astats svg.warmi{color:rgba(255,186,128,.70)}
   .astats .n{display:block;font:400 19px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
       letter-spacing:.10em;font-variant-numeric:tabular-nums;color:rgba(240,232,238,.92)}
   .astats .n.warm{color:rgba(255,186,128,.92)}
   .astats .l{display:block;margin-top:8px;font:400 7.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
       letter-spacing:.24em;text-transform:uppercase;color:rgba(224,233,240,.50)}
-  .arow{margin-top:30px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-  .arow .go{margin-top:0}
+  .arow{margin-top:30px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .arow .go{margin-top:0;width:100%;justify-content:center}
   .go.ghost{background:rgba(10,15,25,.46);border-color:rgba(206,224,236,.20);
       color:rgba(233,240,246,.72)}
   body:not(.ipad) .go.ghost:hover{background:rgba(18,26,38,.66);border-color:rgba(206,224,236,.34)}
@@ -569,12 +573,12 @@
     <div class="aout">Enemy fleet<br>struck from<br>the plot</div>
     <div class="asub">Plot 7&#8209;North &middot; 18 min 42 s &middot; last hit J&#8239;9</div>
     <div class="astats">
-      <div><span class="n">24</span><span class="l">Salvos</span></div>
-      <div><span class="n">11</span><span class="l">Hits</span></div>
-      <div><span class="n">46%</span><span class="l">Accuracy</span></div>
-      <div><span class="n">05</span><span class="l">Hulls sunk</span></div>
-      <div><span class="n warm" data-g="lost">02</span><span class="l">Lost</span></div>
-      <div><span class="n">07</span><span class="l">Longest shot, cells</span></div>
+      <div><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4.6 5.1h4.1l2.7 1.9-2.7 1.9H4.6z"/><path d="M2.6 5.5 3.8 7 2.6 8.5"/></svg><span class="n">24</span><span class="l">Salvos</span></div>
+      <div><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="4.3"/><path d="M7 1.4v2.3M7 10.3v2.3M1.4 7h2.3M10.3 7h2.3"/><circle cx="7" cy="7" r=".9"/></svg><span class="n">11</span><span class="l">Hits</span></div>
+      <div><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 10.4a5.7 5.7 0 1 1 10.4 0"/><path d="M7 9.9 9.8 5.7"/></svg><span class="n">46%</span><span class="l">Accuracy</span></div>
+      <div><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.7v5.6"/><path d="M4.5 5 7 7.5 9.5 5"/><path d="M1.9 10.8c1.3-1 2.2-1 3.4 0s2.1 1 3.4 0 2.1-1 3.4 0"/></svg><span class="n">05</span><span class="l">Hulls sunk</span></div>
+      <div><svg class="warmi" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 8.7h9.2l-1.6 2.2H4z"/><path d="M5.3 3.1l3.4 3.4M8.7 3.1 5.3 6.5"/></svg><span class="n warm" data-g="lost">02</span><span class="l">Lost</span></div>
+      <div><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 7h10"/><path d="M2 4.9v4.2M12 4.9v4.2"/></svg><span class="n">07</span><span class="l">Longest shot, cells</span></div>
     </div>
     <div class="arow">
       <button class="go prim" data-scr="play">Fight it again <i>&#8594;</i></button>
