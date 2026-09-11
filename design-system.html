@@ -190,6 +190,12 @@
       text-transform:uppercase;color:rgba(206,249,238,.86)}
   .ordd b{font-weight:400;color:rgba(233,240,246,.38);letter-spacing:.24em}
   .ordd em{font-style:normal;color:rgba(233,240,246,.26);padding:0 6px}
+  .go.ghost{background:rgba(10,15,25,.46);border-color:rgba(206,224,236,.20);
+      color:rgba(233,240,246,.72)}
+  .go.prim{background:rgba(157,240,220,.94);border-color:rgba(196,250,238,.70);
+      color:rgba(5,20,22,.92);
+      box-shadow:0 14px 40px rgba(3,7,16,.42), inset 0 1px 0 rgba(255,255,255,.34),
+                 0 0 30px rgba(157,240,220,.22)}
 </style>
 
 <div class="wrap">
@@ -333,7 +339,8 @@
     </div>
     <div class="cap"><button class="chipb"><svg class="ic" viewBox="0 0 14 14"><path d="M2.6 5.3h2.2L7.6 3v8L4.8 8.7H2.6z"/><path d="M9.9 5.3a3.1 3.1 0 0 1 0 3.4"/></svg></button></div>
     <button class="pill">Screens</button>
-    <button class="go">Take station <span style="opacity:.7">&rarr;</span></button>
+    <button class="go prim">Begin engagement <span style="opacity:.62">&rarr;</span></button>
+    <button class="go ghost">Change the orders</button>
     <button class="opt on"><svg viewBox="0 0 14 14"><path d="M3.9 8.3a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.7 10.2 4 12.2M7.3 10.2l-.7 2M9.9 10.2l-.7 2"/></svg>Squall</button>
     <button class="opt"><svg viewBox="0 0 14 14"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</button>
     <div class="fldd swd on"><span>Fog of war</span><i></i></div>
@@ -348,7 +355,8 @@
     <tr><td style="width:26%">Chip</td><td><code>40 × 40 · radius 999</code></td><td class="t">Inside a 46px capsule with 3px of padding. Icon 16px.</td></tr>
     <tr><td>Capsule</td><td><code>46 wide · radius 999</code></td><td class="t">Groups 1–5 chips. 4px between chips, 14px between capsules.</td></tr>
     <tr><td>Pill</td><td><code>height 30 · pad 14</code></td><td class="t">The only control that carries its label permanently.</td></tr>
-    <tr><td>Primary</td><td><code>height 44 · pad 24</code></td><td class="t">Teal stroke, one per screen at most.</td></tr>
+    <tr><td>Primary</td><td><code>height 44 · pad 24</code></td><td class="t">Filled with the teal, not outlined in it. The fill reads at .75 relative luminance, so the ink inverts to a deep teal-black — 14.3:1. One per screen at most.</td></tr>
+    <tr><td>Primary, ghost</td><td><code>height 44 · pad 24</code></td><td class="t">The same capsule with a neutral stroke. It stands beside a primary when a screen asks two questions at once, never alone.</td></tr>
     <tr><td>Option</td><td><code>52 tall · radius 14</code></td><td class="t">Icon over label, in a grid of equal columns.</td></tr>
     <tr><td>Option, text</td><td><code>38 tall · radius 14</code></td><td class="t">The same control without a picture; a row of words needs less room.</td></tr>
     <tr><td>Switch</td><td><code>52 tall · track 34 × 19</code></td><td class="t">A setting that is a yes or a no. Label left, track right, whole row pressable.</td></tr>
