@@ -1,7 +1,7 @@
 <title>Règles d'engagement</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
 <style>
   :root{
     /* le fond et le verre de l'app, pour que ce document tienne dans son monde */
@@ -143,6 +143,72 @@
     .act{grid-column:2}
   }
 
+  /* ---- L'ENCART DE LA BOÎTE ----
+     Tout le reste du document est un écran ; ceci est une feuille. Palette
+     d'impression deux couleurs sur papier, une serif de labeur, et un pli au
+     milieu — c'est le détail qui dit « encart plié », et rien d'autre dans ce
+     projet n'a de pli. */
+  .insert{position:relative;margin:44px 0 0;padding:46px 0 40px;
+    width:min(936px, calc(100vw - 64px));
+    background:#e7e3da;color:#191d23;border-radius:2px;overflow:hidden;
+    box-shadow:0 30px 70px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.14) inset;
+    font:400 15px/1.66 'Spectral', Georgia, 'Times New Roman', serif}
+  /* le pli central, imprimé sur le papier et non dessiné par-dessus le texte */
+  .insert::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:26px;
+    margin-left:-13px;pointer-events:none;
+    background:linear-gradient(90deg, rgba(25,29,35,0) 0%, rgba(25,29,35,.055) 42%,
+      rgba(25,29,35,.085) 50%, rgba(255,255,255,.5) 54%, rgba(25,29,35,0) 100%)}
+  .ins{position:relative;padding:0 46px;max-width:none}
+  @media (max-width:640px){
+    .insert{width:auto;padding:34px 0 30px}
+    .insert::before{display:none}
+    .ins{padding:0 24px}
+  }
+  .ins-head{text-align:center;padding-bottom:22px;margin-bottom:26px;
+    border-bottom:1.5px solid #191d23}
+  .ins-head h3{margin:0;font:700 clamp(30px,4.4vw,44px)/1 var(--display);letter-spacing:.09em;
+    text-transform:uppercase;color:#191d23}
+  .ins-head .sub{margin-top:10px;font:400 11px/1.5 var(--display);letter-spacing:.28em;
+    text-transform:uppercase;color:#6c6459}
+  .ins-head .sub b{font-weight:600;color:#a8481a}
+  /* deux colonnes, comme une feuille de règles pliée en deux */
+  .ins-body{column-count:2;column-gap:44px;column-rule:1px solid rgba(25,29,35,.16)}
+  @media (max-width:720px){ .ins-body{column-count:1} }
+  .rule{break-inside:avoid;margin:0 0 20px}
+  .rule h4{margin:0 0 6px;font:600 12px/1.4 var(--display);letter-spacing:.18em;
+    text-transform:uppercase;color:#191d23;
+    display:flex;align-items:baseline;gap:9px}
+  .rule h4 i{font-style:normal;font-family:var(--mono);font-size:11px;letter-spacing:.05em;
+    color:#a8481a}
+  .rule p{margin:0 0 8px;font-size:14.5px;line-height:1.62;color:#2d333c}
+  .rule p:last-child{margin-bottom:0}
+  .rule ol{margin:0;padding-left:19px}
+  .rule ul{margin:0;padding-left:17px;list-style:none}
+  .rule li{margin-bottom:5px;font-size:14.5px;line-height:1.58;color:#2d333c}
+  .rule ul li{position:relative}
+  .rule ul li::before{content:'—';position:absolute;left:-17px;color:#a8481a}
+  .rule b{font-weight:600;color:#191d23}
+  .rule em{font-style:italic;color:#5d6470}
+  /* les trois armes, en blocs empilés : une table ne peut pas se comprimer
+     dans une colonne de 394, et elle poussait la page à déborder */
+  .arms{margin:4px 0 0}
+  .arm{padding:9px 0;border-bottom:1px solid rgba(25,29,35,.14)}
+  .arm:last-child{border-bottom:0;padding-bottom:0}
+  .arm b{display:block;font-weight:600;color:#191d23;font-size:14.5px;line-height:1.4}
+  .arm span{display:block;margin-top:2px;font-size:14px;line-height:1.5;color:#2d333c}
+  .arm i{display:block;margin-top:4px;font-style:normal;font-family:var(--mono);
+    font-size:11px;letter-spacing:.06em;color:#a8481a}
+  /* l'encadré de rappel, seconde couleur d'impression */
+  .recall{break-inside:avoid;margin-top:4px;padding:15px 17px;
+    border:1.5px solid #a8481a;border-radius:2px;background:rgba(168,72,26,.055)}
+  .recall h4{margin:0 0 7px;font:600 11px/1.4 var(--display);letter-spacing:.2em;
+    text-transform:uppercase;color:#a8481a}
+  .recall p{margin:0 0 7px;font-size:14px;line-height:1.55;color:#2d333c}
+  .recall p:last-child{margin-bottom:0}
+  .ins-foot{margin-top:26px;padding-top:14px;border-top:1px solid rgba(25,29,35,.22);
+    text-align:center;font:400 9.5px/1.5 var(--display);letter-spacing:.24em;
+    text-transform:uppercase;color:#8c8579}
+
   /* ---- la chronologie d'un échange : une horloge, donc des temps alignés ---- */
   .beats{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:0;
     width:min(936px, calc(100vw - 64px))}
@@ -192,7 +258,8 @@
   <div class="eyebrow">Dead Reckoning &middot; logique de jeu v1</div>
   <h1>Règles<br>d'engagement</h1>
   <p class="standfirst">Un tour prend une touche et environ quatre secondes. Chaque coque de la
-  flotte est une arme autant qu'une cible — c'est ce qui rend une perte douloureuse.</p>
+  flotte est une arme autant qu'une cible, et tire à son tour — c'est ce qui rend une perte
+  douloureuse.</p>
   <div class="meta">
     <span>Plateau <b>10 &times; 10</b></span>
     <span>Flotte <b>5 coques &middot; 14 cases</b></span>
@@ -201,7 +268,113 @@
   </div>
 </header>
 
+<div class="insert">
+  <div class="ins">
+    <div class="ins-head">
+      <h3>Règle du jeu</h3>
+      <div class="sub">Bataille navale de commandement &middot; un joueur contre la machine
+        &middot; une partie&nbsp;: <b>2 à 3 minutes</b></div>
+    </div>
+
+    <div class="ins-body">
+
+      <div class="rule">
+        <h4><i>1</i>Matériel</h4>
+        <p>Deux plateaux de dix cases sur dix, repérés <b>A à J</b> et <b>1 à 10</b>. Le plateau
+        du haut est celui de l'adversaire, ses navires sont cachés&nbsp;; le plateau du bas est
+        le vôtre, votre flotte y est visible.</p>
+        <p>Cinq navires par camp&nbsp;: porte-avions <b>4 cases</b>, destroyer <b>3</b>,
+        croiseur <b>3</b>, escorteur <b>2</b>, sous-marin <b>2</b>.</p>
+      </div>
+
+      <div class="rule">
+        <h4><i>2</i>Mise en place</h4>
+        <p>Placez vos cinq navires sur votre plateau, à l'horizontale ou à la verticale. Ils ne
+        peuvent pas se chevaucher&nbsp;; ils peuvent se toucher.</p>
+        <p>Choisissez le théâtre, la météo et l'heure de quart. <em>Ils changent la lumière, pas
+        la règle.</em></p>
+      </div>
+
+      <div class="rule">
+        <h4><i>3</i>But du jeu</h4>
+        <p>Couler les cinq navires adverses avant qu'il n'ait coulé les vôtres.</p>
+      </div>
+
+      <div class="rule">
+        <h4><i>4</i>Un tour</h4>
+        <ol>
+          <li>Touchez une case du plateau adverse. <b>Le tir part aussitôt</b> : il n'y a rien à
+          confirmer.</li>
+          <li>La case s'annonce <b>touché</b> ou <b>manqué</b>.</li>
+          <li>L'adversaire riposte dans la foulée, sur votre plateau.</li>
+          <li>À vous.</li>
+        </ol>
+        <p style="margin-top:8px">Une case déjà jouée ne répond pas&nbsp;: vous ne pouvez pas
+        gâcher un tour par maladresse.</p>
+      </div>
+
+      <div class="rule">
+        <h4><i>5</i>Qui tire</h4>
+        <p>Vos navires tirent <b>chacun son tour</b>, dans l'ordre, en boucle. Un navire coulé
+        sort de la rotation, qui raccourcit d'autant.</p>
+      </div>
+
+      <div class="rule">
+        <h4><i>6</i>Les trois armes</h4>
+        <div class="arms">
+          <div class="arm"><b>Canon</b><span>Une case. Tous les navires en ont un.</span>
+            <i>chaque tour</i></div>
+          <div class="arm"><b>Frappe aérienne</b><span>Trois cases en ligne, horizontale ou
+            verticale. Porte-avions.</span><i>tous les 4 tours</i></div>
+          <div class="arm"><b>Torpille</b><span>Part d'une case du bord, remonte la voie et prend
+            le premier navire rencontré. Sous-marin.</span><i>tous les 3 tours</i></div>
+        </div>
+        <p style="margin-top:10px">Une arme spéciale est prête&nbsp;? Touchez sa pastille, puis
+        la case. Sinon, touchez simplement la case&nbsp;: c'est le canon.</p>
+        <p>Tirer une arme spéciale <b>ne fait pas avancer</b> la rotation des canons.</p>
+      </div>
+
+      <div class="rule">
+        <h4><i>7</i>Toucher, couler</h4>
+        <p>Un navire est coulé lorsque <b>toutes</b> ses cases ont été touchées. Il est annoncé à
+        ce moment-là, et pas avant&nbsp;: un « touché » ne dit jamais de quel navire il s'agit.</p>
+      </div>
+
+      <div class="rule">
+        <h4><i>8</i>Quand un navire coule</h4>
+        <p>Vous perdez ce qu'il savait faire, pour le reste de la partie.</p>
+        <ul>
+          <li><b>Porte-avions</b> : plus de frappe aérienne.</li>
+          <li><b>Sous-marin</b> : plus de torpille.</li>
+          <li><b>Les trois autres</b> : une position de tir en moins.</li>
+        </ul>
+        <p style="margin-top:8px">Aucune réparation, aucun renfort. Rien ne revient.</p>
+      </div>
+
+      <div class="rule">
+        <h4><i>9</i>Fin de la partie</h4>
+        <p>Le premier camp qui a perdu ses cinq navires a perdu.</p>
+      </div>
+
+      <div class="recall">
+        <h4>À retenir</h4>
+        <p>Un tour, une touche. Jamais de confirmation à donner, jamais de menu à ouvrir.</p>
+        <p>Le rechargement d'une arme spéciale <b>ne change jamais</b>, même s'il ne vous reste
+        qu'un seul navire&nbsp;: entre deux frappes, le porte-avions tire au canon comme les
+        autres.</p>
+      </div>
+
+    </div>
+
+    <div class="ins-foot">Dead Reckoning &middot; règle du jeu &middot; édition v1</div>
+  </div>
+</div>
+
 <div class="col">
+<p style="margin-top:44px;color:var(--ink-3);font-size:14.5px">L'encart ci-dessus est la règle
+telle qu'on la lirait dans la boîte&nbsp;: ce qu'il faut savoir pour jouer, et rien de plus. Ce
+qui suit est l'autre moitié — <strong>pourquoi</strong> la règle est celle-là, ce qui a été
+écarté en chemin, et où chaque morceau se branche dans ce qui tourne déjà.</p>
 
 <section>
   <h2><span>01</span>L'idée unique</h2>
@@ -220,8 +393,8 @@
   <h2><span>02</span>Le tour</h2>
   <p>Une touche sur le plot adverse. Pas de confirmation, pas de bandeau « à vous de jouer »,
   pas de menu entre deux coups.</p>
-  <p>La touche <em>est</em> l'engagement : le tir part de la coque la plus proche capable de le
-  faire, l'impact se résout sur le plateau du haut, et six dixièmes de seconde plus tard la
+  <p>La touche <em>est</em> l'engagement : le tir part de la coque dont c'est le tour, l'impact
+  se résout sur le plateau du haut, et six dixièmes de seconde plus tard la
   riposte est déjà en l'air au-dessus du sien. On est de nouveau la main en moins de quatre
   secondes.</p>
   <p>C'est là toute la raison pour laquelle le jeu paraît rapide. Les jeux du store ne vont pas
@@ -242,8 +415,8 @@
       <span class="why">Plus rien n'est touchable jusqu'à la fin de l'échange. <em>Pas de
       confirmation à donner : c'est la touche qui engage.</em></span></li>
     <li><span class="at">0,20 s</span><span class="what">Le tir part</span>
-      <span class="why">La coque la plus proche est choisie et le projectile quitte le plateau
-      du bas — arc de missile, avion qui quitte le pont, ou torpille qui entre dans
+      <span class="why">La coque dont c'est le tour ouvre le feu et le projectile quitte le
+      plateau du bas — arc de missile, avion qui quitte le pont, ou torpille qui entre dans
       l'eau.</span></li>
     <li><span class="at">1,40 s</span><span class="what">Il franchit la couture</span>
       <span class="why">Il sort de la moitié basse par le haut et réapparaît en descente dans la
@@ -361,15 +534,32 @@
 
 <section>
   <h2><span>04</span>Quel bateau tire</h2>
-  <p><strong>Jamais au hasard.</strong> Un lanceur tiré au sort casserait la seule chose sur
-  laquelle un joueur doit pouvoir compter : que le tir demandé soit le tir obtenu.</p>
-  <p>Le canon part de <strong>la coque survivante la plus proche de la case visée</strong>,
-  mesurée sur son propre plateau. C'est déterministe, cela ne demande aucune interface, et cela
-  dit une chose qu'aucune règle ne saurait énoncer : à mesure que les coques coulent, les tirs
-  partent de plus loin. L'animation annonce que la flotte s'amincit avant n'importe quel
-  compteur.</p>
-  <p>Les deux spéciales partent toujours de leur propre bateau, parce qu'elles <em>sont</em> ce
-  bateau. La frappe quitte le pont du porte-avions. La torpille quitte le sous-marin.</p>
+  <p><strong>Chacun son tour.</strong> Les coques encore à flot tirent en rotation : le
+  destroyer, puis le croiseur, puis l'escorteur, puis le porte-avions, puis le sous-marin, puis
+  le destroyer à nouveau. Un coup de canon avance la rotation d'un cran.</p>
+  <p>C'est la règle qui tient la promesse de départ : <em>chaque bateau lance ses propres
+  tirs</em>, littéralement, et on finit par les voir tous. Elle est déterministe, elle ne
+  demande aucune interface, et elle rend la flotte qui s'amincit directement lisible —
+  <strong>la rotation raccourcit</strong>, et une silhouette familière cesse d'apparaître. On
+  n'a pas besoin d'un compteur pour savoir qu'on a perdu quelque chose.</p>
+
+  <h3>Pourquoi pas « la plus proche »</h3>
+  <p>La première version de cette règle faisait tirer la coque la plus proche de la case visée.
+  Elle avait l'air juste — la batterie la plus proche engage — et elle était mauvaise pour deux
+  raisons.</p>
+  <p>D'abord elle biaise : on tire beaucoup plus souvent vers le haut de la grille que vers le
+  bas, et ce sont donc presque toujours les mêmes bateaux qui parlent. Ensuite et surtout, c'est
+  un raisonnement <em>invisible</em> : le joueur ne peut pas prévoir qui va tirer, et le calcul
+  qui le décide ne lui apprend rien. Une règle que personne ne peut suivre des yeux n'est pas
+  une règle, c'est un détail d'implémentation.</p>
+  <p>La rotation se suit des yeux sans effort et distribue les animations sur toute la flotte.
+  C'est le même coût en code et cela donne quelque chose à regarder.</p>
+
+  <h3>Les spéciales sortent du rang</h3>
+  <p>La frappe et la torpille partent toujours de leur propre bateau, parce qu'elles
+  <em>sont</em> ce bateau. Elles ne consomment pas de tour de rotation : tirer une spéciale
+  laisse la rotation du canon exactement où elle était. Au coup suivant, c'est encore le tour de
+  la coque qui l'attendait.</p>
 </section>
 
 <section>
@@ -381,6 +571,16 @@
   premier — l'ouverture est donc déjà un vrai choix. Le rythme s'installe tout seul : la plupart
   des tours on tire au canon, et tous les trois ou quatre tours on a quelque chose qui vaut la
   peine d'être dépensé.</p>
+
+  <h3>Le rechargement ne bouge jamais</h3>
+  <p>Il ne raccourcit pas parce qu'il reste moins de bateaux, et il ne s'allonge pas parce qu'il
+  y en a plus. C'est le point à ne pas rater dans une fin de partie serrée : <strong>s'il ne
+  reste que le porte-avions, il ne tire pas une frappe à chaque tour.</strong> Il tire sa frappe
+  au quatrième, et le canon aux trois autres, exactement comme quand il avait quatre compagnons.
+  Pareil pour le sous-marin, un tour sur trois.</p>
+  <p>L'alternative — accélérer les spéciales à mesure que la flotte fond — donnerait une flotte
+  décimée plus dangereuse qu'une flotte intacte. C'est joli sur le papier et c'est faux à jouer :
+  personne ne veut d'un adversaire qui frappe plus fort à chaque coque qu'on lui prend.</p>
 </section>
 
 <section>
@@ -402,6 +602,14 @@
   <p>Cela donne aussi quelque chose à vouloir à l'adversaire. Une fois qu'il a trouvé une coque
   de quatre cases, il ne court plus après des points — il essaie de retirer la frappe aérienne
   avant qu'elle ne serve.</p>
+  <h3>La dernière coque</h3>
+  <p>À une coque près de la fin, la rotation ne fait plus qu'un cran : ce bateau tire chaque
+  tour. Si c'est le porte-avions ou le sous-marin, il garde sa spéciale au rythme qu'elle a
+  toujours eu — une frappe tous les quatre tours, une torpille tous les trois — et le canon
+  entre-temps.</p>
+  <p>C'est volontairement sans consolation. Une partie réduite à une coque est déjà jouée, et un
+  mécanisme de rattrapage à ce stade ne ferait qu'allonger une fin dont l'issue est connue. Le
+  jeu doit finir vite ; c'est la même raison qui gouverne tout le reste du document.</p>
 </section>
 
 <section>
@@ -426,7 +634,7 @@
   <h2><span>08</span>Où se branchent les animations</h2>
   <p>Les trois projectiles existent déjà, et tous les trois atterrissent déjà au bon endroit.</p>
   <ul class="conseq">
-    <li><b>Canon</b><span>L'arc du missile, lancé depuis la coque la plus proche.</span></li>
+    <li><b>Canon</b><span>L'arc du missile, lancé depuis la coque dont c'est le tour.</span></li>
     <li><b>Frappe aérienne</b><span>La catapulte : l'avion quitte le pont du porte-avions,
       traverse, et lâche.</span></li>
     <li><b>Torpille</b><span>La course immergée, juste sous la surface — la seule qui reste à
@@ -470,14 +678,14 @@
 
   <div class="log">
     <div class="turn"><span class="n">1</span><span class="who">Nous</span><span class="act">
-      Canon en <span class="cell">F6</span>. Le destroyer est le plus proche, l'arc part donc de
+      Canon en <span class="cell">F6</span>. La rotation ouvre sur le destroyer : l'arc part de
       lui. <span class="miss">Manqué.</span></span></div>
     <div class="turn t"><span class="n">1</span><span class="who">Eux</span><span class="act">
       Canon en <span class="cell">D4</span>. <span class="miss">Manqué.</span>
       <em>En recherche — la case tombe sur leur damier.</em></span></div>
 
     <div class="turn"><span class="n">2</span><span class="who">Nous</span><span class="act">
-      Canon en <span class="cell">F7</span>. <span class="hit">Touché.</span>
+      Canon en <span class="cell">F7</span>, du croiseur. <span class="hit">Touché.</span>
       <em>Quelque chose est là. Ni laquelle, ni sa longueur — cela n'arrive qu'au moment où elle
       coule.</em></span></div>
     <div class="turn t"><span class="n">2</span><span class="who">Eux</span><span class="act">
@@ -487,16 +695,16 @@
     <div class="turn"><span class="n">3</span><span class="who">Nous</span><span class="act">
       <b>Torpille.</b> On la lance du bord en <span class="cell">J7</span> ; elle remonte vers
       l'ouest et prend <span class="cell">G7</span>. <span class="hit">Touché.</span>
-      <em>Deux cases sur la ligne 7. La coque est posée à l'horizontale — cela vaut plus que la
-      touche elle-même.</em></span></div>
+      <em>Deux cases sur la ligne 7 : la coque est posée à l'horizontale, ce qui vaut plus que la
+      touche. La rotation n'a pas bougé — l'escorteur attend toujours son tour.</em></span></div>
     <div class="turn t"><span class="n">3</span><span class="who">Eux</span><span class="act">
       Canon en <span class="cell">G2</span>, à côté de leur touche. <span class="hit">Touché.</span>
       <em>Ils ont cessé de chercher. Notre porte-avions est à deux sur quatre, et ils connaissent
       son axe.</em></span></div>
 
     <div class="turn"><span class="n">4</span><span class="who">Nous</span><span class="act">
-      Canon en <span class="cell">E7</span>. <span class="hit">Touché.</span> Trois à
-      l'horizontale.</span></div>
+      Canon en <span class="cell">E7</span>, de l'escorteur, dont c'était le tour.
+      <span class="hit">Touché.</span> Trois à l'horizontale.</span></div>
     <div class="turn t pivot"><span class="n">4</span><span class="who">Eux</span><span class="act">
       <b>Frappe aérienne</b> de <span class="cell">F2</span> à <span class="cell">H2</span>.
       Deux de plus au but. <span class="down">Porte-avions coulé.</span>
