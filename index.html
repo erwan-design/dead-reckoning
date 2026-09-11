@@ -203,6 +203,30 @@
   .tips svg{width:15px;height:15px;display:block;stroke:currentColor;fill:none;
       stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;color:rgba(157,240,220,.82)}
 
+  /* WHOSE BOARD. Two segments rather than one toggle: a lone button has to
+     choose between naming what you are looking at and what you would get,
+     and either reading is a guess. Each side keeps its own colour. */
+  .bsw{position:absolute;right:26px;top:calc(50% - 76px);z-index:6;display:flex;
+      border-radius:999px;overflow:hidden;
+      background:rgba(10,15,25,.54);
+      -webkit-backdrop-filter:blur(18px) saturate(130%);backdrop-filter:blur(18px) saturate(130%);
+      border:1px solid rgba(206,224,236,.15);
+      box-shadow:0 14px 36px rgba(3,7,16,.48), inset 0 1px 0 rgba(255,255,255,.07)}
+  .bsw button{appearance:none;cursor:pointer;border:0;background:none;
+      position:relative;display:flex;align-items:center;gap:8px;height:38px;padding:0 15px;
+      font:400 8.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.22em;text-transform:uppercase;color:rgba(224,233,240,.50);
+      transition:color 200ms ease,background 200ms ease}
+  .bsw button + button::before{content:'';position:absolute;left:0;top:10px;bottom:10px;
+      width:1px;background:rgba(206,224,236,.14)}
+  .bsw svg{width:14px;height:14px;display:block;stroke:currentColor;fill:none;
+      stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+  .bsw button[data-plot="0"].on{color:rgba(180,246,230,.98);background:rgba(157,240,220,.13)}
+  .bsw button[data-plot="1"].on{color:rgba(255,196,150,.98);background:rgba(255,150,70,.14)}
+  body:not(.ipad) .bsw button:hover{color:rgba(243,249,252,.92);background:rgba(255,255,255,.07)}
+  body.ipad .bsw button:active{background:rgba(255,255,255,.12);color:rgba(243,249,252,.96)}
+  body.ipad .bsw button{-webkit-tap-highlight-color:transparent}
+
   /* the lower half is the panel — no floating card inside a half that small */
   .dsplit{position:absolute;left:0;right:0;top:50%;bottom:0;box-sizing:border-box;
       padding:22px 26px 66px;display:flex;flex-direction:column;
@@ -593,8 +617,12 @@
 </div>
 <div class="scr" id="scr-over2">
   <div class="dtop">
-    <div class="plab hostile">Enemy plot<em>Record of the engagement</em></div>
+    <div class="plab hostile" id="plab2">Enemy plot<em>Record of the engagement</em></div>
     <div class="pstat">Salvos <b data-o="s1">24</b><br>Hits <b data-o="s2">11</b><br><span data-o="s3">46% accuracy</span></div>
+  </div>
+  <div class="bsw">
+    <button data-plot="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 8.7h9.2l-1.6 2.2H4z"/><path d="M7 8.3V3.2"/><path d="M5.3 4.9 7 3.2l1.7 1.7"/></svg>Mine</button>
+    <button data-plot="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.3 2.3h9.4v9.4H2.3z"/><path d="M2.3 5.4h9.4M2.3 8.6h9.4M5.4 2.3v9.4M8.6 2.3v9.4"/></svg>Theirs</button>
   </div>
   <div class="dsplit osplit">
     <div class="vflash"></div>
@@ -3829,6 +3857,10 @@ function onCtl(e){
     closePops(); sl.classList.toggle('open', !was);
     hideHint(); return;
   }
+  if(b.dataset.plot !== undefined){
+    ANIM.halfEnemy = +b.dataset.plot === 1;
+    halfUI(); hideHint(); return;
+  }
   if(b.dataset.won !== undefined){
     ANIM.won = +b.dataset.won === 1;
     overUI(); if(SCREEN === 'over' || SCREEN === 'over2') overPlay(SCREEN);
@@ -3963,6 +3995,19 @@ function overUI(){
     for(const n of root.querySelectorAll('[data-s]')) n.textContent = O.s[n.dataset.s];
   }
 }
+/* WHOSE BOARD the plan view is showing. The label takes the colour of the
+   side it belongs to, and says a different thing about each: the enemy plot
+   is a record of where the shots fell, her own is what came back. */
+function halfUI(){
+  const en = ANIM.halfEnemy, lab = document.getElementById('plab2');
+  if(lab){
+    lab.classList.toggle('hostile', en);
+    lab.innerHTML = (en ? 'Enemy plot' : 'Own plot') + '<em>'
+      + (en ? 'Record of the engagement' : 'What answered at the end') + '</em>';
+  }
+  for(const b of document.querySelectorAll('#scr-over2 [data-plot]'))
+    b.classList.toggle('on', (+b.dataset.plot === 1) === en);
+}
 /* a CSS animation does not replay on its own: the class has to leave and
    come back, with a reflow in between, or nothing restarts */
 function overPlay(name){
@@ -4033,7 +4078,7 @@ function setScreen(name, quiet){
     GOAL.az = AD.camAz - 0.30; GOAL.el = AD.camEl + 0.10; GOAL.dist = 600;
     GOAL.tgt.set(0, -30, 0); ANIM.glide = 3.4; ANIM.shot = -1; clampGoal();
   } else if(name === 'over2'){
-    overUI(); overPlay(name);
+    overUI(); halfUI(); overPlay(name);
     GOAL.az = AD.gridRot + Math.PI; GOAL.el = 1.545; GOAL.dist = 645;
     GOAL.tgt.set(0, -21, 27); ANIM.glide = 3.4; ANIM.shot = -1;
   } else shot(0);

@@ -233,6 +233,18 @@
   .statd .n.warm{color:rgba(255,186,128,.92)}
   .statd .l{display:block;margin-top:8px;font:400 7.5px/1.4 var(--mono);letter-spacing:.24em;
       text-transform:uppercase;color:rgba(224,233,240,.50)}
+  .bswd{display:inline-flex;border-radius:999px;overflow:hidden;
+      background:rgba(10,15,25,.54);border:1px solid rgba(206,224,236,.15);
+      box-shadow:0 14px 36px rgba(3,7,16,.48), inset 0 1px 0 rgba(255,255,255,.07)}
+  .bswd span{position:relative;display:flex;align-items:center;gap:8px;height:38px;padding:0 15px;
+      font:400 8.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;
+      color:rgba(224,233,240,.50)}
+  .bswd span + span::before{content:'';position:absolute;left:0;top:10px;bottom:10px;width:1px;
+      background:rgba(206,224,236,.14)}
+  .bswd svg{width:14px;height:14px;display:block;stroke:currentColor;fill:none;stroke-width:1.2;
+      stroke-linecap:round;stroke-linejoin:round}
+  .bswd span.mine{color:rgba(180,246,230,.98);background:rgba(157,240,220,.13)}
+  .bswd span.theirs{color:rgba(255,196,150,.98);background:rgba(255,150,70,.14)}
 </style>
 
 <div class="wrap">
@@ -396,6 +408,7 @@
     <tr><td>Primary, ghost</td><td><code>height 44 · pad 24</code></td><td class="t">The same capsule with a neutral stroke. It stands beside a primary when a screen asks two questions at once, never alone.</td></tr>
     <tr><td>Option</td><td><code>52 tall · radius 14</code></td><td class="t">Icon over label, in a grid of equal columns.</td></tr>
     <tr><td>Option, text</td><td><code>38 tall · radius 14</code></td><td class="t">The same control without a picture; a row of words needs less room.</td></tr>
+    <tr><td>Segmented switch</td><td><code>38 tall · radius 999</code></td><td class="t">Two or three segments in one capsule, hairline between. The active segment carries its own side's colour; it floats over the thing it switches, never in a panel beside it.</td></tr>
     <tr><td>Switch</td><td><code>52 tall · track 34 × 19</code></td><td class="t">A setting that is a yes or a no. Label left, track right, whole row pressable.</td></tr>
     <tr><td>Stepper</td><td><code>52 tall · keys 32 · radius 10</code></td><td class="t">A setting that is a number. Tabular figures; the key at a limit drops to 28% and stops taking presses.</td></tr>
   </table>
@@ -452,8 +465,20 @@
   <h2>Saying how a thing is worked</h2>
   <p>An instruction floats over the thing it is about, not in the panel beside it.
   It is a capsule like any other control, but it takes no pointer: nothing here is
-  pressable, and a hint that looks pressable is a lie.</p>
+  pressable, and a hint that looks pressable is a lie. A <b>segmented switch</b> floats
+  the same way and is pressable — two segments rather than one toggle, because a lone
+  button has to choose between naming what you are looking at and naming what you would
+  get, and either reading is a guess. Each segment keeps its own side's colour, so the
+  switch says whose board is up without being read.</p>
   <div class="demo">
+    <div class="bswd">
+      <span class="mine"><svg viewBox="0 0 14 14"><path d="M2.4 8.7h9.2l-1.6 2.2H4z"/><path d="M7 8.3V3.2"/><path d="M5.3 4.9 7 3.2l1.7 1.7"/></svg>Mine</span>
+      <span><svg viewBox="0 0 14 14"><path d="M2.3 2.3h9.4v9.4H2.3z"/><path d="M2.3 5.4h9.4M2.3 8.6h9.4M5.4 2.3v9.4M8.6 2.3v9.4"/></svg>Theirs</span>
+    </div>
+    <div class="bswd">
+      <span><svg viewBox="0 0 14 14"><path d="M2.4 8.7h9.2l-1.6 2.2H4z"/><path d="M7 8.3V3.2"/><path d="M5.3 4.9 7 3.2l1.7 1.7"/></svg>Mine</span>
+      <span class="theirs"><svg viewBox="0 0 14 14"><path d="M2.3 2.3h9.4v9.4H2.3z"/><path d="M2.3 5.4h9.4M2.3 8.6h9.4M5.4 2.3v9.4M8.6 2.3v9.4"/></svg>Theirs</span>
+    </div>
     <div class="tipd">
       <span><svg viewBox="0 0 14 14"><path d="M7 2.1v9.8M2.1 7h9.8"/><path d="M5.5 3.6 7 2.1l1.5 1.5M5.5 10.4 7 11.9l1.5-1.5M3.6 5.5 2.1 7l1.5 1.5M10.4 5.5 11.9 7l-1.5 1.5"/></svg>Drag a hull to place it</span>
       <span><svg viewBox="0 0 14 14"><path d="M11.4 7.4a4.4 4.4 0 1 1-1.5-3.5"/><path d="M11.8 1.9v3H8.9"/></svg>Twist to turn it</span>
