@@ -120,8 +120,11 @@
   .card h3{margin:0 0 4px;text-align:center;
       font:400 15px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       letter-spacing:.30em;text-transform:uppercase;color:rgba(244,238,242,.88)}
-  .card h6{margin:26px 0 9px;font:400 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
-      letter-spacing:.32em;text-transform:uppercase;color:rgba(224,233,240,.28)}
+  /* the group head is styled by what it IS, not by what contains it: written
+     as `.card h6` it left the split panel's headings at the browser default —
+     black, 10.7px, no tracking, invisible on a dark panel */
+  .card h6, .ghd h6{margin:26px 0 9px;font:400 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing:.32em;text-transform:uppercase;color:rgba(224,233,240,.42)}
   .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
   .opts button{appearance:none;cursor:pointer;box-sizing:border-box;
       height:52px;padding:0 8px;border-radius:14px;
@@ -245,8 +248,7 @@
   /* an auto margin at each end rather than one at the foot: the slack is
      split above the block and above the answers instead of pooling into a
      single hole under the figures */
-  .osplit .kick{margin-top:auto}
-  .osplit .vd{margin-top:16px}
+  .osplit .vd{margin-top:auto}
   .osplit .vd b{font-size:36px}
   .osplit .vd i{max-width:126px}
   .osplit .aout{margin-top:18px;font-size:18px;line-height:1.5}
@@ -618,7 +620,6 @@
 <div class="scr" id="scr-over2">
   <div class="dtop">
     <div class="plab hostile" id="plab2">Enemy plot<em>Record of the engagement</em></div>
-    <div class="pstat">Salvos <b data-o="s1">24</b><br>Hits <b data-o="s2">11</b><br><span data-o="s3">46% accuracy</span></div>
   </div>
   <div class="bsw">
     <button data-plot="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 8.7h9.2l-1.6 2.2H4z"/><path d="M7 8.3V3.2"/><path d="M5.3 4.9 7 3.2l1.7 1.7"/></svg>Mine</button>
@@ -626,7 +627,6 @@
   </div>
   <div class="dsplit osplit">
     <div class="vflash"></div>
-    <div class="kick">Action complete</div>
     <div class="vd"><i></i><b data-o="word">You win</b><i></i></div>
     <div class="aout" data-o="line">Enemy fleet struck from the plot</div>
     <div class="asub" data-o="sub">Plot 7&#8209;North &middot; 18 min 42 s &middot; last hit J&#8239;9</div>
@@ -3988,10 +3988,6 @@ function overUI(){
     if(o('word')) o('word').textContent = O.word;
     if(o('line')) o('line').innerHTML   = O.line;
     if(o('sub'))  o('sub').innerHTML    = O.sub;
-    /* the plan view carries the same three figures at its shoulder */
-    if(o('s1')) o('s1').textContent = O.s.salvos;
-    if(o('s2')) o('s2').textContent = O.s.hits;
-    if(o('s3')) o('s3').textContent = O.s.acc + ' accuracy';
     for(const n of root.querySelectorAll('[data-s]')) n.textContent = O.s[n.dataset.s];
   }
 }
