@@ -196,6 +196,43 @@
       color:rgba(5,20,22,.92);
       box-shadow:0 14px 40px rgba(3,7,16,.42), inset 0 1px 0 rgba(255,255,255,.34),
                  0 0 30px rgba(157,240,220,.22)}
+  /* the verdict, and the caption that floats over the scene */
+  .vdd{display:flex;align-items:center;justify-content:center;gap:20px;width:100%}
+  .vdd i{flex:1 1 auto;height:1px;max-width:150px;display:block;
+      background:linear-gradient(90deg, rgba(157,240,220,0), rgba(157,240,220,.60))}
+  .vdd i + b + i{background:linear-gradient(270deg, rgba(157,240,220,0), rgba(157,240,220,.60))}
+  .vdd b{flex:0 0 auto;white-space:nowrap;font-weight:400;
+      font:400 40px/1 var(--mono);letter-spacing:.30em;text-indent:.30em;
+      text-transform:uppercase;color:rgba(190,251,238,.98);
+      text-shadow:0 0 22px rgba(157,240,220,.26)}
+  .vdd.lose b{color:rgba(255,199,155,.98);text-shadow:0 0 22px rgba(255,168,104,.26)}
+  .vdd.lose i{background:linear-gradient(90deg, rgba(255,186,128,0), rgba(255,186,128,.60))}
+  .vdd.lose i + b + i{background:linear-gradient(270deg, rgba(255,186,128,0), rgba(255,186,128,.60))}
+  .tipd{display:inline-flex;align-items:center;border-radius:999px;
+      background:rgba(10,15,25,.54);border:1px solid rgba(206,224,236,.15);
+      box-shadow:0 14px 36px rgba(3,7,16,.48), inset 0 1px 0 rgba(255,255,255,.07);
+      font:400 8.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;
+      color:rgba(233,240,246,.70);white-space:nowrap}
+  .tipd span{position:relative;display:flex;align-items:center;gap:9px;height:38px;padding:0 17px}
+  .tipd span + span::before{content:'';position:absolute;left:0;top:10px;bottom:10px;width:1px;
+      background:rgba(206,224,236,.14)}
+  .tipd svg{width:15px;height:15px;display:block;stroke:currentColor;fill:none;stroke-width:1.2;
+      stroke-linecap:round;stroke-linejoin:round;color:rgba(157,240,220,.82)}
+  .statd{display:grid;grid-template-columns:repeat(3,1fr);border-radius:18px;overflow:hidden;
+      width:100%;text-align:center;background:rgba(9,13,22,.52);
+      border:1px solid rgba(206,224,236,.14);
+      box-shadow:0 24px 60px rgba(3,7,16,.50), inset 0 1px 0 rgba(255,255,255,.06)}
+  .statd > div{padding:15px 8px 14px;border-left:1px solid rgba(206,224,236,.08)}
+  .statd > div:first-child{border-left:0}
+  .statd svg{display:block;width:17px;height:17px;margin:0 auto 12px;stroke:currentColor;
+      fill:none;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;
+      color:rgba(224,233,240,.44)}
+  .statd svg.warmi{color:rgba(255,186,128,.70)}
+  .statd .n{display:block;font:400 19px/1 var(--mono);letter-spacing:.10em;
+      font-variant-numeric:tabular-nums;color:rgba(240,232,238,.92)}
+  .statd .n.warm{color:rgba(255,186,128,.92)}
+  .statd .l{display:block;margin-top:8px;font:400 7.5px/1.4 var(--mono);letter-spacing:.24em;
+      text-transform:uppercase;color:rgba(224,233,240,.50)}
 </style>
 
 <div class="wrap">
@@ -391,6 +428,38 @@
   board. Labels sit at 38% and the values at 86% — the eye should land on what was chosen,
   not on what the rows are called.</p>
 
+  <h2>Telling the outcome</h2>
+  <p>One word carries the whole after-action screen, and the two sides' colours
+  do the saying: teal when the plot was hers, amber when it was theirs. The rules
+  either side draw outward from the word and stop short of the edge — they frame
+  it rather than underline it. The figures change with the verdict as well as the
+  words: a defeat that reports a good day's shooting reads as a bug, not a defeat.</p>
+  <div class="demo" style="display:block">
+    <div class="vdd"><i></i><b>You win</b><i></i></div>
+    <div class="vdd lose" style="margin-top:30px"><i></i><b>You lose</b><i></i></div>
+  </div>
+  <div class="demo" style="display:block;margin-top:14px">
+    <div class="statd">
+      <div><svg viewBox="0 0 14 14"><path d="M4.6 5.1h4.1l2.7 1.9-2.7 1.9H4.6z"/><path d="M2.6 5.5 3.8 7 2.6 8.5"/></svg><span class="n">24</span><span class="l">Salvos</span></div>
+      <div><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.3"/><path d="M7 1.4v2.3M7 10.3v2.3M1.4 7h2.3M10.3 7h2.3"/><circle cx="7" cy="7" r=".9"/></svg><span class="n">11</span><span class="l">Hits</span></div>
+      <div><svg class="warmi" viewBox="0 0 14 14"><path d="M2.4 8.7h9.2l-1.6 2.2H4z"/><path d="M5.3 3.1l3.4 3.4M8.7 3.1 5.3 6.5"/></svg><span class="n warm">01</span><span class="l">Lost</span></div>
+    </div>
+  </div>
+  <p>A <b>stat cell</b> is icon, figure, label — in that order, centred, with the
+  icon at 44% and the label at 50%, so the figure is the only thing that carries
+  weight. A cell turns amber only when the figure is a loss of her own.</p>
+
+  <h2>Saying how a thing is worked</h2>
+  <p>An instruction floats over the thing it is about, not in the panel beside it.
+  It is a capsule like any other control, but it takes no pointer: nothing here is
+  pressable, and a hint that looks pressable is a lie.</p>
+  <div class="demo">
+    <div class="tipd">
+      <span><svg viewBox="0 0 14 14"><path d="M7 2.1v9.8M2.1 7h9.8"/><path d="M5.5 3.6 7 2.1l1.5 1.5M5.5 10.4 7 11.9l1.5-1.5M3.6 5.5 2.1 7l1.5 1.5M10.4 5.5 11.9 7l-1.5 1.5"/></svg>Drag a hull to place it</span>
+      <span><svg viewBox="0 0 14 14"><path d="M11.4 7.4a4.4 4.4 0 1 1-1.5-3.5"/><path d="M11.8 1.9v3H8.9"/></svg>Twist to turn it</span>
+    </div>
+  </div>
+
   <h2>Icons</h2>
   <p>One hand throughout: a 14&nbsp;× 14 box, 1.25 stroke, round caps and joins, no fills,
   90% opacity. Every icon is a silhouette an officer would recognise — a hull, a wake, a
@@ -446,6 +515,8 @@
     <tr><td>Panel open</td><td><code>340ms cubic-bezier(.28,.9,.2,1)</code></td><td class="t">Popovers and trays, scaling from their own edge.</td></tr>
     <tr><td>Screen change</td><td><code>760ms ease</code></td><td class="t">Cross-fade between title, deployment and battle.</td></tr>
     <tr><td>Entrance</td><td><code>2400ms ease 800ms</code></td><td class="t">The interface arrives after the scene, never with it.</td></tr>
+    <tr><td>Verdict settle</td><td><code>880ms cubic-bezier(.16,.9,.24,1)</code></td><td class="t">The word arrives with its tracking open at .62em and closes to .30em — it settles rather than appears.</td></tr>
+    <tr><td>Read order</td><td><code>60 → 1180ms, 55ms apart</code></td><td class="t">The after-action screen assembles in the order it should be read: kicker, verdict, sentence, figures, then the two answers. Every step honours prefers-reduced-motion.</td></tr>
     <tr><td>Theatre cross-fade</td><td><code>0.8/s exponential</code></td><td class="t">Every scene colour eased toward its target, in the render loop.</td></tr>
   </table>
 
