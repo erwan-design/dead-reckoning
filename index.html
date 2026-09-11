@@ -79,14 +79,12 @@
       text-shadow:0 1px 2px rgba(4,7,13,.95);
       transition:font-size 780ms cubic-bezier(.3,.9,.2,1), margin-top 780ms
                  cubic-bezier(.3,.9,.2,1), letter-spacing 780ms ease, color 620ms ease}
-  /* above the menu window */
-  body.s-setup #brand{top:30px}
-  /* two lines at 56px, one line when it is small: a break is the one thing
-     that cannot be interpolated, so it is simply dropped */
-  body.s-setup #brand br{display:none}
-  body.s-setup #brand b{font-size:10px;letter-spacing:.42em;color:rgba(246,241,244,.80)}
-  body.s-setup #brand span{margin-top:7px;font-size:7.5px;letter-spacing:.30em;
-      color:rgba(236,228,235,.46)}
+  /* It keeps its size and simply comes down to sit just above the menu.
+     Nothing but `top` changes between the two states, so the move is a pure
+     translation — no size, no tracking, no break to interpolate.
+     50% - 343 places its foot 26px over the card: the screen pads itself by
+     208 so that title, card and action read as one centred block. */
+  body.s-setup #brand{top:calc(50% - 343px)}
   /* every other screen names itself */
   body:not(.s-attract):not(.s-setup) #brand{opacity:0}
   .go{margin-top:30px;appearance:none;cursor:pointer;box-sizing:border-box;
@@ -105,7 +103,7 @@
 
   /* setup: one decision, made on a card */
   #scr-setup{display:flex;flex-direction:column;align-items:center;justify-content:center;
-      padding:0 26px}
+      padding:208px 26px 0}
   .card{width:min(520px,calc(100vw - 48px));box-sizing:border-box;
       padding:30px 30px 28px;border-radius:24px;
       background:rgba(9,13,22,.56);
@@ -130,7 +128,7 @@
       border-color:rgba(157,240,220,.36)}
   .opts svg{width:17px;height:17px;display:block;stroke:currentColor;fill:none;
       stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;opacity:.92}
-  #scr-setup > .go{margin-top:22px;align-self:stretch;justify-content:center}
+  #scr-setup > .go{margin-top:22px;width:min(520px, 100%);justify-content:center}
 
   /* ---- deployment: the orders written before anyone fires ---- */
   /* the head of a group carries its own current reading on the right */
