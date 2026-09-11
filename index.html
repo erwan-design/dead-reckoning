@@ -4,25 +4,194 @@
 <style>
   html,body{margin:0;height:100%;background:#0b0c14;overflow:hidden;
     -webkit-font-smoothing:antialiased;}
-  canvas{display:block;width:100vw;height:100vh;opacity:0;transition:opacity 2200ms cubic-bezier(.2,.6,.2,1)}
+  canvas{display:block;width:100%;height:100%;opacity:0;
+    transition:opacity 2200ms cubic-bezier(.2,.6,.2,1)}
+  #stage{position:fixed;inset:0;overflow:hidden;background:#0b0c14}
+  /* ---- and the stage can pretend to be a tablet held upright ---- */
+  body.ipad{background:#07080c;display:grid;place-items:center}
+  body.ipad #stage{position:relative;inset:auto;
+    height:min(1133px, calc(100vh - 56px));aspect-ratio:744/1133;width:auto;
+    border-radius:30px;
+    box-shadow:0 0 0 11px #14161d, 0 0 0 12px rgba(226,236,244,.10),
+               0 0 0 13px rgba(0,0,0,.55), 0 44px 110px rgba(0,0,0,.62)}
   canvas.in{opacity:1}
   /* ---- readout: one block, top left, out of the picture's way ---- */
-  .rd{position:fixed;left:26px;top:22px;pointer-events:none;user-select:none;
+  .rd{position:absolute;left:26px;top:22px;pointer-events:none;user-select:none;
       font:400 10px/1.95 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       letter-spacing:.235em;text-transform:uppercase;
-      color:rgba(233,224,232,.34);text-shadow:0 0 22px rgba(8,10,20,.9);
+      color:rgba(236,228,235,.52);
+      text-shadow:0 1px 2px rgba(4,7,13,.95), 0 0 18px rgba(4,7,13,.9);
       opacity:0;transition:opacity 2600ms ease 900ms}
   .rd.in{opacity:1}
   .rd b{display:block;font-weight:400;color:rgba(240,232,238,.66);letter-spacing:.34em}
   .rd .ln{display:block}
   .rd .gap{display:block;height:10px}
   .rd i{font-style:normal;color:rgba(168,240,224,.5)}
-  .hint{position:fixed;left:26px;top:auto;bottom:24px;
+  .hint{position:absolute;left:26px;top:auto;bottom:24px;
         color:rgba(233,224,232,.19);transition:opacity 1600ms ease}
   .hint.out{opacity:0!important}
 
+  /* ---- the screens before the game ---- */
+  .scr{position:absolute;inset:0;z-index:8;pointer-events:none;
+      opacity:0;transition:opacity 760ms ease}
+  .scr.on{opacity:1;pointer-events:auto}
+  .scr *{pointer-events:auto}
+
+  /* attract: the key art, and the least type that will carry it */
+  #scr-attract{display:flex;align-items:flex-start;padding:60px 56px 0}
+  /* the sky is at its lightest exactly where the title now sits, so the type
+     is given a scrim rather than left to fight the haze */
+  #scr-attract::before{content:'';position:absolute;left:0;right:0;top:0;height:44%;
+      pointer-events:none;
+      background:linear-gradient(180deg, rgba(5,8,14,.80) 0%, rgba(5,8,14,.56) 36%,
+                 rgba(5,8,14,.22) 70%, rgba(5,8,14,0) 100%)}
+  #scr-attract > .tblock{position:relative}
+  .load{position:absolute;left:56px;right:56px;bottom:80px}
+  .lrow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px;
+      font:400 9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.28em;text-transform:uppercase;color:rgba(236,228,235,.62);
+      text-shadow:0 1px 2px rgba(4,7,13,.95)}
+  .lrow span:last-child{font-variant-numeric:tabular-nums;color:rgba(198,248,234,.86)}
+  .lbar{height:2px;border-radius:2px;overflow:hidden;
+      background:rgba(236,241,246,.16);box-shadow:0 1px 2px rgba(4,7,13,.7)}
+  /* the bar is held at one fixed reading: these screens are shown, not played,
+     so the loading state has to survive being looked at */
+  .lbar i{display:block;width:68%;height:100%;border-radius:2px;
+      background:linear-gradient(90deg, rgba(157,240,220,.55), rgba(202,249,236,.96));
+      box-shadow:0 0 12px rgba(157,240,220,.55)}
+  .ttl{font:400 56px/1.08 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.26em;text-transform:uppercase;color:rgba(246,241,244,.94);
+      text-shadow:0 0 46px rgba(8,10,20,.88)}
+  .sub{margin-top:18px;font:400 10px/1.9 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.32em;text-transform:uppercase;color:rgba(236,228,235,.62);
+      text-shadow:0 1px 2px rgba(4,7,13,.95)}
+  .go{margin-top:30px;appearance:none;cursor:pointer;box-sizing:border-box;
+      display:inline-flex;align-items:center;gap:12px;height:44px;padding:0 24px;border-radius:999px;
+      font:400 9.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.26em;text-transform:uppercase;color:rgba(198,248,234,.94);
+      background:rgba(12,24,28,.46);
+      -webkit-backdrop-filter:blur(18px) saturate(130%);backdrop-filter:blur(18px) saturate(130%);
+      border:1px solid rgba(157,240,220,.34);
+      box-shadow:0 14px 40px rgba(3,7,16,.42), inset 0 1px 0 rgba(255,255,255,.08);
+      transition:background 220ms ease,border-color 220ms ease,transform 220ms ease}
+  body:not(.ipad) .go:hover{background:rgba(20,44,48,.62);border-color:rgba(157,240,220,.58);transform:translateY(-1px)}
+  .go:active{transform:translateY(0)}
+  .go i{font-style:normal;opacity:.7}
+
+  /* setup: one decision, made on a card */
+  #scr-setup{display:flex;align-items:center;justify-content:center}
+  .card{width:min(520px,calc(100vw - 48px));box-sizing:border-box;
+      padding:30px 30px 28px;border-radius:24px;
+      background:rgba(9,13,22,.56);
+      -webkit-backdrop-filter:blur(22px) saturate(130%);backdrop-filter:blur(22px) saturate(130%);
+      border:1px solid rgba(206,224,236,.14);
+      box-shadow:0 30px 70px rgba(3,7,16,.50), inset 0 1px 0 rgba(255,255,255,.06)}
+  .card h3{margin:0;font:400 15px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.30em;text-transform:uppercase;color:rgba(244,238,242,.88)}
+  .card h6{margin:26px 0 9px;font:400 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing:.32em;text-transform:uppercase;color:rgba(224,233,240,.28)}
+  .card p{margin:11px 2px 0;font:400 9px/1.8 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing:.20em;text-transform:uppercase;color:rgba(233,224,232,.34);min-height:17px}
+  .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .opts button{appearance:none;cursor:pointer;box-sizing:border-box;
+      height:52px;padding:0 8px;border-radius:14px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+      font:400 8.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.20em;text-transform:uppercase;color:rgba(224,233,240,.48);
+      background:rgba(255,255,255,.03);border:1px solid rgba(206,224,236,.11);
+      transition:color 200ms ease,background 200ms ease,border-color 200ms ease}
+  body:not(.ipad) .opts button:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.08)}
+  .opts button.on{color:rgba(180,246,230,.98);background:rgba(157,240,220,.12);
+      border-color:rgba(157,240,220,.36)}
+  .opts svg{width:17px;height:17px;display:block;stroke:currentColor;fill:none;
+      stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;opacity:.92}
+  .card .go{margin-top:18px;width:100%;justify-content:center}
+
+  /* ---- deployment: the orders written before anyone fires ---- */
+  .chd{display:flex;align-items:center;justify-content:space-between;gap:14px}
+  .tag{font:400 7.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.28em;
+      text-transform:uppercase;color:rgba(157,240,220,.78);padding:6px 10px;border-radius:999px;
+      background:rgba(157,240,220,.10);border:1px solid rgba(157,240,220,.24);white-space:nowrap}
+  .card .lede{margin:12px 2px 2px}
+  /* the head of a group carries its own current reading on the right */
+  .ghd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:24px 0 9px}
+  .ghd h6{margin:0}
+  .ghd span{font:400 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.24em;
+      text-transform:uppercase;color:rgba(180,246,230,.80);font-variant-numeric:tabular-nums}
+  .opts.c4{grid-template-columns:repeat(4,1fr)}
+  .opts.c2{grid-template-columns:repeat(2,1fr)}
+  /* a segmented row of words needs less room than a row of pictures */
+  .opts.txt button{height:38px;flex-direction:row;gap:0}
+  /* a stepper and a switch: the two settings that are not a choice of three */
+  .fld{display:flex;align-items:center;justify-content:space-between;box-sizing:border-box;
+      height:52px;border-radius:14px;background:rgba(255,255,255,.03);
+      border:1px solid rgba(206,224,236,.11);
+      font:400 8.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.20em;text-transform:uppercase;color:rgba(224,233,240,.48);
+      transition:color 200ms ease,background 200ms ease,border-color 200ms ease}
+  .opts .fld{flex-direction:row}
+  .stp{padding:0 6px 0 14px;gap:6px}
+  .stp .n{font-variant-numeric:tabular-nums;color:rgba(180,246,230,.98);letter-spacing:.16em;
+      min-width:56px;text-align:right}
+  .stp button{appearance:none;cursor:pointer;flex:0 0 auto;width:32px;height:32px;border-radius:10px;
+      display:flex;align-items:center;justify-content:center;color:rgba(224,233,240,.62);
+      background:rgba(255,255,255,.05);border:1px solid rgba(206,224,236,.12);
+      transition:color 180ms ease,background 180ms ease}
+  .stp button svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round}
+  .stp button.na{opacity:.28;pointer-events:none}
+  .sw{appearance:none;cursor:pointer;width:100%;padding:0 12px 0 14px;gap:10px;text-align:left}
+  .sw i{flex:0 0 auto;display:block;width:34px;height:19px;border-radius:999px;position:relative;
+      background:rgba(236,241,246,.14);transition:background 240ms ease}
+  .sw i::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+      background:rgba(236,241,246,.60);
+      transition:transform 260ms cubic-bezier(.3,.9,.2,1),background 240ms ease}
+  .sw.on{color:rgba(180,246,230,.96);background:rgba(157,240,220,.09);border-color:rgba(157,240,220,.30)}
+  .sw.on i{background:rgba(157,240,220,.36)}
+  .sw.on i::after{transform:translateX(15px);background:rgba(202,249,236,.98)}
+  /* the orders read back, so the card can be checked without re-reading it */
+  .sum{margin-top:26px;padding:14px 16px;border-radius:16px;
+      background:rgba(157,240,220,.055);border:1px solid rgba(157,240,220,.17);
+      font:400 9px/1.85 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;
+      text-transform:uppercase;color:rgba(206,249,238,.86)}
+  .sum b{font-weight:400;color:rgba(233,240,246,.38);letter-spacing:.24em}
+  .sum em{font-style:normal;color:rgba(233,240,246,.26);padding:0 6px}
+  .go .l2{display:none}
+  .go.wait .l1{display:none} .go.wait .l2{display:inline}
+  .go.wait{color:rgba(233,240,246,.52);border-color:rgba(206,224,236,.20);background:rgba(12,20,28,.46)}
+  .go.wait i{opacity:0}
+  .go.prim{background:rgba(157,240,220,.15);border-color:rgba(157,240,220,.50);
+      color:rgba(215,252,243,.98);box-shadow:0 14px 40px rgba(3,7,16,.42),
+      inset 0 1px 0 rgba(255,255,255,.10), 0 0 26px rgba(157,240,220,.10)}
+  .note{margin:12px 2px 0;height:12px;
+      font:400 8px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.22em;
+      text-transform:uppercase;color:rgba(233,224,232,.0);text-align:center;
+      transition:color 320ms ease}
+  .note.on{color:rgba(233,224,232,.40)}
+  body:not(.ipad) .sw:hover, body:not(.ipad) .stp button:hover{color:rgba(243,249,252,.92);
+      background:rgba(255,255,255,.08)}
+  body:not(.ipad) .go.prim:hover{background:rgba(157,240,220,.24);border-color:rgba(157,240,220,.70)}
+
+  /* the game's own furniture only exists once the game does */
+  body:not(.s-play) .rd, body:not(.s-play) .rail, body:not(.s-play) .dbg,
+  body:not(.s-play) .half, body:not(.s-play) .srule{opacity:0!important;pointer-events:none}
+  /* the screen switcher is the one thing that outlives the screen it is on */
+  /* above the screen overlays, or the title card swallows every click on it */
+  .nav{position:absolute;left:20px;bottom:20px;z-index:9;
+      display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+      opacity:0;transition:opacity 2400ms ease 800ms}
+  .nav.in{opacity:1}
+  .nav .dpan{width:176px}
+  /* the open state was written for Debug alone; Screens needs it too */
+  .nav.open .dpan{opacity:1;pointer-events:auto;transform:none}
+  .nav.open .dtog{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.34)}
+  .nav .drow{flex-direction:column}
+  .nav .drow button{width:100%;justify-content:flex-start;display:flex;align-items:center;
+      gap:9px;height:30px;padding:0 11px}
+  .nav .drow svg{width:13px;height:13px;flex:0 0 auto;display:block;stroke:currentColor;
+      fill:none;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+
   /* ---- debug: every switch the HUD no longer carries, bottom left ---- */
-  .dbg{position:fixed;left:20px;bottom:20px;z-index:7;
+  .dbg{position:absolute;left:112px;bottom:20px;z-index:7;
       display:flex;flex-direction:column;align-items:flex-start;gap:8px;
       opacity:0;transition:opacity 2400ms ease 800ms}
   .dbg.in{opacity:1}
@@ -35,7 +204,7 @@
       border:1px solid rgba(206,224,236,.13);
       box-shadow:0 10px 30px rgba(3,7,16,.34), inset 0 1px 0 rgba(255,255,255,.07);
       transition:color 200ms ease,background 200ms ease}
-  .dtog:hover{color:rgba(243,249,252,.96);background:rgba(20,30,44,.60)}
+  body:not(.ipad) .dtog:hover{color:rgba(243,249,252,.96);background:rgba(20,30,44,.60)}
   .dbg.open .dtog{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.34)}
   .dpan{order:-1;width:264px;box-sizing:border-box;padding:12px 12px 10px;border-radius:18px;
       background:rgba(9,13,22,.58);
@@ -55,41 +224,65 @@
       font:400 8px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       letter-spacing:.14em;text-transform:uppercase;color:rgba(224,233,240,.48);
       transition:color 180ms ease,background 180ms ease,border-color 180ms ease}
-  .drow button:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.09)}
+  body:not(.ipad) .drow button:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.09)}
   .drow button.on{color:rgba(170,242,224,.98);background:rgba(157,240,220,.13);
       border-color:rgba(157,240,220,.34)}
   .drow button.na{opacity:.24;pointer-events:none}
   .drow button.danger{color:rgba(255,124,104,.66);border-color:rgba(255,124,104,.16)}
-  .drow button.danger:hover{color:rgba(255,166,146,.98);background:rgba(255,104,84,.13)}
+  body:not(.ipad) .drow button.danger:hover{color:rgba(255,166,146,.98);background:rgba(255,104,84,.13)}
   /* ---- two boards, one above the other ---- */
-  .srule{position:fixed;left:0;right:0;top:50%;height:1px;z-index:5;pointer-events:none;
+  .srule{position:absolute;left:0;right:0;top:50%;height:1px;z-index:5;pointer-events:none;
       background:linear-gradient(90deg,rgba(206,224,236,0),rgba(206,224,236,.22) 12%,
                  rgba(206,224,236,.22) 88%,rgba(206,224,236,0));
       opacity:0;transition:opacity 500ms ease}
-  #rhead{font:400 21px/1.15 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-      letter-spacing:.14em;color:rgba(190,246,230,.90);font-variant-numeric:tabular-nums}
-  #rhead s{text-decoration:none;color:rgba(233,224,232,.26);padding:0 2px}
-  #rheadl{color:rgba(233,224,232,.26);letter-spacing:.30em}
-  #rstat{display:grid;grid-template-rows:auto auto;grid-auto-flow:column;
-      gap:1px 18px;justify-content:end;text-align:right}
-  #rstat .v{color:rgba(240,232,238,.76);letter-spacing:.10em;font-variant-numeric:tabular-nums}
-  #rstat .k{color:rgba(233,224,232,.26)}
-  #rbar{display:flex;justify-content:flex-end;align-items:center;gap:11px}
-  #rbar .segs{display:flex;gap:3px}
-  #rbar .segs i{display:block;width:14px;height:4px;border-radius:2px;
-      background:rgba(233,224,232,.14)}
-  #rbar .segs i.on{background:rgba(168,240,224,.62)}
-  #rbar .v{color:rgba(240,232,238,.70);font-variant-numeric:tabular-nums}
-  #rtrk{display:grid;grid-template-columns:auto auto auto;gap:1px 15px;justify-content:end}
+  /* ---- the command panel: a real instrument, not a caption ---- */
+  #rl{font-size:9px;letter-spacing:.15em;line-height:1.8;text-align:left!important}
+  #rl b{display:inline}
+  #rl .k{color:rgba(233,224,232,.46)}
+  #rl .v{color:rgba(240,232,238,.80);font-variant-numeric:tabular-nums}
+  #rl .hd{margin:0 4px 7px;text-align:left}
+  .pan{display:flex;align-items:stretch;box-sizing:border-box;border-radius:16px;
+      background:rgba(9,13,22,.46);
+      -webkit-backdrop-filter:blur(18px) saturate(130%);backdrop-filter:blur(18px) saturate(130%);
+      border:1px solid rgba(206,224,236,.13);
+      box-shadow:0 16px 44px rgba(3,7,16,.40), inset 0 1px 0 rgba(255,255,255,.06)}
+  .pan > div{padding:10px 14px;align-content:center}
+  .pan > div + div{border-left:1px solid rgba(206,224,236,.09)}
+  /* each block keeps its own inner layout; only the widths are negotiated here */
+  .pan .f-fleet{flex:0 0 auto;display:flex;flex-direction:column;justify-content:center}
+  .pan .f-trk{flex:1 1 auto}
+  .pan .f-gun{flex:0 0 auto;min-width:184px}
+  .pan svg{width:13px;height:13px;flex:0 0 auto;display:block;stroke:currentColor;fill:none;
+      stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+
+  /* fleet block */
+  .fl1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .fl2{display:flex;align-items:center;gap:7px;margin-top:6px;color:rgba(233,224,232,.46)}
+  .segs{display:flex;gap:2px}
+  .segs i{display:block;width:12px;height:4px;border-radius:2px;background:rgba(233,224,232,.13)}
+  .segs i.on{background:rgba(168,240,224,.66);box-shadow:0 0 6px rgba(157,240,220,.32)}
+
+  /* contact rows */
+  .trk{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:3px 9px}
+  .trk .c{color:rgba(168,240,224,.66);letter-spacing:.16em}
+  .trk .st{text-align:right;color:rgba(233,224,232,.50)}
+  .trk .sunk, .trk .sunk + span, .trk .sunk ~ .st{color:rgba(255,176,120,.78)}
+
+  /* gunnery block */
+  .gun{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 6px;text-align:center}
+  .gun .g{display:flex;align-items:center;justify-content:center;gap:6px;
+      color:rgba(240,232,238,.80);font-variant-numeric:tabular-nums}
+  .gun .k{text-align:center;font-size:8px;letter-spacing:.22em}
   #rtrk span{white-space:nowrap}
-  #rtrk .k{color:rgba(233,224,232,.26)}
+  #rtrk .k{color:rgba(233,224,232,.46)}
   #rtrk .c{color:rgba(168,240,224,.62);letter-spacing:.18em}
   #rtrk .s{text-align:right;font-variant-numeric:tabular-nums}
   #rtrk .done{color:rgba(255,176,120,.70)}
-  .half{position:fixed;left:26px;top:22px;z-index:5;pointer-events:none;user-select:none;
+  .half{position:absolute;left:26px;top:22px;z-index:5;pointer-events:none;user-select:none;
       font:400 10px/1.95 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-      letter-spacing:.235em;text-transform:uppercase;color:rgba(233,224,232,.30);
-      text-shadow:0 0 22px rgba(8,10,20,.9);opacity:0;transition:opacity 500ms ease}
+      letter-spacing:.235em;text-transform:uppercase;color:rgba(236,228,235,.48);
+      text-shadow:0 1px 2px rgba(4,7,13,.95), 0 0 18px rgba(4,7,13,.9);
+      opacity:0;transition:opacity 500ms ease}
   body.split .srule, body.split .half{opacity:1}
   /* nothing to press on the upper board: the HUD and the readout go below.
      The column is taller than half a screen, so it folds into two rather
@@ -98,15 +291,27 @@
   #util{top:22px;transform:none;gap:6px}
   #rail{top:auto;bottom:22px;transform:none}
   body.split #util{top:calc(50% + 22px)}
-  body.split .rd{top:22px;left:auto;right:26px;text-align:right}
+  /* the command panel lies along the foot of the upper board */
+  body.split .rd{top:auto;bottom:calc(50% + 18px);left:26px;right:26px;text-align:left}
   .half.b{top:calc(50% + 22px)}
-  .half b{display:block;color:rgba(240,232,238,.62);letter-spacing:.34em}
+  /* whose board this is, said plainly: friendly reads teal, hostile reads amber */
+  .half b{position:relative;display:block;padding-left:15px;margin-bottom:3px;
+      font-size:12px;letter-spacing:.36em;color:rgba(168,240,224,.90)}
+  .half b::before{content:'';position:absolute;left:0;top:50%;
+      width:4px;height:13px;margin-top:-7px;border-radius:2px;
+      background:currentColor;box-shadow:0 0 10px currentColor;opacity:.85}
+  .half.b b{color:rgba(255,186,128,.92)}
+  .half .ln{padding-left:15px}
+  #rown{display:flex;align-items:center;gap:5px}
+  #rown .segs{margin-right:4px}
+  #rown .segs i.hurt{background:rgba(255,176,120,.72);box-shadow:0 0 6px rgba(255,150,70,.30)}
+  #rsta{color:rgba(168,240,224,.52)}
   .half .ln{display:block}
   .half i{font-style:normal;color:rgba(168,240,224,.5)}
   body.split .hint{display:none}
 
   /* ---- HUD: lone actions are a disc, related ones share one capsule ---- */
-  .rail{position:fixed;right:20px;top:50%;transform:translateY(-50%);z-index:6;
+  .rail{position:absolute;right:20px;top:50%;transform:translateY(-50%);z-index:6;
       display:flex;flex-direction:column;align-items:center;gap:14px;
       opacity:0;transition:opacity 2400ms ease 800ms}
   .rail.in{opacity:1}
@@ -125,7 +330,7 @@
       display:flex;align-items:center;justify-content:center;
       color:rgba(224,233,240,.52);
       transition:color 200ms ease,background 200ms ease}
-  .chip:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.08)}
+  body:not(.ipad) .chip:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.08)}
   .chip:active{background:rgba(255,255,255,.13)}
   .chip svg{width:16px;height:16px;display:block;stroke:currentColor;fill:none;
       stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;opacity:.94}
@@ -137,7 +342,7 @@
   .chip.hot.on{color:rgba(255,190,134,.98);background:rgba(255,150,70,.15)}
   .chip.hot.on svg{filter:drop-shadow(0 0 5px rgba(255,150,70,.85))}
   .chip.danger{color:rgba(255,124,104,.62)}
-  .chip.danger:hover{color:rgba(255,166,146,.98);background:rgba(255,104,84,.13)}
+  body:not(.ipad) .chip.danger:hover{color:rgba(255,166,146,.98);background:rgba(255,104,84,.13)}
   .chip.na{opacity:.24;pointer-events:none}
   /* name tag, so an icon-only HUD still says what it is */
   .chip::after{content:attr(data-l);position:absolute;right:calc(100% + 14px);top:50%;
@@ -148,7 +353,7 @@
       -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
       border:1px solid rgba(206,224,236,.13);
       transition:opacity 160ms ease,transform 260ms cubic-bezier(.3,.9,.2,1)}
-  .chip:hover::after{opacity:1;transform:translate(0,-50%)}
+  body:not(.ipad) .chip:hover::after{opacity:1;transform:translate(0,-50%)}
   .slot.open .chip::after{opacity:0}
   .slot.open .chip{color:rgba(170,242,224,.98);background:rgba(157,240,220,.10)}
   /* the menu itself */
@@ -168,7 +373,7 @@
       font:400 9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       letter-spacing:.20em;text-transform:uppercase;color:rgba(224,233,240,.50);
       transition:color 200ms ease,background 200ms ease}
-  .pop button:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.07)}
+  body:not(.ipad) .pop button:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.07)}
   .pop button.on{color:rgba(170,242,224,.98);background:rgba(157,240,220,.12)}
   .pop svg{width:14px;height:14px;flex:0 0 auto;display:block;stroke:currentColor;fill:none;
       stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;opacity:.92}
@@ -177,20 +382,29 @@
       .rail{gap:10px} .chip svg{width:14px;height:14px} }
   @media (max-width:760px){ .rd{font-size:8.5px;letter-spacing:.14em;left:14px;top:14px}
       .hint{display:none} .rail{right:10px} }
+
+  /* ---- a tablet has no pointer: pressing replaces hovering ---- */
+  body.ipad .chip:active{background:rgba(255,255,255,.14);color:rgba(243,249,252,.98)}
+  body.ipad .chip:active::after{opacity:1;transform:translate(0,-50%)}
+  body.ipad .pop button:active, body.ipad .drow button:active,
+  body.ipad .opts button:active{background:rgba(255,255,255,.13);color:rgba(243,249,252,.98)}
+  body.ipad .go:active{background:rgba(24,52,56,.72);border-color:rgba(157,240,220,.62)}
+  body.ipad .sw:active, body.ipad .stp button:active{background:rgba(255,255,255,.13);
+      color:rgba(243,249,252,.96)}
+  body.ipad .dtog:active{background:rgba(22,32,46,.66);color:rgba(243,249,252,.96)}
+  body.ipad .chip, body.ipad .go, body.ipad .dtog, body.ipad .pop button,
+  body.ipad .drow button, body.ipad .opts button, body.ipad .sw,
+  body.ipad .stp button{-webkit-tap-highlight-color:transparent}
 </style>
+<div id="stage">
 <canvas id="c"></canvas>
 <div class="rd" id="rl">
-  <b>Dead Reckoning</b>
-  <div class="ln"><span id="rtf">Task Force Meridian</span> &nbsp;&middot;&nbsp; Plot 7&#8209;North</div>
-  <span class="gap"></span>
-  <div id="rhead"></div>
-  <div class="ln" id="rheadl">Hulls resolved</div>
-  <span class="gap"></span>
-  <div id="rstat"></div>
-  <span class="gap"></span>
-  <div id="rtrk"></div>
-  <span class="gap"></span>
-  <div id="rbar"></div>
+  <div class="hd"><b>Dead Reckoning</b><span class="k"> &middot; <span id="rtf">Task Force Meridian</span></span></div>
+  <div class="pan">
+    <div class="f-fleet" id="rfleet"></div>
+    <div class="f-trk trk" id="rtrk"></div>
+    <div class="f-gun gun" id="rstat"></div>
+  </div>
 </div>
 <div class="rail in-a" id="util">
   <div class="cap">
@@ -202,6 +416,7 @@
     <button data-cam="0"><em>01</em>Cam 01</button>
     <button data-cam="1"><em>02</em>Cam 02</button>
     <button data-cam="2"><em>03</em>Cam 03</button>
+      <button data-cam="3"><em>04</em>Cam 04</button>
     </div>
     <button class="chip" data-pop="cam" data-l="Camera"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.1 4.7h2.4l1-1.5h3l1 1.5h2.4v6.3H2.1z"/><circle cx="7" cy="7.8" r="1.9"/></svg></button>
     </div>
@@ -216,19 +431,88 @@
     <button class="chip danger" data-a="reset" data-l="Reset"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M11.7 1.8v3H8.8"/></svg></button>
   </div>
 </div>
+<div class="scr" id="scr-attract">
+  <div class="tblock">
+    <div class="ttl">Dead<br>Reckoning</div>
+    <div class="sub">A naval command exercise &middot; Plot 7&#8209;North</div>
+  </div>
+  <div class="load" id="load">
+    <div class="lrow"><span>Making ready</span><span id="lpct">68%</span></div>
+    <div class="lbar"><i id="lfill"></i></div>
+  </div>
+</div>
+<div class="scr" id="scr-setup">
+  <div class="card">
+    <div class="chd"><h3>Deployment</h3><span class="tag">Exercise 07</span></div>
+    <p class="lede" id="thdesc"></p>
+
+    <div class="ghd"><h6>Theatre</h6><span id="g-th"></span></div>
+    <div class="opts" id="opts">
+      <button data-e="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 10.3h10.4l-1.6 2.2H3.4z"/><path d="M7 9.9V1.7"/><path d="M6.4 3.4 3.6 9.9h2.8z"/><path d="M7.6 4.2l2.9 5.7H7.6z"/></svg>Age of sail</button>
+      <button data-e="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.9 8.3a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.7 10.2 4 12.2M7.3 10.2l-.7 2M9.9 10.2l-.7 2"/></svg>Squall</button>
+      <button data-e="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</button>
+    </div>
+
+    <div class="ghd"><h6>Weather</h6><span id="g-wx"></span></div>
+    <div class="opts" id="opt-wx">
+      <button data-wx="0"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="2.6"/><path d="M7 1.3v1.5M7 11.2v1.5M1.3 7h1.5M11.2 7h1.5M3 3l1.1 1.1M9.9 9.9 11 11M11 3 9.9 4.1M4.1 9.9 3 11"/></svg>Clear</button>
+      <button data-wx="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.9 8.1a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.9 10.1 4.1 12.4M7.4 10.1l-.8 2.3M9.9 10.1l-.8 2.3"/></svg>Gale</button>
+      <button data-wx="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.7 4.6c1.5-.9 2.6-.9 4.1 0s2.6.9 4.1 0"/><path d="M1.7 7.3c1.7-1 2.9-1 4.6 0s2.9 1 4.6 0"/><path d="M2.4 10c1.5-.9 2.6-.9 4.1 0s2.6.9 4.1 0"/></svg>Fog bank</button>
+    </div>
+
+    <div class="ghd"><h6>Hour of the watch</h6><span id="g-tod"></span></div>
+    <div class="opts c4" id="opt-tod">
+      <button data-tod="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.5 11.3h11"/><path d="M4.2 8.7a2.8 2.8 0 0 1 5.6 0"/><path d="M7 2.2v1.6M2.9 4.2l1.1 1.1M11.1 4.2 10 5.3"/></svg>Dawn</button>
+      <button data-tod="1"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="2.5"/><path d="M7 1.4v1.4M7 11.2v1.4M1.4 7h1.4M11.2 7h1.4M3.1 3.1 4.1 4.1M9.9 9.9l1 1M10.9 3.1 9.9 4.1M4.1 9.9l-1 1"/></svg>Midday</button>
+      <button data-tod="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.5 11.3h11"/><path d="M4.2 8.7a2.8 2.8 0 0 1 5.6 0"/><path d="M7 1.9v3.3"/><path d="M5.5 3.6 7 5.2l1.5-1.6"/></svg>Dusk</button>
+      <button data-tod="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Middle</button>
+    </div>
+
+    <div class="ghd"><h6>Flagship</h6><span id="g-fs"></span></div>
+    <div class="opts txt" id="opt-fs">
+      <button data-fs="0"></button><button data-fs="1"></button><button data-fs="2"></button>
+    </div>
+
+    <div class="ghd"><h6>Order of battle</h6><span id="g-ob"></span></div>
+    <div class="opts c2">
+      <div class="fld stp">
+        <span>Hulls</span>
+        <button data-step="-1" id="sdn"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.2 7h7.6"/></svg></button>
+        <span class="n" id="hn">05</span>
+        <button data-step="1" id="sup"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 3.2v7.6M3.2 7h7.6"/></svg></button>
+      </div>
+      <button class="fld sw" data-sw="fow"><span>Fog of war</span><i></i></button>
+    </div>
+    <div class="opts c2" style="margin-top:6px">
+      <button class="fld sw" data-sw="salvo"><span>Salvo of three</span><i></i></button>
+      <button class="fld sw" data-sw="drift"><span>Wind drift</span><i></i></button>
+    </div>
+
+    <div class="sum" id="sum"></div>
+    <button class="go prim" data-fake="1"><span class="l1">Begin engagement</span><span class="l2">Standing by</span><i>&#8594;</i></button>
+    <div class="note" id="gonote">Prototype &middot; the three screens stand alone</div>
+  </div>
+</div>
+<div class="nav in-a" id="nav">
+  <div class="dpan">
+    <h5>Screens</h5><div class="drow">
+      <button data-scr="attract"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.9 3.1h10.2v7.8H1.9z"/><path d="M4.2 8.4h5.6"/></svg>Title</button>
+      <button data-scr="setup"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 2.6h9.2v8.8H2.4z"/><path d="M2.4 5.6h9.2"/><circle cx="4.7" cy="8.4" r="1.1"/></svg>Deployment</button>
+      <button data-scr="play"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.3 2.5h9.4v3.6H2.3z"/><path d="M2.3 7.9h9.4v3.6H2.3z"/></svg>Battle</button>
+    </div>
+  </div>
+  <button class="dtog" id="ntog">Screens</button>
+</div>
 <div class="dbg in-a" id="dbg">
   <div class="dpan">
     <h5>Layers</h5><div class="drow">
       <button data-a="radar">Radar</button><button data-a="con">Contacts</button><button data-a="rings">Impacts</button><button data-a="hit">Strike</button><button data-a="fleet">Fleet</button>
     </div>
-    <h5>Boards</h5><div class="drow">
-      <button data-a="split">Two boards</button>
-    </div>
     <h5>Scene</h5><div class="drow">
       <button data-e="0">Galleon</button><button data-e="1">Squall</button><button data-e="2">Night</button>
     </div>
     <h5>Camera</h5><div class="drow">
-      <button data-cam="0">Cam 01</button><button data-cam="1">Cam 02</button><button data-cam="2">Cam 03</button>
+      <button data-cam="0">Cam 01</button><button data-cam="1">Cam 02</button><button data-cam="2">Cam 03</button><button data-cam="3">Cam 04</button>
     </div>
     <h5>Manoeuvres</h5><div class="drow">
       <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="sink">Sink</button><button data-a="snd">Sound</button><button class="danger" data-a="reset">Reset</button>
@@ -237,13 +521,14 @@
   <button class="dtog" id="dtog">Debug</button>
 </div>
 <div class="srule"></div>
-<div class="half a">Enemy plot</div>
-<div class="half b">
+<div class="half a">
   <b>Own plot</b>
-  <div class="ln" id="rcond">05:12 local &middot; swell 1.1m &middot; vis 14km &middot; wind 040/06</div>
-  <div class="ln">Salvos <span id="rsal">07</span> &middot; <i>struck <span id="rstr">00</span></i> &middot; <span id="rsta">solution held</span></div>
+  <div class="ln" id="rown"></div>
+  <div class="ln" id="rsta">solution held</div>
 </div>
+<div class="half b"><b>Enemy plot</b></div>
 <div class="rd hint" id="hint">drag orbit &middot; scroll range &middot; shift-drag pan &middot; r reset</div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.1/three.min.js"></script>
 <script>
 /* ============================================================
@@ -284,11 +569,12 @@ const NOCC = 12, NMARK = 16, NPOST = 16, NDMG = 3, NCON = 8;
 const canvas = document.getElementById('c');
 const renderer = new T.WebGLRenderer({canvas, antialias:false, alpha:false, powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio||1, 1.6));
-renderer.setSize(innerWidth, innerHeight, false);
+const stage = document.getElementById('stage');
+renderer.setSize(stage.clientWidth, stage.clientHeight, false);
 renderer.autoClear = true;
 
 const scene  = new T.Scene();
-const camera = new T.PerspectiveCamera(AD.fovV, innerWidth/innerHeight, 5, 44000);
+const camera = new T.PerspectiveCamera(AD.fovV, stage.clientWidth/stage.clientHeight, 5, 44000);
 
 /* ---------- shared uniforms ---------- */
 const occA = [], occB = [], marks = [], posts = [], MISSM = [];
@@ -2149,7 +2435,7 @@ function addLabel(txt, gx, gz){
     transparent:true, blending:T.AdditiveBlending, depthWrite:false
   }));
   const p = cellW(gx, gz, 0.55);
-  m.position.copy(p); m.rotation.y = AD.gridRot; m.scale.z = 3.3;
+  m.position.copy(p); m.rotation.y = AD.gridRot; m.scale.z = 1;
   labels.add(m);
 }
 /* the eye reads the plot from the left, so A is the leftmost column */
@@ -2582,8 +2868,8 @@ const matComp = new T.ShaderMaterial({
 });
 
 function sizeTargets(){
-  const w = Math.floor(innerWidth*renderer.getPixelRatio());
-  const h = Math.floor(innerHeight*renderer.getPixelRatio());
+  const w = Math.floor(stage.clientWidth*renderer.getPixelRatio());
+  const h = Math.floor(stage.clientHeight*renderer.getPixelRatio());
   for(const t of [rtScene, rtB1, rtB2, rtW1, rtW2]) if(t) t.dispose();
   rtScene = rt(w, h, true);
   rtB1 = rt(w/2, h/2); rtB2 = rt(w/2, h/2);
@@ -2596,24 +2882,24 @@ sizeTargets();
    ENVIRONMENTS — two grades of the same sea, cross-faded
    ============================================================ */
 const ENVS = [
-  { name:'Galleon', era:1, cond:'first light &middot; swell 1.1m &middot; courses &amp; topsails &middot; wind nne/06',
+  { name:'Galleon', era:1, blurb:'Seventeenth century &middot; first light &middot; courses and topsails', cond:'first light &middot; swell 1.1m &middot; courses &amp; topsails &middot; wind nne/06',
     sunAz:-1.48, sunEl:0.385, sunCol:[0xffd7b6,2.20],
     zenith:[0x0e3161,1], midSky:[0x2f6da8,1], haze:[0xdcc6ac,1.06], hazeWarm:[0xf7d6ac,1.14],
     deep:[0x16386f,1], shoal:[0x4f92da,1], shad:[0x3d669e,0.62], foam:[0xdaf0ea,1],
     gradeLo:[0x93bfe2,1], gradeHi:[0xffe4c6,1],
     fogStart:700, fogDist:1150, exp:1.38, f0:0.085, fexp:3.05, sheen:0.26, gridI:0.205, swell:1.0, night:0 },
-  { name:'Squall', era:0, cond:'14:40 local &middot; swell 3.4m &middot; vis 6km &middot; wind 250/28',
+  { name:'Squall', era:0, blurb:'Modern fleet &middot; afternoon squall &middot; swell 3.4m', cond:'14:40 local &middot; swell 3.4m &middot; vis 6km &middot; wind 250/28',
     sunAz:-0.86, sunEl:0.60, sunCol:[0xc9d6e2,1.32],
     zenith:[0x27333f,1], midSky:[0x4d6070,1], haze:[0x9fb0b8,1.0], hazeWarm:[0xb3c1c5,1.0],
     deep:[0x0f1b24,1], shoal:[0x2b5064,1], shad:[0x27384a,0.76], foam:[0xeef7f7,1],
     gradeLo:[0xa9c0cc,1], gradeHi:[0xe6eef0,1],
     fogStart:380, fogDist:640, exp:1.16, f0:0.060, fexp:3.45, sheen:0.09, gridI:0.30, swell:2.25, night:0 },
-  { name:'Night', era:0, cond:'21:48 local &middot; swell 1.4m &middot; vis 9km &middot; running lights burning',
-    sunAz:-0.70, sunEl:0.088, sunCol:[0xff9e6a,0.70],
-    zenith:[0x060b1e,1], midSky:[0x152640,1], haze:[0x2c3850,1.0], hazeWarm:[0x6d4b3c,1.0],
-    deep:[0x060b1c,1], shoal:[0x142848,1], shad:[0x161d34,0.84], foam:[0xc0d4e0,1],
+  { name:'Night', era:0, blurb:'Modern fleet &middot; after dark &middot; running lights burning', cond:'21:48 local &middot; swell 1.4m &middot; vis 9km &middot; running lights burning',
+    sunAz:-0.70, sunEl:0.088, sunCol:[0xff9e6a,0.58],
+    zenith:[0x050917,1], midSky:[0x101e32,1], haze:[0x222c3e,1.0], hazeWarm:[0x553b2f,1.0],
+    deep:[0x050916,1], shoal:[0x101f38,1], shad:[0x111729,0.84], foam:[0xa3b4be,1],
     gradeLo:[0x8fa8c6,1], gradeHi:[0xdadfe6,1],
-    fogStart:380, fogDist:760, exp:1.20, f0:0.105, fexp:2.45, sheen:0.06, gridI:0.42, swell:1.25, night:1 }
+    fogStart:380, fogDist:760, exp:1.10, f0:0.105, fexp:2.45, sheen:0.06, gridI:0.44, swell:1.25, night:1 }
 ];
 for(const e of ENVS) for(const k of ['sunCol','zenith','midSky','haze','hazeWarm','deep','shoal','shad','foam','gradeLo','gradeHi'])
   e['_'+k] = Cs(e[k][0], e[k][1]);
@@ -2669,10 +2955,12 @@ function shipNamed(n){ return SHIPS.find(x => x.name === n && x.era === ANIM.era
 function shotList(){
   if(!SHOTS) SHOTS = [
     /* the key-art angle exactly, brought in and centred on the plot */
-    { az:HOME.az, el:0.380, dist:400, t:new T.Vector3(12, -52, 5) },
+    { az:HOME.az, el:0.450, dist:600, t:new T.Vector3(12, -50, 5) },
     { az:2.24, el:0.048, dist:340, t:new T.Vector3(-30, 6, 20) },
     /* straight down on the plot, framed to sit dead centre in its half */
-    { az:3.05, el:1.06,  dist:560, t:new T.Vector3(0, -70, 0) }
+    { az:3.05, el:1.06,  dist:560, t:new T.Vector3(0, -70, 0) },
+    /* and one truly parallel to the board, squared to the screen */
+    { az:AD.gridRot + Math.PI, el:1.545, dist:520, t:new T.Vector3(0, -21, 0) }
   ];
   return SHOTS;
 }
@@ -2689,7 +2977,7 @@ function shot(i){
 const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
 const SINK_DUR = 11.0;
 const SALVO_DUR = 9.0;
-const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, plot:0, split:true, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, env:1, envK:0 };
+const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, env:1, envK:0 };
 
 function setStrike(on){
   if(on && ANIM.fireGoal < 0.5){ FX.splash.material.uniforms.uT0.value = tt; boom(FIRE, 0.30);
@@ -3186,12 +3474,21 @@ function sndFrame(dt, tt){
 
 /* ---------- controls ---------- */
 const railEl = document.getElementById('rail'), utilEl = document.getElementById('util'),
-      dbgEl = document.getElementById('dbg');
-const rStr = document.getElementById('rstr'), rSta = document.getElementById('rsta'),
-      rCond = document.getElementById('rcond'), rSal = document.getElementById('rsal'),
+      dbgEl = document.getElementById('dbg'), navEl = document.getElementById('nav');
+const rSta = document.getElementById('rsta'), rOwn = document.getElementById('rown'),
       rTf = document.getElementById('rtf'),
-      rTrk = document.getElementById('rtrk'), rHead = document.getElementById('rhead'),
-      rStat = document.getElementById('rstat'), rBar = document.getElementById('rbar');
+      rTrk = document.getElementById('rtrk'),
+      rStat = document.getElementById('rstat'), rFleet = document.getElementById('rfleet');
+
+/* the panel's pictograms, in the same hand as the rest of the interface */
+const ICO = {
+  hull:'<path d="M1.9 8.9h10.2l-1.5 2.6H3.4z"/><path d="M4.6 8.9V6.2h4.1v2.7"/><path d="M6.6 6.2V3.3"/>',
+  sunk:'<path d="M7 1.9v5.5"/><path d="M4.5 5.2 7 7.7l2.5-2.5"/><path d="M1.9 10.7c1.3-1 2.2-1 3.4 0s2.1 1 3.4 0 2.1-1 3.4 0"/>',
+  aim :'<circle cx="7" cy="7" r="4.6"/><path d="M7 1.3v2.1M7 10.6v2.1M1.3 7h2.1M10.6 7h2.1"/>',
+  hit :'<circle cx="7" cy="7" r="1.7"/><circle cx="7" cy="7" r="5"/>',
+  pct :'<path d="M2.6 11.4 11.4 2.6"/><circle cx="4.3" cy="4.3" r="1.6"/><circle cx="9.7" cy="9.7" r="1.6"/>'
+};
+const svg = k => '<svg viewBox="0 0 14 14" aria-hidden="true">' + ICO[k] + '</svg>';
 
 /* how fast the beam turns, in radians a second */
 const _RAD_W = 0.42;
@@ -3206,33 +3503,38 @@ function plotReadout(){
   const sqHit = CON_GROUPS.reduce((a, g) => a + g.hit.filter(Boolean).length, 0);
   const miss  = MISSM.length, salvos = miss + sqHit;
 
-  rHead.innerHTML = pad(sunk) + '<s>/</s>' + pad(total);
-  rStat.innerHTML = [['Salvos', pad(salvos)], ['Hits', pad(sqHit)], ['Miss', pad(miss)],
-                     ['Accuracy', Math.round(100*sqHit/Math.max(1, salvos)) + '%']]
-    .map(([k, v]) => '<span class="v">' + v + '</span><span class="k">' + k + '</span>').join('');
+  /* how much of her fleet is on the bottom, and how close the next one is */
+  let segs = '';
+  for(let i=0;i<sqTot;i++) segs += '<i' + (i < sqHit ? ' class="on"' : '') + '></i>';
+  rFleet.innerHTML =
+    '<div class="fl1"><span class="k">Enemy fleet</span>'
+    + '<span class="segs">' + segs + '</span>'
+    + '<span class="v">' + pad(sqHit) + '/' + pad(sqTot) + '</span></div>'
+    + '<div class="fl2">' + svg('sunk') + '<span class="v">' + pad(sunk) + ' / ' + pad(total)
+    + '</span><span class="k">hulls sunk</span></div>';
 
-  const cells = [];
+  const rows = [];
   for(let i=0;i<total;i++){
     const g = CON_GROUPS[i], done = g.hit.every(Boolean), sq = [];
     for(let c=0;c<g.cells.length;c++) if(g.hit[c])
       sq.push(colLetter(g.cells[c][0]) + (g.cells[c][1] + 1));
-    cells.push('<span class="k">Track ' + pad(i+1) + '</span>');
-    cells.push('<span class="c">' + sq.join(' ') + '</span>');
-    cells.push('<span class="' + (done ? 'done' : '') + '">' + (done ? 'sunk' : 'held') + '</span>');
+    rows.push('<span class="' + (done ? 'sunk' : '') + '">' + svg(done ? 'sunk' : 'hull') + '</span>');
+    rows.push('<span class="k">Track ' + pad(i+1) + '</span>');
+    rows.push('<span class="c">' + sq.join(' ') + '</span>');
+    rows.push('<span class="st">' + (done ? 'sunk' : 'held') + '</span>');
   }
-  rTrk.innerHTML = cells.join('');
+  rTrk.innerHTML = rows.join('');
 
-  let segs = '';
-  for(let i=0;i<sqTot;i++) segs += '<i' + (i < sqHit ? ' class="on"' : '') + '></i>';
-  rBar.innerHTML = '<span class="k">Squares struck</span><span class="segs">' + segs
-                 + '</span><span class="v">' + pad(sqHit) + ' / ' + pad(sqTot) + '</span>';
+  rStat.innerHTML =
+    ['aim', 'hit', 'pct'].map((ic, i) =>
+      '<span class="g">' + svg(ic) + [pad(salvos), pad(sqHit),
+      Math.round(100*sqHit/Math.max(1, salvos)) + '%'][i] + '</span>').join('')
+    + ['Salvos', 'Hits', 'Accuracy'].map(k => '<span class="k">' + k + '</span>').join('');
 }
 function refreshUI(){
   const burning = ANIM.fireGoal > 0.5, sinking = ANIM.sink >= 0, flying = ANIM.mis >= 0,
         cating = ANIM.cat >= 0, running = ANIM.tor >= 0;
   /* struck counts hulls that carry a scar, not manoeuvres in flight */
-  rStr.textContent = String(DMG.length).padStart(2, '0');
-  rSal.textContent = String(7 + (burning?1:0) + (sinking?1:0)).padStart(2, '0');
   /* the readout must name the same squares the sea does */
   const CELL = colLetter(POS.cruiser[0]) + (Math.floor(POS.cruiser[1]) + 1);
   const cs = (ANIM.ship || shipNamed('escort')).cells;
@@ -3252,10 +3554,23 @@ function refreshUI(){
                        return hits + ' struck \u00b7 ' + done + ' of ' + CON_GROUPS.length + ' resolved';
                      })()
                    : 'solution held';
-  rCond.innerHTML = ENVS[ANIM.env].cond;
+  /* her own fleet, in the same language the enemy panel uses */
+  {
+    const mine = SHIPS.filter(x => x.era === ANIM.era);
+    const hurt = DMG.length;
+    let pips = '';
+    for(let i=0;i<mine.length;i++) pips += '<i class="' + (i < hurt ? 'hurt' : 'on') + '"></i>';
+    rOwn.innerHTML = '<span class="segs">' + pips + '</span><span class="v">'
+      + String(mine.length).padStart(2, '0') + '</span><span class="k">hulls &middot; </span><span class="v">'
+      + String(hurt).padStart(2, '0') + '</span><span class="k">damaged</span>';
+  }
+  thDesc.innerHTML = ENVS[ANIM.env].blurb;
+  for(const b of optsEl.children) b.classList.toggle('on', +b.dataset.e === ANIM.env);
+  setupUI();
   plotReadout();
   rTf.textContent = ANIM.era === 1 ? 'Line of Battle' : 'Task Force Meridian';
   /* one pass over the HUD: every control lights from the state it reports */
+  for(const b of navEl.querySelectorAll('[data-scr]')) b.classList.toggle('on', b.dataset.scr === SCREEN);
   for(const b of document.querySelectorAll('#rail button, #util button, #dbg button')){
     const d = b.dataset;
     if(d.pop === 'act'){
@@ -3274,7 +3589,7 @@ function refreshUI(){
                           || (a === 'snd' && ANIM.snd) || (a === 'hit' && burning)
                           || (a === 'radar' && ANIM.radar) || (a === 'con' && ANIM.con)
                           || (a === 'rings' && ANIM.rings) || (a === 'fleet' && ANIM.fleet)
-                          || (a === 'split' && ANIM.split));
+                          || (a === 'split' && ANIM.split) || (a === 'ipad' && ANIM.ipad));
   }
 }
 function closePops(){ for(const s of document.querySelectorAll('.slot')) s.classList.remove('open'); }
@@ -3312,6 +3627,7 @@ function onCtl(e){
   if(a === 'rings') ANIM.rings = !ANIM.rings;
   if(a === 'fleet') ANIM.fleet = !ANIM.fleet;
   if(a === 'hit')   setStrike(!(ANIM.fireGoal > 0.5));
+  if(a === 'ipad'){ ANIM.ipad = !ANIM.ipad; document.body.classList.toggle('ipad', ANIM.ipad); fit(); }
   if(a === 'split'){
     ANIM.split = !ANIM.split;
     document.body.classList.toggle('split', ANIM.split);
@@ -3327,12 +3643,122 @@ function onCtl(e){
       for(const t of CAT.trails) t.material.uniforms.uFade.value = 0; } }
   refreshUI(); hideHint();
 }
+/* MAKING READY is held at one fixed reading and never finishes. The title is a
+   screen to be looked at, not a boot sequence to be sat through, so the bar
+   states a moment rather than measuring one. Its value lives in the markup. */
+
+/* ATTRACT → SETUP → PLAY. The scene never stops; only what stands in
+   front of it, and where the camera is asked to stand. */
+const SCR = { attract: document.getElementById('scr-attract'), setup: document.getElementById('scr-setup') };
+const optsEl = document.getElementById('opts'), thDesc = document.getElementById('thdesc');
+/* DEPLOYMENT. Everything on this card but the theatre is written down and not
+   yet obeyed: the orders exist, the engagement does not read them. The theatre
+   is the exception because the sea behind the card is the real one. */
+const SETUP = { wx:1, tod:1, fs:0, hulls:5, fow:true, salvo:false, drift:true };
+const THN  = ['Age of sail', 'Squall', 'Night'];
+const WXN  = ['Clear', 'Gale', 'Fog bank'];
+const TODN = ['Dawn', 'Midday', 'Dusk', 'Middle watch'];
+const TODH = ['05:20', '12:05', '19:40', '00:35'];
+/* she is not the same ship in 1680 as she is now */
+const FLEET = [
+  { ships:['Destroyer', 'Carrier', 'Cruiser'], of:'Task Force Meridian' },
+  { ships:['Galleon', 'Line ship', 'Fluyt'],   of:'Line of Battle' }
+];
+const SEA = ['slight &middot; 0.9m', 'rough &middot; 3.4m', 'slight &middot; 1.2m'];
+const VIS = ['14 km', '6 km', '900 m'];
+const sumEl  = document.getElementById('sum'),  goNote = document.getElementById('gonote'),
+      hnEl   = document.getElementById('hn'),
+      wxEl   = document.getElementById('opt-wx'), todEl = document.getElementById('opt-tod'),
+      fsEl   = document.getElementById('opt-fs');
+function setupUI(){
+  const F = FLEET[ANIM.era];
+  for(let i=0;i<3;i++) fsEl.children[i].textContent = F.ships[i];
+  if(SETUP.fs > 2) SETUP.fs = 0;
+  for(const b of wxEl.children)  b.classList.toggle('on', +b.dataset.wx  === SETUP.wx);
+  for(const b of todEl.children) b.classList.toggle('on', +b.dataset.tod === SETUP.tod);
+  for(const b of fsEl.children)  b.classList.toggle('on', +b.dataset.fs  === SETUP.fs);
+  for(const b of document.querySelectorAll('#scr-setup .sw'))
+    b.classList.toggle('on', !!SETUP[b.dataset.sw]);
+  hnEl.textContent = String(SETUP.hulls).padStart(2, '0');
+  document.getElementById('sdn').classList.toggle('na', SETUP.hulls <= 3);
+  document.getElementById('sup').classList.toggle('na', SETUP.hulls >= 7);
+  /* each group states its own reading, so the card can be read at a glance */
+  document.getElementById('g-th').innerHTML  = THN[ANIM.env];
+  document.getElementById('g-wx').innerHTML  = 'sea ' + SEA[SETUP.wx] + ' &middot; vis ' + VIS[SETUP.wx];
+  document.getElementById('g-tod').innerHTML = TODH[SETUP.tod] + ' local';
+  document.getElementById('g-fs').innerHTML  = F.of;
+  document.getElementById('g-ob').innerHTML  = SETUP.hulls + ' hulls &middot; 10 \u00d7 10';
+  const rules = [SETUP.fow ? 'fog of war' : 'open plot',
+                 SETUP.salvo ? 'salvo of three' : 'single shot',
+                 SETUP.drift ? 'wind drift' : 'no drift'];
+  sumEl.innerHTML =
+      '<b>Orders</b> &middot; ' + THN[ANIM.env] + ' <em>/</em> ' + WXN[SETUP.wx]
+    + ' <em>/</em> ' + TODN[SETUP.tod] + ' ' + TODH[SETUP.tod]
+    + '<br><b>Flag</b> &middot; ' + F.ships[SETUP.fs] + ' <em>/</em> ' + SETUP.hulls + ' hulls'
+    + '<br><b>Rules</b> &middot; ' + rules.join(' <em>/</em> ');
+}
+let _goT = 0;
+/* the button is a button and nothing more: it says so, rather than pretending */
+function fakeGo(b){
+  clearTimeout(_goT); b.classList.add('wait'); goNote.classList.add('on');
+  _goT = setTimeout(() => b.classList.remove('wait'), 1500);
+}
+function setupCtl(b){
+  const d = b.dataset;
+  if(d.wx   !== undefined){ SETUP.wx  = +d.wx;  setupUI(); return true; }
+  if(d.tod  !== undefined){ SETUP.tod = +d.tod; setupUI(); return true; }
+  if(d.fs   !== undefined){ SETUP.fs  = +d.fs;  setupUI(); return true; }
+  if(d.step !== undefined){ SETUP.hulls = Math.max(3, Math.min(7, SETUP.hulls + (+d.step)));
+                            setupUI(); return true; }
+  if(d.sw   !== undefined){ SETUP[d.sw] = !SETUP[d.sw]; setupUI(); return true; }
+  if(d.fake !== undefined){ fakeGo(b); return true; }
+  return false;
+}
+let SCREEN = 'attract';
+const SCREENS = ['attract', 'setup', 'play'];
+function setScreen(name, quiet){
+  if(SCREENS.indexOf(name) < 0) name = 'attract';
+  SCREEN = name;
+  /* each screen has its own address, so any of them can be opened on its own */
+  if(!quiet && location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
+  for(const k in SCR) SCR[k].classList.toggle('on', k === name);
+  document.body.classList.remove('s-attract', 's-setup', 's-play');
+  document.body.classList.add('s-' + name);
+  const play = name === 'play';
+  /* the beam and its returns are instruments of the engagement: the title
+     and deployment screens show the sea, not the plot being worked */
+  ANIM.radar = play; ANIM.con = play;
+  ANIM.split = play;
+  document.body.classList.toggle('split', play);
+  if(!play) fit();
+  if(name === 'attract'){
+    /* the framing the piece was drawn for */
+    GOAL.az = AD.camAz; GOAL.el = AD.camEl; GOAL.dist = AD.camDist;
+    GOAL.tgt.copy(AD.target); ANIM.glide = 3.4; ANIM.shot = -1; clampGoal();
+  } else if(name === 'setup'){
+    goNote.classList.remove('on');
+    GOAL.az = AD.camAz + 0.42; GOAL.el = AD.camEl + 0.06; GOAL.dist = 520;
+    GOAL.tgt.set(24, 8, 12); ANIM.glide = 3.4; ANIM.shot = -1; clampGoal();
+  } else shot(0);
+  refreshUI();
+}
+for(const k in SCR) SCR[k].addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.scr !== undefined){ setScreen(b.dataset.scr); return; }
+  if(setupCtl(b)) return;
+  onCtl(e);
+});
 railEl.addEventListener('click', onCtl);
 utilEl.addEventListener('click', onCtl);
 dbgEl.addEventListener('click', e => {
   const t = e.target.closest('button');
-  if(t && t.id === 'dtog'){ dbgEl.classList.toggle('open'); return; }
+  if(t && t.id === 'dtog'){ navEl.classList.remove('open'); dbgEl.classList.toggle('open'); return; }
   onCtl(e);
+});
+navEl.addEventListener('click', e => {
+  const t = e.target.closest('button'); if(!t) return;
+  if(t.id === 'ntog'){ dbgEl.classList.remove('open'); navEl.classList.toggle('open'); return; }
+  if(t.dataset.scr !== undefined){ navEl.classList.remove('open'); setScreen(t.dataset.scr); }
 });
 pushEnv(); refreshUI();
 
@@ -3453,7 +3879,8 @@ canvas.addEventListener('pointerdown', e => {
 });
 canvas.addEventListener('pointermove', e => {
   const p = ptrs.get(e.pointerId);
-  if(!p){ ptx = e.clientX/innerWidth - 0.5; pty = e.clientY/innerHeight - 0.5; return; }
+  if(!p){ const r = canvas.getBoundingClientRect();
+          ptx = (e.clientX - r.left)/r.width - 0.5; pty = (e.clientY - r.top)/r.height - 0.5; return; }
   const dx = e.clientX - p.x, dy = e.clientY - p.y;
   p.x = e.clientX; p.y = e.clientY;
   if(ptrs.size === 2){
@@ -3515,6 +3942,10 @@ function boardCam(S){
 /* dress the scene for one board or the other, then draw it */
 function board(enemy){
   applyEnv(enemy ? NIGHT : CUR);
+  /* painted letters are stretched along the deck to read at a grazing angle;
+     seen from straight above they must not be stretched at all */
+  const st = enemy ? 1.0 : 1/Math.max(0.28, Math.sin(shotList()[0].el));
+  for(let i=0;i<labels.children.length;i++) labels.children[i].scale.z = st;
   const on = !enemy && ANIM.fleet;
   const showM = on && ANIM.era === 0, showS = on && ANIM.era === 1;
   for(let i=0;i<HIDEABLE.length;i++)  HIDEABLE[i].visible  = showM;
@@ -3538,8 +3969,8 @@ function board(enemy){
 }
 
 function fit(){
-  renderer.setSize(innerWidth, innerHeight, false);
-  const asp = innerWidth/innerHeight;
+  renderer.setSize(stage.clientWidth, stage.clientHeight, false);
+  const asp = stage.clientWidth/stage.clientHeight;
   camera.aspect = asp;
   const refTanH = Math.tan(T.MathUtils.degToRad(AD.fovV)/2)*(16/9);
   const f = asp >= 1.6 ? AD.fovV : T.MathUtils.radToDeg(2*Math.atan(refTanH/Math.max(asp, 0.5)));
@@ -3549,17 +3980,18 @@ function fit(){
   sizeTargets();
 }
 addEventListener('resize', fit, {passive:true});
-/* she opens folded: the plot above, her own board below on the key-art angle */
-document.body.classList.add('split');
-{ const S = shotList()[0];
-  CAM.az = GOAL.az = S.az; CAM.el = GOAL.el = S.el; CAM.dist = GOAL.dist = S.dist;
-  CAM.tgt.copy(S.t); GOAL.tgt.copy(S.t); ANIM.shot = 0; }
+if(window.ResizeObserver) new ResizeObserver(fit).observe(stage);
 /* one hull is alight on her own board from the first frame. Set directly:
    setStrike() stamps the splash with the clock, which does not exist yet. */
 ANIM.fireGoal = 1;
 scar(shipNamed('cruiser'), FIRE, 15.0);
-refreshUI();
 fit();
+document.body.classList.add('ipad');
+setScreen(location.hash.slice(1) || 'attract');
+addEventListener('hashchange', () => {
+  const h = location.hash.slice(1);
+  if(h && h !== SCREEN) setScreen(h, true);
+});
 
 /* ============================================================
    LOOP
@@ -3664,17 +4096,17 @@ function frame(now){
     camera.aspect = asp; camera.updateProjectionMatrix();
     renderer.setScissorTest(true);
     for(let pass2 = 0; pass2 < 2; pass2++){
-      const enemy = pass2 === 0;
+      /* her own formation above, the plot below where the hand is */
+      const enemy = pass2 === 1;
       board(enemy);
-      /* the plot is always read from overhead; her own board is wherever you fly */
-      if(enemy) boardCam(shotList()[2]);
+      if(enemy) boardCam(shotList()[3]);
       else {
         camera.position.copy(_liveP); camera.quaternion.copy(_liveQ);
         skyMesh.position.copy(_liveP);
         water.position.set(lwx, 0, lwz); farSea.position.set(lwx, 0, lwz);
         SH.uWC.value.set(lwx, lwz); SH.uCam.value.copy(_liveP);
       }
-      const y = enemy ? H - Hh : 0;
+      const y = enemy ? 0 : H - Hh;
       renderer.setViewport(0, y, W, Hh);
       renderer.setScissor(0, y, W, Hh);
       renderer.render(scene, camera);
@@ -3682,7 +4114,7 @@ function frame(now){
     renderer.setScissorTest(false);
     renderer.setViewport(0, 0, W, H);
     renderer.setScissor(0, 0, W, H);
-    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+    camera.aspect = stage.clientWidth/stage.clientHeight; camera.updateProjectionMatrix();
   } else {
     renderer.render(scene, camera);
   }

@@ -1,0 +1,450 @@
+<title>Dead Reckoning — Design System</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    /* surfaces — every panel in the app is one of these three densities */
+    --s-chip:   rgba(10,15,25,.42);
+    --s-panel:  rgba(9,13,22,.46);
+    --s-menu:   rgba(9,13,22,.58);
+    --s-tag:    rgba(8,12,20,.78);
+    --stroke:   rgba(206,224,236,.13);
+    --stroke-2: rgba(206,224,236,.09);
+    --inner:    rgba(255,255,255,.07);
+    --drop:     rgba(3,7,16,.40);
+
+    /* ink */
+    --ink-1: rgba(246,241,244,.94);
+    --ink-2: rgba(236,228,235,.62);
+    --ink-3: rgba(233,224,232,.46);
+    --ink-4: rgba(224,233,240,.28);
+
+    /* the two sides, and the one warning */
+    --friend:      rgba(168,240,224,.92);
+    --friend-soft: rgba(157,240,220,.13);
+    --friend-line: rgba(157,240,220,.38);
+    --hostile:     rgba(255,186,128,.92);
+    --hostile-soft:rgba(255,150,70,.15);
+    --danger:      rgba(255,124,104,.66);
+
+    --page: #0b0c14;
+    --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  html,body{margin:0;background:var(--page);color:var(--ink-2);
+    font:400 11px/1.7 var(--mono);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:64px 40px 120px}
+
+  h1{margin:0;font:400 34px/1.1 var(--mono);letter-spacing:.26em;
+     text-transform:uppercase;color:var(--ink-1)}
+  .lede{margin:18px 0 0;max-width:62ch;font-size:11px;line-height:2;
+        letter-spacing:.06em;color:var(--ink-2)}
+  h2{margin:74px 0 4px;font:400 10px/1 var(--mono);letter-spacing:.34em;
+     text-transform:uppercase;color:var(--friend)}
+  h2 + p{margin:0 0 26px;max-width:62ch;font-size:10.5px;line-height:1.95;
+         letter-spacing:.05em;color:var(--ink-3)}
+  .rule{height:1px;background:var(--stroke);margin:14px 0 0}
+
+  .grid{display:grid;gap:10px}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  @media (max-width:820px){ .g4,.g3{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:520px){ .g4,.g3,.g2{grid-template-columns:1fr} .wrap{padding:44px 20px 80px} }
+
+  /* a swatch says what it is and where it is used */
+  .sw{border-radius:14px;overflow:hidden;border:1px solid var(--stroke-2)}
+  .sw .chip{height:74px;position:relative;
+      background-image:linear-gradient(135deg,#24303f,#111722 60%,#1b2534)}
+  .sw .chip i{position:absolute;inset:0;display:block}
+  .sw .meta{padding:9px 11px 11px;background:rgba(255,255,255,.015)}
+  .sw b{display:block;font-weight:400;letter-spacing:.16em;text-transform:uppercase;
+        color:var(--ink-2);font-size:9px}
+  .sw code{display:block;margin-top:4px;font-size:9px;letter-spacing:.02em;color:var(--ink-4)}
+  .sw em{display:block;margin-top:6px;font-style:normal;font-size:9px;line-height:1.7;
+         letter-spacing:.04em;color:var(--ink-3)}
+
+  /* theatre strips */
+  .th{border-radius:14px;border:1px solid var(--stroke-2);overflow:hidden}
+  .th .band{height:96px}
+  .th .meta{padding:10px 12px 12px;background:rgba(255,255,255,.015)}
+  .th .dots{display:flex;gap:5px;margin-top:8px}
+  .th .dots i{width:16px;height:16px;border-radius:5px;display:block;
+      border:1px solid rgba(255,255,255,.07)}
+
+  /* type specimens */
+  .spec{border-top:1px solid var(--stroke-2);padding:18px 0;display:grid;
+        grid-template-columns:150px 1fr;gap:20px;align-items:baseline}
+  .spec .n{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-4)}
+  .spec .n span{display:block;color:var(--ink-3);margin-top:3px;letter-spacing:.02em}
+  @media (max-width:620px){ .spec{grid-template-columns:1fr;gap:8px} }
+
+  /* live components */
+  .demo{border:1px solid var(--stroke-2);border-radius:16px;padding:26px;
+        background:linear-gradient(150deg,#1a2432,#0d131c 70%);
+        display:flex;flex-wrap:wrap;gap:26px;align-items:center}
+  .cap{display:flex;flex-direction:column;align-items:center;width:46px;padding:3px 0;
+      box-sizing:border-box;border-radius:999px;background:var(--s-chip);
+      -webkit-backdrop-filter:blur(16px) saturate(130%);backdrop-filter:blur(16px) saturate(130%);
+      border:1px solid var(--stroke);
+      box-shadow:0 10px 30px var(--drop), inset 0 1px 0 var(--inner)}
+  .cap > * + *{position:relative}
+  .cap > * + *::before{content:'';position:absolute;left:9px;right:9px;top:0;height:1px;
+      background:rgba(206,224,236,.11)}
+  .chipb{position:relative;appearance:none;background:none;border:0;cursor:pointer;
+      width:40px;height:40px;border-radius:999px;display:flex;align-items:center;
+      justify-content:center;color:rgba(224,233,240,.52);transition:color .2s,background .2s}
+  .chipb:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.08)}
+  .chipb.on{color:var(--friend);background:var(--friend-soft)}
+  .chipb.on svg{filter:drop-shadow(0 0 5px rgba(157,240,220,.85))}
+  .chipb.hot{color:var(--hostile);background:var(--hostile-soft)}
+  .chipb.dg{color:var(--danger)}
+  svg.ic{width:16px;height:16px;display:block;stroke:currentColor;fill:none;
+      stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;opacity:.94}
+
+  .pill{appearance:none;cursor:pointer;box-sizing:border-box;height:30px;padding:0 14px;
+      border-radius:999px;font:400 8.5px/1 var(--mono);letter-spacing:.22em;
+      text-transform:uppercase;color:rgba(224,233,240,.50);background:var(--s-chip);
+      -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+      border:1px solid var(--stroke);box-shadow:0 10px 30px var(--drop), inset 0 1px 0 var(--inner)}
+  .go{appearance:none;cursor:pointer;display:inline-flex;align-items:center;gap:12px;
+      height:44px;padding:0 24px;border-radius:999px;font:400 9.5px/1 var(--mono);
+      letter-spacing:.26em;text-transform:uppercase;color:rgba(198,248,234,.94);
+      background:rgba(12,24,28,.46);border:1px solid rgba(157,240,220,.34);
+      box-shadow:0 14px 40px rgba(3,7,16,.42), inset 0 1px 0 rgba(255,255,255,.08)}
+  .opt{appearance:none;cursor:pointer;box-sizing:border-box;height:52px;width:126px;
+      border-radius:14px;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:6px;font:400 8.5px/1 var(--mono);letter-spacing:.20em;
+      text-transform:uppercase;color:rgba(224,233,240,.48);background:rgba(255,255,255,.03);
+      border:1px solid rgba(206,224,236,.11)}
+  .opt.on{color:rgba(180,246,230,.98);background:var(--friend-soft);border-color:rgba(157,240,220,.36)}
+  .opt svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.2;
+      stroke-linecap:round;stroke-linejoin:round}
+
+  .segs{display:flex;gap:2px}
+  .segs i{display:block;width:12px;height:4px;border-radius:2px;background:rgba(233,224,232,.13)}
+  .segs i.on{background:rgba(168,240,224,.66);box-shadow:0 0 6px rgba(157,240,220,.32)}
+  .segs i.hurt{background:rgba(255,176,120,.72);box-shadow:0 0 6px rgba(255,150,70,.30)}
+
+  .pan{display:flex;border-radius:16px;background:var(--s-panel);
+      -webkit-backdrop-filter:blur(18px) saturate(130%);backdrop-filter:blur(18px) saturate(130%);
+      border:1px solid var(--stroke);
+      box-shadow:0 16px 44px var(--drop), inset 0 1px 0 rgba(255,255,255,.06);
+      font-size:9px;letter-spacing:.15em;text-transform:uppercase}
+  .pan > div{padding:10px 14px}
+  .pan > div + div{border-left:1px solid var(--stroke-2)}
+  .k{color:var(--ink-3)} .v{color:rgba(240,232,238,.80)}
+
+  /* labels for the two sides */
+  .side{position:relative;padding-left:15px;font-size:12px;letter-spacing:.36em;
+        text-transform:uppercase}
+  .side::before{content:'';position:absolute;left:0;top:50%;width:4px;height:13px;
+      margin-top:-7px;border-radius:2px;background:currentColor;
+      box-shadow:0 0 10px currentColor;opacity:.85}
+  .side.f{color:var(--friend)} .side.h{color:var(--hostile)}
+
+  /* icon sheet */
+  .icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:2px}
+  .icons div{display:flex;flex-direction:column;align-items:center;gap:9px;padding:16px 6px;
+      border-radius:12px;color:rgba(224,233,240,.60);font-size:8px;letter-spacing:.16em;
+      text-transform:uppercase;background:rgba(255,255,255,.018)}
+  .icons svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.25;
+      stroke-linecap:round;stroke-linejoin:round}
+
+  table{width:100%;border-collapse:collapse;font-size:10px;letter-spacing:.04em}
+  th{text-align:left;font-weight:400;color:var(--ink-4);font-size:9px;letter-spacing:.20em;
+     text-transform:uppercase;padding:0 14px 9px 0}
+  td{padding:9px 14px 9px 0;border-top:1px solid var(--stroke-2);color:var(--ink-2);
+     vertical-align:top}
+  td.t{color:var(--ink-3)}
+  td code{color:rgba(198,248,234,.80)}
+
+  footer{margin-top:90px;padding-top:22px;border-top:1px solid var(--stroke-2);
+     font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-4)}
+
+  /* a setting that is a yes or a no, and a setting that is a number */
+  .fldd{display:flex;align-items:center;justify-content:space-between;box-sizing:border-box;
+      height:52px;border-radius:14px;background:rgba(255,255,255,.03);
+      border:1px solid rgba(206,224,236,.11);width:226px;
+      font:400 8.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.20em;text-transform:uppercase;color:rgba(224,233,240,.48)}
+  .swd{padding:0 12px 0 14px;gap:10px;cursor:pointer}
+  .swd i{flex:0 0 auto;display:block;width:34px;height:19px;border-radius:999px;position:relative;
+      background:rgba(236,241,246,.14)}
+  .swd i::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;
+      border-radius:50%;background:rgba(236,241,246,.60)}
+  .swd.on{color:rgba(180,246,230,.96);background:rgba(157,240,220,.09);
+      border-color:rgba(157,240,220,.30)}
+  .swd.on i{background:rgba(157,240,220,.36)}
+  .swd.on i::after{transform:translateX(15px);background:rgba(202,249,236,.98)}
+  .stpd{padding:0 6px 0 14px;gap:6px}
+  .stpd .n{font-variant-numeric:tabular-nums;color:rgba(180,246,230,.98);letter-spacing:.16em;
+      min-width:40px;text-align:right}
+  .stpd span.b{box-sizing:border-box;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;
+      justify-content:center;color:rgba(224,233,240,.62);background:rgba(255,255,255,.05);
+      border:1px solid rgba(206,224,236,.12)}
+  .stpd span.b svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.4;
+      stroke-linecap:round}
+  .ordd{padding:14px 16px;border-radius:16px;background:rgba(157,240,220,.055);
+      border:1px solid rgba(157,240,220,.17);
+      font:400 9px/1.85 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;
+      text-transform:uppercase;color:rgba(206,249,238,.86)}
+  .ordd b{font-weight:400;color:rgba(233,240,246,.38);letter-spacing:.24em}
+  .ordd em{font-style:normal;color:rgba(233,240,246,.26);padding:0 6px}
+</style>
+
+<div class="wrap">
+
+  <h1>Dead&nbsp;Reckoning</h1>
+  <p class="lede">The visual language of a naval command exercise. Everything here is taken
+  from the running application rather than drawn up beside it — if a value appears on this
+  page it is the value the app uses. The system has one job: to keep a glass instrument
+  panel legible over a live, moving, brightly lit sea.</p>
+
+  <h2>Principles</h2>
+  <p>Five rules the rest of the system follows.</p>
+  <table>
+    <tr><td style="width:26%">The picture comes first</td>
+      <td class="t">Chrome is glass laid over a scene that never stops moving. It borrows the
+      scene's light, never competes with it, and occupies the edges.</td></tr>
+    <tr><td>Two sides, two colours</td>
+      <td class="t">Teal is ours. Amber is theirs. No element uses both, and nothing else
+      earns an accent colour — a third hue would make the first two meaningless.</td></tr>
+    <tr><td>One typeface, many weights of silence</td>
+      <td class="t">A single monospace family throughout. Hierarchy is made with size,
+      letter-spacing and opacity — never with a second family or a bold weight.</td></tr>
+    <tr><td>Round for controls, soft-square for surfaces</td>
+      <td class="t">Anything you press is a circle or a capsule. Anything that holds
+      information is a rounded rectangle. The shape tells you whether it is for reading
+      or for touching.</td></tr>
+    <tr><td>Legibility is engineered</td>
+      <td class="t">Type over the scene gets a scrim or a two-stage shadow. It is never
+      left to chance, because the sea behind it changes by the second.</td></tr>
+  </table>
+
+  <h2>Surfaces</h2>
+  <p>Four densities of the same glass. Each is a translucent ground plus a hairline stroke,
+  an inner top highlight and a dropped shadow — the three together are what make it read as
+  a pane rather than a tint.</p>
+  <div class="grid g4">
+    <div class="sw"><div class="chip"><i style="background:rgba(10,15,25,.42);backdrop-filter:blur(16px)"></i></div>
+      <div class="meta"><b>Chip</b><code>rgba(10,15,25,.42)</code><em>Capsules, pills, the buttons themselves.</em></div></div>
+    <div class="sw"><div class="chip"><i style="background:rgba(9,13,22,.46);backdrop-filter:blur(18px)"></i></div>
+      <div class="meta"><b>Panel</b><code>rgba(9,13,22,.46)</code><em>The command panel, laid over the board.</em></div></div>
+    <div class="sw"><div class="chip"><i style="background:rgba(9,13,22,.58);backdrop-filter:blur(20px)"></i></div>
+      <div class="meta"><b>Menu</b><code>rgba(9,13,22,.58)</code><em>Anything that opens: popovers, cards, the debug tray.</em></div></div>
+    <div class="sw"><div class="chip"><i style="background:rgba(8,12,20,.78);backdrop-filter:blur(12px)"></i></div>
+      <div class="meta"><b>Tag</b><code>rgba(8,12,20,.78)</code><em>The name that slides out of an icon-only button.</em></div></div>
+  </div>
+  <table style="margin-top:22px">
+    <tr><td style="width:26%">Stroke</td><td><code>rgba(206,224,236,.13)</code></td><td class="t">One hairline, never two. A nested border is the most common way to make glass look cheap.</td></tr>
+    <tr><td>Divider</td><td><code>rgba(206,224,236,.09)</code></td><td class="t">Inset 9px from the edge so it never meets the rounded corner.</td></tr>
+    <tr><td>Inner light</td><td><code>inset 0 1px 0 rgba(255,255,255,.07)</code></td><td class="t">A single lit pixel along the top edge. This is what sells the thickness.</td></tr>
+    <tr><td>Drop</td><td><code>0 10px 30px rgba(3,7,16,.34)</code></td><td class="t">Deepens to <code>.46</code> for menus, which float higher.</td></tr>
+    <tr><td>Blur</td><td><code>blur(16–22px) saturate(130%)</code></td><td class="t">The saturation lift is what keeps the sea's colour alive through the glass.</td></tr>
+  </table>
+
+  <h2>Ink</h2>
+  <p>Four levels, all of them the same near-white at different opacities. Nothing on a
+  glass surface goes below 46% — that floor was raised from 26% after a legibility pass.</p>
+  <div class="grid g4">
+    <div class="sw"><div class="chip" style="display:flex;align-items:center;justify-content:center;font-size:18px;letter-spacing:.2em;color:rgba(246,241,244,.94)">Aa</div>
+      <div class="meta"><b>Primary</b><code>rgba(246,241,244,.94)</code><em>Titles and headline figures.</em></div></div>
+    <div class="sw"><div class="chip" style="display:flex;align-items:center;justify-content:center;font-size:18px;letter-spacing:.2em;color:rgba(236,228,235,.62)">Aa</div>
+      <div class="meta"><b>Body</b><code>rgba(236,228,235,.62)</code><em>Running text and subtitles.</em></div></div>
+    <div class="sw"><div class="chip" style="display:flex;align-items:center;justify-content:center;font-size:18px;letter-spacing:.2em;color:rgba(233,224,232,.46)">Aa</div>
+      <div class="meta"><b>Label</b><code>rgba(233,224,232,.46)</code><em>Field names beside a value. The floor.</em></div></div>
+    <div class="sw"><div class="chip" style="display:flex;align-items:center;justify-content:center;font-size:18px;letter-spacing:.2em;color:rgba(224,233,240,.28)">Aa</div>
+      <div class="meta"><b>Section</b><code>rgba(224,233,240,.28)</code><em>Group headings only — never a value.</em></div></div>
+  </div>
+
+  <h2>The two sides</h2>
+  <p>The whole information design rests on this pair. Teal is the friendly board, the grid,
+  the confirmed state; amber is the enemy, the hit, the burning hull. A control that is on
+  glows teal; a hull that is gone glows amber.</p>
+  <div class="demo">
+    <span class="side f">Own plot</span>
+    <span class="side h">Enemy plot</span>
+    <span class="segs"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>
+    <span class="segs"><i class="hurt"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>
+  </div>
+  <table style="margin-top:22px">
+    <tr><td style="width:26%">Friendly</td><td><code>rgba(168,240,224,.92)</code></td><td class="t">Labels, active controls, the plot grid, confirmed returns.</td></tr>
+    <tr><td>Friendly fill</td><td><code>rgba(157,240,220,.13)</code></td><td class="t">The disc behind an active chip.</td></tr>
+    <tr><td>Hostile</td><td><code>rgba(255,186,128,.92)</code></td><td class="t">The enemy board, resolved hulls, damaged pips.</td></tr>
+    <tr><td>Hostile fill</td><td><code>rgba(255,150,70,.15)</code></td><td class="t">Behind a chip in a warm state.</td></tr>
+    <tr><td>Danger</td><td><code>rgba(255,124,104,.66)</code></td><td class="t">Reset, and nothing else. One destructive control in the app.</td></tr>
+  </table>
+
+  <h2>Theatres</h2>
+  <p>Three lighting states drive the scene, and the interface sits on all three without
+  changing. Each is a full palette — sun, zenith, mid sky, haze, deep water, shoal — cross-faded
+  over 0.8&nbsp;s when the theatre changes.</p>
+  <div class="grid g3">
+    <div class="th">
+      <div class="band" style="background:linear-gradient(180deg,#0e3161,#2f6da8 42%,#dcc6ac)"></div>
+      <div class="meta"><b style="letter-spacing:.2em;color:var(--ink-2);font-size:9px;text-transform:uppercase">Age of sail</b>
+        <div class="dots"><i style="background:#ffd7b6"></i><i style="background:#0e3161"></i><i style="background:#2f6da8"></i><i style="background:#dcc6ac"></i><i style="background:#16386f"></i><i style="background:#4f92da"></i></div>
+        <em style="display:block;margin-top:9px;font-style:normal;font-size:9px;color:var(--ink-3);letter-spacing:.04em">First light. Sun 6° above the horizon, exposure 1.38.</em></div>
+    </div>
+    <div class="th">
+      <div class="band" style="background:linear-gradient(180deg,#27333f,#4d6070 42%,#9fb0b8)"></div>
+      <div class="meta"><b style="letter-spacing:.2em;color:var(--ink-2);font-size:9px;text-transform:uppercase">Squall</b>
+        <div class="dots"><i style="background:#c9d6e2"></i><i style="background:#27333f"></i><i style="background:#4d6070"></i><i style="background:#9fb0b8"></i><i style="background:#0f1b24"></i><i style="background:#2b5064"></i></div>
+        <em style="display:block;margin-top:9px;font-style:normal;font-size:9px;color:var(--ink-3);letter-spacing:.04em">Afternoon, swell 3.4 m. Exposure 1.16, the flattest light.</em></div>
+    </div>
+    <div class="th">
+      <div class="band" style="background:linear-gradient(180deg,#050917,#101e32 42%,#222c3e)"></div>
+      <div class="meta"><b style="letter-spacing:.2em;color:var(--ink-2);font-size:9px;text-transform:uppercase">Night</b>
+        <div class="dots"><i style="background:#ff9e6a"></i><i style="background:#050917"></i><i style="background:#101e32"></i><i style="background:#222c3e"></i><i style="background:#050916"></i><i style="background:#101f38"></i></div>
+        <em style="display:block;margin-top:9px;font-style:normal;font-size:9px;color:var(--ink-3);letter-spacing:.04em">After dark. Running lights burning, exposure 1.10.</em></div>
+    </div>
+  </div>
+
+  <h2>Type</h2>
+  <p>One family — the platform monospace — set in capitals throughout, with letter-spacing
+  doing the work a second typeface usually does. Small sizes are spaced wide so they read as
+  instrument legends; the title is spaced tighter so it holds together as a shape.</p>
+
+  <div class="spec"><div class="n">Title<span>56 / 1.08 · .26em</span></div>
+    <div style="font-size:40px;line-height:1.08;letter-spacing:.26em;color:var(--ink-1)">Dead Reckoning</div></div>
+  <div class="spec"><div class="n">Card heading<span>15 / 1.2 · .30em</span></div>
+    <div style="font-size:15px;letter-spacing:.30em;text-transform:uppercase;color:rgba(244,238,242,.88)">Deployment</div></div>
+  <div class="spec"><div class="n">Board label<span>12 · .36em</span></div>
+    <div><span class="side f">Own plot</span></div></div>
+  <div class="spec"><div class="n">Readout<span>10 / 1.95 · .235em</span></div>
+    <div style="font-size:10px;letter-spacing:.235em;text-transform:uppercase;color:var(--ink-2)">14:40 local · swell 3.4m · wind 250/28</div></div>
+  <div class="spec"><div class="n">Panel data<span>9 / 1.8 · .15em</span></div>
+    <div style="font-size:9px;letter-spacing:.15em;text-transform:uppercase"><span class="k">Hulls</span> <span class="v">01/03</span> <span class="k">·</span> <span class="k">Salvos</span> <span class="v">12</span> <span class="k">·</span> <span class="k">Acc</span> <span class="v">42%</span></div></div>
+  <div class="spec"><div class="n">Control<span>8.5 / 1 · .22em</span></div>
+    <div style="font-size:8.5px;letter-spacing:.22em;text-transform:uppercase;color:rgba(224,233,240,.50)">Screens · Debug · Take station</div></div>
+  <div class="spec"><div class="n">Section<span>8 / 1 · .30em</span></div>
+    <div style="font-size:8px;letter-spacing:.30em;text-transform:uppercase;color:var(--ink-4)">Manoeuvres</div></div>
+
+  <h2>Controls</h2>
+  <p>Round for touching. A lone action is a disc; related actions share one capsule with
+  inset hairlines between them. No control carries a visible label until it is hovered or
+  pressed — the icon set does the naming.</p>
+  <div class="demo">
+    <div class="cap">
+      <button class="chipb on"><svg class="ic" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.3"/><path d="M7 7V1.7"/><path d="M7 7l4.6 2.6"/></svg></button>
+      <button class="chipb"><svg class="ic" viewBox="0 0 14 14"><circle cx="4.4" cy="9.4" r="1.5"/><path d="M7.3 6.6a4.1 4.1 0 0 1 0 5.6"/><path d="M9.7 4.2a7.4 7.4 0 0 1 0 10.4"/></svg></button>
+      <button class="chipb hot"><svg class="ic" viewBox="0 0 14 14"><circle cx="7" cy="7" r="1.7"/><path d="M7 1.9v1.9M7 10.2v1.9M1.9 7h1.9M10.2 7h1.9"/></svg></button>
+      <button class="chipb dg"><svg class="ic" viewBox="0 0 14 14"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M11.7 1.8v3H8.8"/></svg></button>
+    </div>
+    <div class="cap"><button class="chipb"><svg class="ic" viewBox="0 0 14 14"><path d="M2.6 5.3h2.2L7.6 3v8L4.8 8.7H2.6z"/><path d="M9.9 5.3a3.1 3.1 0 0 1 0 3.4"/></svg></button></div>
+    <button class="pill">Screens</button>
+    <button class="go">Take station <span style="opacity:.7">&rarr;</span></button>
+    <button class="opt on"><svg viewBox="0 0 14 14"><path d="M3.9 8.3a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.7 10.2 4 12.2M7.3 10.2l-.7 2M9.9 10.2l-.7 2"/></svg>Squall</button>
+    <button class="opt"><svg viewBox="0 0 14 14"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</button>
+    <div class="fldd swd on"><span>Fog of war</span><i></i></div>
+    <div class="fldd swd"><span>Salvo of three</span><i></i></div>
+    <div class="fldd stpd"><span>Hulls</span>
+      <span class="b"><svg viewBox="0 0 14 14"><path d="M3.2 7h7.6"/></svg></span>
+      <span class="n">05</span>
+      <span class="b"><svg viewBox="0 0 14 14"><path d="M7 3.2v7.6M3.2 7h7.6"/></svg></span>
+    </div>
+  </div>
+  <table style="margin-top:22px">
+    <tr><td style="width:26%">Chip</td><td><code>40 × 40 · radius 999</code></td><td class="t">Inside a 46px capsule with 3px of padding. Icon 16px.</td></tr>
+    <tr><td>Capsule</td><td><code>46 wide · radius 999</code></td><td class="t">Groups 1–5 chips. 4px between chips, 14px between capsules.</td></tr>
+    <tr><td>Pill</td><td><code>height 30 · pad 14</code></td><td class="t">The only control that carries its label permanently.</td></tr>
+    <tr><td>Primary</td><td><code>height 44 · pad 24</code></td><td class="t">Teal stroke, one per screen at most.</td></tr>
+    <tr><td>Option</td><td><code>52 tall · radius 14</code></td><td class="t">Icon over label, in a grid of equal columns.</td></tr>
+    <tr><td>Option, text</td><td><code>38 tall · radius 14</code></td><td class="t">The same control without a picture; a row of words needs less room.</td></tr>
+    <tr><td>Switch</td><td><code>52 tall · track 34 × 19</code></td><td class="t">A setting that is a yes or a no. Label left, track right, whole row pressable.</td></tr>
+    <tr><td>Stepper</td><td><code>52 tall · keys 32 · radius 10</code></td><td class="t">A setting that is a number. Tabular figures; the key at a limit drops to 28% and stops taking presses.</td></tr>
+  </table>
+
+  <h2>Reading surfaces</h2>
+  <p>Information panels are soft rectangles, never circles. They divide with vertical or
+  horizontal hairlines and hold one idea per cell.</p>
+  <div class="demo" style="display:block">
+    <div class="pan">
+      <div><span class="k">Enemy fleet</span>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <span class="segs"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>
+          <span class="v">05/07</span></div></div>
+      <div><span class="k">Track 01</span> <span style="color:rgba(168,240,224,.66)">G1 G3</span> <span class="k">held</span><br>
+           <span class="k">Track 03</span> <span style="color:rgba(168,240,224,.66)">J9 J10</span> <span style="color:rgba(255,176,120,.78)">sunk</span></div>
+      <div style="text-align:center"><span class="v">12</span> &nbsp; <span class="v">05</span> &nbsp; <span class="v">42%</span><br>
+        <span class="k" style="font-size:8px;letter-spacing:.22em">Salvos&nbsp;&nbsp;Hits&nbsp;&nbsp;Acc</span></div>
+    </div>
+  </div>
+
+  <div class="demo" style="display:block;margin-top:14px">
+    <div class="ordd">
+      <b>Orders</b> &middot; Squall <em>/</em> Gale <em>/</em> Dusk 19:40<br>
+      <b>Flag</b> &middot; Carrier <em>/</em> 5 hulls<br>
+      <b>Rules</b> &middot; fog of war <em>/</em> salvo of three <em>/</em> wind drift
+    </div>
+  </div>
+  <p>The <b>orders block</b> is the one reading surface tinted teal rather than neutral: it
+  reads back a set of choices the reader has just made, so it belongs to their side of the
+  board. Labels sit at 38% and the values at 86% — the eye should land on what was chosen,
+  not on what the rows are called.</p>
+
+  <h2>Icons</h2>
+  <p>One hand throughout: a 14&nbsp;× 14 box, 1.25 stroke, round caps and joins, no fills,
+  90% opacity. Every icon is a silhouette an officer would recognise — a hull, a wake, a
+  bearing — never a generic symbol.</p>
+  <div class="icons">
+    <div><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.3"/><path d="M7 7V1.7"/><path d="M7 7l4.6 2.6"/></svg>Radar</div>
+    <div><svg viewBox="0 0 14 14"><circle cx="4.4" cy="9.4" r="1.5"/><path d="M7.3 6.6a4.1 4.1 0 0 1 0 5.6"/><path d="M9.7 4.2a7.4 7.4 0 0 1 0 10.4"/></svg>Contacts</div>
+    <div><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="1.9"/><circle cx="7" cy="7" r="5.2"/></svg>Impacts</div>
+    <div><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="1.7"/><path d="M7 1.9v1.9M7 10.2v1.9M1.9 7h1.9M10.2 7h1.9"/></svg>Strike</div>
+    <div><svg viewBox="0 0 14 14"><path d="M1.9 8.9h10.2l-1.5 2.6H3.4z"/><path d="M4.6 8.9V6.2h4.1v2.7"/><path d="M6.6 6.2V3.3"/></svg>Fleet</div>
+    <div><svg viewBox="0 0 14 14"><path d="M2.6 11.4 11.4 2.6"/><path d="M7.6 2.6h3.8v3.8"/><path d="m5.2 8.4 1.6 1.6"/></svg>Missile</div>
+    <div><svg viewBox="0 0 14 14"><path d="M7 1.8v10.4"/><path d="M1.8 7.7 7 5.9l5.2 1.8"/><path d="M4.5 11.5 7 10.7l2.5.8"/></svg>Catapult</div>
+    <div><svg viewBox="0 0 14 14"><path d="M11.9 7c0 1-1.6 1.8-3.4 1.8S5.1 8 5.1 7s1.6-1.8 3.4-1.8S11.9 6 11.9 7z"/><path d="M5.1 5.6 3.7 4.4M5.1 8.4 3.7 9.6"/><circle cx="1.9" cy="7" r=".65"/></svg>Torpedo</div>
+    <div><svg viewBox="0 0 14 14"><path d="M7 1.9v5.5"/><path d="M4.5 5.2 7 7.7l2.5-2.5"/><path d="M1.9 10.7c1.3-1 2.2-1 3.4 0s2.1 1 3.4 0 2.1-1 3.4 0"/></svg>Sink</div>
+    <div><svg viewBox="0 0 14 14"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M11.7 1.8v3H8.8"/></svg>Reset</div>
+    <div><svg viewBox="0 0 14 14"><path d="M2.1 4.7h2.4l1-1.5h3l1 1.5h2.4v6.3H2.1z"/><circle cx="7" cy="7.8" r="1.9"/></svg>Camera</div>
+    <div><svg viewBox="0 0 14 14"><path d="M1.9 9.9h10.2"/><path d="M4.2 9.9a2.8 2.8 0 0 1 5.6 0"/><path d="M7 2.9v1.7M3.3 4.4l1.2 1.2M10.7 4.4 9.5 5.6"/></svg>Scene</div>
+    <div><svg viewBox="0 0 14 14"><path d="M1.8 10.3h10.4l-1.6 2.2H3.4z"/><path d="M7 9.9V1.7"/><path d="M6.4 3.4 3.6 9.9h2.8z"/><path d="M7.6 4.2l2.9 5.7H7.6z"/></svg>Age of sail</div>
+    <div><svg viewBox="0 0 14 14"><path d="M3.9 8.3a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.7 10.2 4 12.2M7.3 10.2l-.7 2M9.9 10.2l-.7 2"/></svg>Squall</div>
+    <div><svg viewBox="0 0 14 14"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</div>
+    <div><svg viewBox="0 0 14 14"><path d="M2.3 2.5h9.4v3.6H2.3z"/><path d="M2.3 7.9h9.4v3.6H2.3z"/></svg>Two boards</div>
+  </div>
+
+  <h2>Legibility over the scene</h2>
+  <p>The hardest problem in the system. Type sits on a sea that runs from near-black at
+  night to a pale haze at noon, so contrast cannot be left to the colour alone.</p>
+  <table>
+    <tr><td style="width:26%">Scrim</td>
+      <td class="t">Where large type meets the sky — the title screen — a vertical gradient
+      from <code>rgba(5,8,14,.80)</code> to transparent over the top 44% of the frame.
+      Against the Squall haze this takes the title from roughly 2:1 to better than 5:1.</td></tr>
+    <tr><td>Two-stage shadow</td>
+      <td class="t">Small type over the scene carries <code>0 1px 2px rgba(4,7,13,.95)</code>
+      for a tight rim and <code>0 0 18px rgba(4,7,13,.9)</code> for a soft ground. The rim is
+      what holds it over light water; the glow is what holds it over dark.</td></tr>
+    <tr><td>Glass, not shadow</td>
+      <td class="t">Anything with more than three words gets a panel instead. A shadow can
+      rescue a label; it cannot rescue a paragraph.</td></tr>
+    <tr><td>Opacity floor</td>
+      <td class="t">46% on glass, 28% reserved for section headings that sit directly above
+      the value they name.</td></tr>
+  </table>
+
+  <h2>Geometry &amp; motion</h2>
+  <table>
+    <tr><th style="width:26%">Token</th><th>Value</th><th>Where</th></tr>
+    <tr><td>Radius — control</td><td><code>999px</code></td><td class="t">Chips, capsules, pills, menu rows.</td></tr>
+    <tr><td>Radius — surface</td><td><code>14 / 16 / 18 / 20 / 24</code></td><td class="t">Option, command panel, debug tray, popover, card.</td></tr>
+    <tr><td>Radius — device</td><td><code>30px</code></td><td class="t">The tablet frame itself.</td></tr>
+    <tr><td>Edge margin</td><td><code>20 / 22 / 26</code></td><td class="t">Controls, boards, text blocks.</td></tr>
+    <tr><td>Grouping</td><td><code>4 inside · 14 between</code></td><td class="t">A ratio of 3.5:1, enough that groups read without a rule.</td></tr>
+    <tr><td>Colour change</td><td><code>200ms ease</code></td><td class="t">Hover, active, on/off.</td></tr>
+    <tr><td>Panel open</td><td><code>340ms cubic-bezier(.28,.9,.2,1)</code></td><td class="t">Popovers and trays, scaling from their own edge.</td></tr>
+    <tr><td>Screen change</td><td><code>760ms ease</code></td><td class="t">Cross-fade between title, deployment and battle.</td></tr>
+    <tr><td>Entrance</td><td><code>2400ms ease 800ms</code></td><td class="t">The interface arrives after the scene, never with it.</td></tr>
+    <tr><td>Theatre cross-fade</td><td><code>0.8/s exponential</code></td><td class="t">Every scene colour eased toward its target, in the render loop.</td></tr>
+  </table>
+
+  <h2>Format</h2>
+  <p>The application is composed for an iPad mini held upright — <code>744 × 1133</code>,
+  ratio 0.657. Everything is a child of a single stage element at that size, so the whole
+  interface can be re-hosted at any dimension without touching a rule.</p>
+
+  <footer>Dead Reckoning · design system · every value taken from the running application</footer>
+</div>
