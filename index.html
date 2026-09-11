@@ -353,9 +353,9 @@
   /* the game's own furniture only exists once the game does */
   body:not(.s-play) .rd, body:not(.s-play) .rail,
   body:not(.s-play) .half, body:not(.s-play) .srule{opacity:0!important;pointer-events:none}
-  /* the tray holds the Win/Loss switch: it has to be reachable from the
-     screen that switch is about */
-  body:not(.s-play):not(.s-over) .dbg{opacity:0!important;pointer-events:none}
+  /* the tray belongs to the engagement alone; Win/Loss is set from there and
+     read on the screen it is about */
+  body:not(.s-play) .dbg{opacity:0!important;pointer-events:none}
   /* the screen switcher is the one thing that outlives the screen it is on */
   /* above the screen overlays, or the title card swallows every click on it */
   /* A COLLAPSED PANEL STILL HOLDS ITS BOX. Screens is 176 wide and sits at
