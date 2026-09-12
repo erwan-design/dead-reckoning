@@ -341,13 +341,17 @@
   </table>
 
   <h2>Theatres</h2>
-  <p>Three lighting states drive the scene, and the interface sits on all three without
+  <p>Four lighting states drive the scene, and the interface sits on all four without
   changing. Each is a full palette — sun, zenith, mid sky, haze, deep water, shoal — cross-faded
-  over 0.8&nbsp;s when the theatre changes.</p>
+  over 0.8&nbsp;s when the theatre changes. A theatre is a light, not a period: all four
+  carry the same modern fleet, because the palette is what changes and the hulls are not
+  what it is about. A theatre also owns its weather: rain is a
+  property of the storm, not a switch beside it, so there is one thing to set and nothing
+  to keep in step with it.</p>
   <div class="grid g3">
     <div class="th">
       <div class="band" style="background:linear-gradient(180deg,#0e3161,#2f6da8 42%,#dcc6ac)"></div>
-      <div class="meta"><b style="letter-spacing:.2em;color:var(--ink-2);font-size:9px;text-transform:uppercase">Age of sail</b>
+      <div class="meta"><b style="letter-spacing:.2em;color:var(--ink-2);font-size:9px;text-transform:uppercase">Morning</b>
         <div class="dots"><i style="background:#ffd7b6"></i><i style="background:#0e3161"></i><i style="background:#2f6da8"></i><i style="background:#dcc6ac"></i><i style="background:#16386f"></i><i style="background:#4f92da"></i></div>
         <em style="display:block;margin-top:9px;font-style:normal;font-size:9px;color:var(--ink-3);letter-spacing:.04em">First light. Sun 6° above the horizon, exposure 1.38.</em></div>
     </div>
@@ -363,7 +367,22 @@
         <div class="dots"><i style="background:#ff9e6a"></i><i style="background:#050917"></i><i style="background:#101e32"></i><i style="background:#222c3e"></i><i style="background:#050916"></i><i style="background:#101f38"></i></div>
         <em style="display:block;margin-top:9px;font-style:normal;font-size:9px;color:var(--ink-3);letter-spacing:.04em">After dark. Running lights burning, exposure 1.10.</em></div>
     </div>
+    <div class="th">
+      <div class="band" style="background:linear-gradient(180deg,#161b22,#2c3640 42%,#666f77)"></div>
+      <div class="meta"><b style="letter-spacing:.2em;color:var(--ink-2);font-size:9px;text-transform:uppercase">Storm</b>
+        <div class="dots"><i style="background:#8f9aa6"></i><i style="background:#161b22"></i><i style="background:#2c3640"></i><i style="background:#666f77"></i><i style="background:#080d12"></i><i style="background:#1b2f3c"></i></div>
+        <em style="display:block;margin-top:9px;font-style:normal;font-size:9px;color:var(--ink-3);letter-spacing:.04em">Full gale, swell 7.8 m. Visibility a quarter of clear; rain and lightning.</em></div>
+    </div>
   </div>
+  <p style="margin-top:20px">A storm is not a squall with the numbers turned up. A squall is
+  weather you sail through; a storm is weather that decides. The sun goes behind the cloud, so
+  the sea loses its shoal colour and keeps only its foam, and the fog closes to 190 where clear
+  weather holds 700 — which is why the grid's own intensity has to rise with it.</p>
+  <table style="margin-top:18px">
+    <tr><td style="width:26%">Rain, in the air</td><td><code>line segments</code></td><td class="t">Streaks, never points: at any shutter a drop is a smear, and points read as snow. A tenth of them are fully visible and the rest trail off — that spread is most of what makes it read as rain and not as mesh. The column is a disc, not a box, because a box shows its corners the moment it turns.</td></tr>
+    <tr><td>Rain, on the water</td><td><code>one ring per cell</code></td><td class="t">A jittered grid where each cell holds one ring that opens and dies on its own clock. The ring never leaves its cell, so a single lookup does. Faded out past 290, where a ring is smaller than a pixel and can only alias.</td></tr>
+    <tr><td>Lightning</td><td><code>composite pass</code></td><td class="t">Not a light in the scene — the scene being lit. It belongs before the tonemap, where the roll-off keeps a multiply from burning the frame to paper white, and the lift is weighted to the top of the frame or it reads as an exposure change. Two to four strokes in a couple of tenths, then seconds of nothing: a burst and a wait, never a strobe.</td></tr>
+  </table>
 
   <h2>Type</h2>
   <p>One family — the platform monospace — set in capitals throughout, with letter-spacing
@@ -418,6 +437,7 @@
     <tr><td>Primary, ghost</td><td><code>height 44 · pad 24</code></td><td class="t">The same capsule with a neutral stroke. It stands beside a primary when a screen asks two questions at once, never alone.</td></tr>
     <tr><td>Option</td><td><code>52 tall · radius 14</code></td><td class="t">Icon over label, in a grid of equal columns.</td></tr>
     <tr><td>Option, text</td><td><code>38 tall · radius 14</code></td><td class="t">The same control without a picture; a row of words needs less room.</td></tr>
+    <tr><td>Menu</td><td><code>rows 32 · radius 20</code></td><td class="t">A chip that opens a list instead of doing one thing. It is for settings — sound, framing, which board is on top — never for a manoeuvre, which must stay one press away. It hangs off the side of its chip and opens into the half it belongs to: anchored to the chip's top rather than centred on it, so it never climbs over the seam onto the other board.</td></tr>
     <tr><td>Segmented switch</td><td><code>38 tall · radius 999</code></td><td class="t">Two or three segments in one capsule, hairline between. The active segment carries its own side's colour; it floats over the thing it switches, never in a panel beside it.</td></tr>
     <tr><td>Switch</td><td><code>52 tall · track 34 × 19</code></td><td class="t">A setting that is a yes or a no. Label left, track right, whole row pressable.</td></tr>
     <tr><td>Stepper</td><td><code>52 tall · keys 32 · radius 10</code></td><td class="t">A setting that is a number. Tabular figures; the key at a limit drops to 28% and stops taking presses.</td></tr>
@@ -463,6 +483,12 @@
     </div>
   </div>
 
+  <p style="margin-top:24px">A <b>contact row</b> is the one place two readings share a
+  line. The silhouette says how much of a hull is accounted for and where along her it has
+  been struck; the references under it say where on the plot. Written as two panels — a
+  roster and a list of tracks — the second was the first one spelled out in words, and in a
+  gutter this narrow that redundancy costs more than it gives.</p>
+
   <h2>Telling the outcome</h2>
   <p>One word carries the whole after-action screen, and the two sides' colours
   do the saying: teal when the plot was hers, amber when it was theirs. The rules
@@ -483,6 +509,17 @@
   <p>A <b>stat cell</b> is icon, figure, label — in that order, centred, with the
   icon at 44% and the label at 50%, so the figure is the only thing that carries
   weight. A cell turns amber only when the figure is a loss of her own.</p>
+
+  <h2>What a square can say</h2>
+  <p>Three states, and the plot counts in squares for all of them: a footprint drawn as one
+  rectangle reads as one long cell, so a four-cell hull leaves four marks, not one. The
+  brackets sit at each square's corners; nine adjacent squares share eight interior edges, so
+  the stroke has to be finer there or the brackets double into a lattice.</p>
+  <table style="margin-top:18px">
+    <tr><td style="width:26%">Struck</td><td><code>amber · pulsing</code></td><td class="t">A wash inside, brackets at the corners, and a beat. It is an alarm and it is allowed to look like one.</td></tr>
+    <tr><td>Lost with a hull</td><td><code>amber · pulsing</code></td><td class="t">Exactly the struck treatment over every square she sat on. A sinking is a hit that covers more ground, so it should not need a second language.</td></tr>
+    <tr><td>Lit</td><td><code>cold white · still</code></td><td class="t">What a star shell found: nine squares and, in the middle, how many of them hold something. No pulse — a reading is not an alarm, and what you have learned must be tellable from what you have hit without reading the colour. The squares come up as the light comes down, and the count lands last, exactly as the star goes out.</td></tr>
+  </table>
 
   <h2>Saying how a thing is worked</h2>
   <p>An instruction floats over the thing it is about, not in the panel beside it.
@@ -508,8 +545,11 @@
   </div>
 
   <h2>Icons</h2>
-  <p>One hand throughout: a 14&nbsp;× 14 box, 1.25 stroke, round caps and joins, no fills,
-  90% opacity. Every icon is a silhouette an officer would recognise — a hull, a wake, a
+  <p>Thirty-seven of them, one hand throughout: a 14&nbsp;× 14 box, 1.25 stroke, round caps
+  and joins, no fills, 90% opacity. Where a shape refuses to read at that size the shape
+  changes, not the size — a gear's teeth are finer than the stroke itself, so the settings
+  icon is a rack of sliders; a parachute's canopy and its rigging enclose an area that at
+  14&nbsp;px becomes a blob, so the star shell keeps the canopy and drops the rigging. Every icon is a silhouette an officer would recognise — a hull, a wake, a
   bearing — never a generic symbol.</p>
   <div class="icons">
     <div><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.3"/><path d="M7 7V1.7"/><path d="M7 7l4.6 2.6"/></svg>Radar</div>
@@ -524,10 +564,13 @@
     <div><svg viewBox="0 0 14 14"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M11.7 1.8v3H8.8"/></svg>Reset</div>
     <div><svg viewBox="0 0 14 14"><path d="M2.1 4.7h2.4l1-1.5h3l1 1.5h2.4v6.3H2.1z"/><circle cx="7" cy="7.8" r="1.9"/></svg>Camera</div>
     <div><svg viewBox="0 0 14 14"><path d="M1.9 9.9h10.2"/><path d="M4.2 9.9a2.8 2.8 0 0 1 5.6 0"/><path d="M7 2.9v1.7M3.3 4.4l1.2 1.2M10.7 4.4 9.5 5.6"/></svg>Scene</div>
-    <div><svg viewBox="0 0 14 14"><path d="M1.8 10.3h10.4l-1.6 2.2H3.4z"/><path d="M7 9.9V1.7"/><path d="M6.4 3.4 3.6 9.9h2.8z"/><path d="M7.6 4.2l2.9 5.7H7.6z"/></svg>Age of sail</div>
+    <div><svg viewBox="0 0 14 14"><path d="M1.5 11.3h11"/><path d="M4.2 8.7a2.8 2.8 0 0 1 5.6 0"/><path d="M7 2.2v1.6M2.9 4.2l1.1 1.1M11.1 4.2 10 5.3"/></svg>Morning</div>
     <div><svg viewBox="0 0 14 14"><path d="M3.9 8.3a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.7 10.2 4 12.2M7.3 10.2l-.7 2M9.9 10.2l-.7 2"/></svg>Squall</div>
     <div><svg viewBox="0 0 14 14"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</div>
+    <div><svg viewBox="0 0 14 14"><path d="M2 5.8A5.4 5.4 0 0 1 12 5.8"/><path d="M7 6.2V9"/><path d="M7 10.4v2M4.9 10 3.7 12M9.1 10l1.2 2"/></svg>Star shell</div>
+    <div><svg viewBox="0 0 14 14"><path d="M2 3.6h10M2 7h10M2 10.4h10"/><path d="M8.7 2.1v3M4.5 5.5v3M9.9 8.9v3"/></svg>Settings</div>
     <div><svg viewBox="0 0 14 14"><path d="M2.3 2.5h9.4v3.6H2.3z"/><path d="M2.3 7.9h9.4v3.6H2.3z"/></svg>Two boards</div>
+    <div><svg viewBox="0 0 14 14"><path d="M4.6 11.2V2.8"/><path d="M3.1 4.3 4.6 2.8l1.5 1.5"/><path d="M9.4 2.8v8.4"/><path d="M10.9 9.7 9.4 11.2 7.9 9.7"/></svg>Swap</div>
   </div>
 
   <h2>Legibility over the scene</h2>
@@ -575,7 +618,7 @@
   <table style="margin-top:22px">
     <tr><th style="width:26%">Layout</th><th>Split</th><th>Where</th></tr>
     <tr><td>Whole</td><td><code>744 × 1133</code></td><td class="t">Title, deployment, after action. One block, centred, with the title above it.</td></tr>
-    <tr><td>Two boards</td><td><code>744 × 566 each</code></td><td class="t">Battle. The enemy plot above on a fixed plan view, her own formation below on the orbit rig — two passes into one target. The board nearest the controls is the one the hand moves.</td></tr>
+    <tr><td>Two boards</td><td><code>744 × 566 each</code></td><td class="t">Battle. The enemy plot above on a fixed plan view, her own formation below on the orbit rig — two passes into one target. The two halves can be exchanged, and everything that <em>describes</em> a board travels with it; the rails do not. A control belongs to the hand, not to the plot it acts on, and the thumb is at the foot of the screen whichever board is on top.</td></tr>
     <tr><td>Board and panel</td><td><code>566 above · 567 below</code></td><td class="t">Split deployment and split after action. The lower half is the panel itself, never a card floating inside it — a card in a half that small has no room to be a card.</td></tr>
   </table>
   <p>A half-screen panel pads <code>20 / 26 / 62</code>: the foot is deep because the Screens
@@ -583,10 +626,13 @@
   inside the panel is split by an auto margin at each end rather than pooled into one hole
   above the buttons.</p>
   <p>An instrument beside a board, never across it. The upper board on the battle screen is
-  framed to <code>419 × 418</code> rather than filling its half, which opens a gutter of about
-  160 either side; the readout lives there in two columns of <code>120</code>, clear of the
-  grid by 20. A bar across the foot covered the bottom row of cells, and a plot you cannot
-  read is not a plot.</p>
+  framed rather than filling its half, which opens a gutter either side; the readout lives
+  there in <strong>one</strong> column of <code>138</code>, clear of the grid by 51. A bar
+  across the foot covered the bottom row of cells, and a plot you cannot read is not a plot.
+  The second column went the same way as the bar, and for a better reason: of the four panels
+  it held, one repeated a figure the first column already gave, two carried a constant
+  dressed as a measurement, and the fourth said in words what the hull roster says in shape.
+  A gutter is not a place to put things because it is empty.</p>
   <p>A card that narrow wraps rather than spills: every row folds onto a second line before
   anything is squeezed out or clipped. Labels sit under their figures when they will not sit
   beside them.</p>

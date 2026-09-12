@@ -40,10 +40,10 @@
   .col{max-width:66ch}
   /* la prose garde sa justification ; les données sortent sur toute la largeur,
      pour que la table et le journal ne défilent jamais sur un écran normal */
-  .scroll, .plots, .log, .later{width:min(936px, calc(100vw - 64px))}
+  .scroll, .plots, .log{width:min(936px, calc(100vw - 64px))}
   @media (max-width:640px){
     .wrap{padding:0 20px 72px}
-    .scroll, .plots, .log, .later{width:min(936px, calc(100vw - 40px))}
+    .scroll, .plots, .log{width:min(936px, calc(100vw - 40px))}
   }
 
   /* ---- bandeau de tête ---- */
@@ -72,11 +72,6 @@
   strong{color:var(--ink-1);font-weight:600}
   code{font:400 .88em/1 var(--mono);letter-spacing:.04em;color:var(--ink-1);
     background:rgba(198,216,230,.07);padding:2px 5px;border-radius:4px}
-
-  /* la thèse, au poids qu'elle porte */
-  .thesis{margin:0;padding:26px 0 26px 26px;border-left:2px solid var(--mine);
-    font:400 clamp(19px,2.4vw,23px)/1.5 var(--body);color:var(--ink-1);max-width:52ch}
-  .thesis b{font-weight:600;color:var(--mine)}
 
   /* ---- la table des batteries : des données, donc du chiffre et de la largeur ---- */
   .scroll{overflow-x:auto;margin:26px 0 0;
@@ -245,29 +240,6 @@
     text-transform:uppercase;color:var(--ink-1)}
   .keys span{display:block;font-size:13.5px;line-height:1.58;color:var(--ink-2);margin-top:2px}
 
-  /* ---- le sort des commandes actuelles : deux états, donc deux colonnes ---- */
-  .fate{width:min(936px, calc(100vw - 64px));border-collapse:collapse;margin:26px 0 0;
-    border:1px solid var(--stroke);border-radius:4px;overflow:hidden;display:table}
-  .fate th{text-align:left;padding:14px 16px 12px;border-bottom:1px solid var(--stroke);
-    background:var(--raise);
-    font:400 10px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--ink-4)}
-  .fate td{padding:13px 16px;border-bottom:1px solid var(--stroke-2);vertical-align:top;
-    background:var(--raise);font-size:14px;line-height:1.6;color:var(--ink-2)}
-  .fate tr:last-child td{border-bottom:0}
-  .fate td:first-child{font:600 14px/1.5 var(--display);letter-spacing:.07em;
-    text-transform:uppercase;color:var(--ink-1);white-space:nowrap;width:26%}
-  .verdict{display:inline-block;margin-right:9px;font:400 9.5px/1 var(--mono);letter-spacing:.14em;
-    text-transform:uppercase;padding:4px 7px;border-radius:3px;white-space:nowrap}
-  .live{color:var(--mine);background:var(--mine-dim);border:1px solid var(--mine-line)}
-  .half{color:#ffd9a8;background:rgba(255,186,128,.12);border:1px solid rgba(255,186,128,.34)}
-  .deco{color:var(--ink-3);background:rgba(198,216,230,.06);border:1px solid var(--stroke-2)}
-  .keep{color:var(--mine);background:var(--mine-dim);border:1px solid var(--mine-line)}
-  .go{color:var(--theirs);background:var(--theirs-dim);border:1px solid var(--theirs-line)}
-  @media (max-width:640px){
-    .fate{width:auto}
-    .fate td:first-child{width:auto;white-space:normal}
-  }
-
   /* ---- une liste simple, qui porte une conséquence ---- */
   .conseq{list-style:none;margin:24px 0 0;padding:0;display:grid;gap:0}
   .conseq li{display:grid;grid-template-columns:210px 1fr;gap:0 22px;padding:15px 0;
@@ -278,14 +250,6 @@
   .conseq span{font-size:14.5px;line-height:1.62}
   .conseq .cost{color:var(--theirs)}
   @media (max-width:600px){ .conseq li{grid-template-columns:1fr;gap:5px} }
-
-  /* ---- la ligne de coupe : ce que la v1 ne fait pas ---- */
-  .later{margin-top:26px;display:grid;gap:1px;background:var(--stroke-2);
-    border:1px solid var(--stroke);border-radius:4px;overflow:hidden}
-  .later div{background:var(--raise);padding:16px 18px}
-  .later h5{margin:0 0 5px;font:600 13px/1.3 var(--display);letter-spacing:.1em;
-    text-transform:uppercase;color:var(--ink-2)}
-  .later p{margin:0;font-size:13.5px;line-height:1.6;color:var(--ink-4)}
 
   footer{margin-top:76px;padding-top:24px;border-top:1px solid var(--stroke);
     font:400 11px/1.8 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-4)}
@@ -418,55 +382,10 @@
 </div>
 
 <div class="col">
-<p style="margin-top:44px;color:var(--ink-3);font-size:14.5px">L'encart ci-dessus est la règle
-telle qu'on la lirait dans la boîte. Ce qui suit ne la répète pas&nbsp;: c'est
-<strong>pourquoi</strong> elle est celle-là, et où chaque morceau se branche dans ce qui tourne
-déjà.</p>
+
 
 <section>
-  <h2><span>01</span>L'idée</h2>
-  <p class="thesis">Chaque coque tire un coup par tour. <b>Deux d'entre elles font mieux
-  lorsqu'elles sont prêtes.</b> Couler une coque, c'est lui retirer ce qu'elle savait faire.</p>
-  <p>La bataille navale classique rend la flotte passive&nbsp;: cinq formes qui attendent d'être
-  trouvées. Ici elles sont l'arsenal — l'adversaire ne marque pas des points, <strong>il
-  désarme</strong>, et cela se voit sur son propre plateau.</p>
-</section>
-
-<section>
-  <h2><span>02</span>Le tour</h2>
-  <p>Une touche, aucune confirmation, aucun menu. Ce n'est pas la longueur des animations qui
-  fait la vitesse d'un jeu&nbsp;: c'est qu'il n'y ait rien entre la décision et le résultat.</p>
-  <ul class="beats">
-    <li><span class="at">0,00 s</span><span class="what">La case s'allume</span>
-      <span class="why">Sous le doigt, avant tout le reste. Le seul accusé de réception.</span></li>
-    <li><span class="at">0,00 s</span><span class="what">Les pastilles s'éteignent</span>
-      <span class="why">C'est le <b>lever</b> du doigt qui engage&nbsp;: le doigt posé montrait,
-      il ne validait pas. Rien d'autre à confirmer.</span></li>
-    <li><span class="at">0,20 s</span><span class="what">Le tir part</span>
-      <span class="why">De la coque dont c'est le tour.</span></li>
-    <li><span class="at">1,40 s</span><span class="what">Il franchit la couture</span>
-      <span class="why">Il sort de la moitié basse et redescend dans la haute, sur la case
-      visée.</span></li>
-    <li><span class="at">1,60 s</span><span class="what">L'impact</span>
-      <span class="why"><b>Touché</b> ou <b>manqué</b>. Pour la frappe, les trois cases
-      tranchent ensemble.</span></li>
-    <li><span class="at">1,90 s</span><span class="what">Le relevé suit</span>
-      <span class="why">Salves, coups au but, précision, registre des coques.</span></li>
-    <li class="rest"><span class="at">2,20 s</span><span class="what">Un temps</span>
-      <span class="why">Rien. Sans cette pause, la riposte marche sur le coup
-      précédent.</span></li>
-    <li class="them"><span class="at">2,40 s</span><span class="what">Leur tir entre</span>
-      <span class="why">D'au-delà de l'horizon&nbsp;: leur flotte est cachée, on ne montre pas le
-      bateau qui tire.</span></li>
-    <li class="them"><span class="at">3,40 s</span><span class="what">Leur impact</span>
-      <span class="why">La coque touchée brûle jusqu'à la fin de la partie.</span></li>
-    <li><span class="at">3,80 s</span><span class="what">La main revient</span>
-      <span class="why">Les rechargements ont avancé d'un tour.</span></li>
-  </ul>
-</section>
-
-<section>
-  <h2><span>03</span>Les batteries, et ce qu'on perd avec elles</h2>
+  <h2><span>01</span>Les batteries, et ce qu'on perd avec elles</h2>
   <p>Trois coques portent un canon, deux portent mieux&nbsp;: deux règles à apprendre, pas cinq.
   Les deux époques partagent les mêmes emplacements.</p>
 
@@ -569,7 +488,7 @@ déjà.</p>
 </section>
 
 <section>
-  <h2><span>04</span>L'adversaire</h2>
+  <h2><span>02</span>L'adversaire</h2>
   <p>Les mêmes coques, les mêmes spéciales, les mêmes rechargements. Un seul basculement le rend
   crédible.</p>
   <ul class="conseq">
@@ -580,12 +499,10 @@ déjà.</p>
       touches alignées et il suit la ligne. Il dépense la frappe en chasse, la torpille en
       recherche.</span></li>
   </ul>
-  <p style="margin-top:24px">Une trentaine de lignes, et cela bat un joueur distrait sans jamais
-  rien faire de déloyal.</p>
 </section>
 
 <section>
-  <h2><span>05</span>Ce qu'on a sous la main</h2>
+  <h2><span>03</span>Ce qu'on a sous la main</h2>
   <p>Presque rien, et c'est bon signe. La moitié du haut ne porte <strong>aucun bouton</strong> —
   c'est la surface de visée. Le rail de droite ne porte plus des manœuvres mais <strong>les cinq
   coques</strong>&nbsp;: si la coque est la batterie, la liste des coques est la barre d'outils.
@@ -700,140 +617,12 @@ déjà.</p>
     </div>
   </div>
 
-  <table class="fate">
-    <thead><tr><th>Aujourd'hui</th><th>Pendant une partie</th></tr></thead>
-    <tbody>
-      <tr><td>Missile, catapulte, torpille</td>
-        <td><span class="verdict go">partent</span>Ce ne sont plus des commandes mais des
-        résultats&nbsp;: on ne déclenche pas une torpille, on tire avec le sous-marin.</td></tr>
-      <tr><td>Sink</td>
-        <td><span class="verdict go">part</span>Un naufrage se mérite.</td></tr>
-      <tr><td>Reset</td>
-        <td><span class="verdict go">quitte le rail</span>Trop près du pouce pour ce qu'il efface.
-        Il devient <em>Abandonner</em>, dans un menu, avec la seule confirmation du jeu.</td></tr>
-      <tr><td>Menu caméra</td>
-        <td><span class="verdict go">part</span>Quatre cadrages sont un outil d'auteur. Il reste
-        un geste et une pastille <em>recadrer</em>.</td></tr>
-      <tr><td>Son</td>
-        <td><span class="verdict keep">reste</span>Toujours accessible, jamais dangereux.</td></tr>
-      <tr><td>Screens, Debug</td>
-        <td><span class="verdict go">partent du jeu</span>Les échafaudages ne survivent pas à la
-        construction.</td></tr>
-    </tbody>
-  </table>
-  <p style="margin-top:24px">La tablette est tenue à deux mains&nbsp;: <strong>le râtelier là où
-  est le pouce, le plot là où est l'œil.</strong> Armer et viser sont deux gestes différents, et
-  les confondre ferait armer par erreur en visant.</p>
 </section>
 
-<section>
-  <h2><span>06</span>Ce que l'écran dit vraiment</h2>
-  <p>Trois statuts, et il vaut mieux savoir lequel on regarde. <strong>Vivant</strong>&nbsp;: calculé
-  à partir de l'état de la partie, change quand la partie change. <strong>À moitié</strong>&nbsp;:
-  une part est calculée, l'autre est une constante. <strong>Décor</strong>&nbsp;: écrit en dur, ne
-  bouge pas.</p>
 
-  <h3>Bataille — gouttière gauche</h3>
-  <table class="fate">
-    <tbody>
-      <tr><td>Enemy fleet</td><td><span class="verdict live">vivant</span>Les pastilles et le
-        <code>03/07</code> comptent les cases touchées sur les cases connues, prises directement
-        sur les coques adverses.</td></tr>
-      <tr><td>Hulls sunk</td><td><span class="verdict live">vivant</span><code>01/03</code>&nbsp;:
-        une coque n'est comptée coulée que lorsque toutes ses cases le sont.</td></tr>
-      <tr><td>Tracks</td><td><span class="verdict live">vivant</span>Une ligne par coque
-        rencontrée, avec ses vraies références de grille et son statut — <em>held</em> tant qu'il
-        reste une case à trouver, <em>sunk</em> ensuite.</td></tr>
-    </tbody>
-  </table>
-
-  <h3>Bataille — gouttière droite</h3>
-  <table class="fate">
-    <tbody>
-      <tr><td>Hits</td><td><span class="verdict live">vivant</span>Le nombre de cases adverses
-        touchées.</td></tr>
-      <tr><td>Enemy hulls</td><td><span class="verdict live">vivant</span>Les trois coques à plat,
-        à leur vraie longueur, remplies là où elles ont été touchées.</td></tr>
-      <tr><td>Salvos</td><td><span class="verdict half">à moitié</span>Coups au but (vivant)
-        <b>+ 7</b>. Les sept ratés sont les anneaux d'écume posés sur l'eau au chargement&nbsp;:
-        une constante, pas un compteur.</td></tr>
-      <tr><td>Accuracy</td><td><span class="verdict half">à moitié</span>Coups au but divisés par
-        les salves — donc elle hérite de la même constante. Elle bouge quand on touche, jamais
-        quand on manque.</td></tr>
-    </tbody>
-  </table>
-
-  <h3>Bataille — son propre plateau</h3>
-  <table class="fate">
-    <tbody>
-      <tr><td>Nom de la force</td><td><span class="verdict live">vivant</span><em>Task Force
-        Meridian</em> ou <em>Line of Battle</em> selon l'époque chargée.</td></tr>
-      <tr><td>Hulls · damaged</td><td><span class="verdict live">vivant</span>Le nombre de coques
-        de l'époque en cours, et le nombre qui porte une brûlure.</td></tr>
-      <tr><td>Ligne d'état</td><td><span class="verdict live">vivant</span><em>Hit G3 ·
-        burning</em>, <em>torpedo running</em>, <em>going down</em>… elle suit ce qui se passe à
-        l'instant, y compris pendant une manœuvre.</td></tr>
-    </tbody>
-  </table>
-
-  <h3>Déploiement</h3>
-  <table class="fate">
-    <tbody>
-      <tr><td>Theatre</td><td><span class="verdict live">vivant</span>Change réellement la
-        lumière, la mer et l'époque de la flotte.</td></tr>
-      <tr><td>Weather · Hour · Flagship</td><td><span class="verdict deco">décor</span>Les
-        lectures à droite du titre — état de la mer, visibilité, heure locale, nom de la force —
-        sont des tables fixes attachées au bouton choisi. Elles ne changent rien à la partie.
-        <em>C'est la première dette à payer&nbsp;: l'interface est déjà là.</em></td></tr>
-    </tbody>
-  </table>
-
-  <h3>Fin de partie</h3>
-  <table class="fate">
-    <tbody>
-      <tr><td>Les six chiffres</td><td><span class="verdict deco">décor</span>Salves, coups,
-        précision, coques coulées, perdues, portée&nbsp;: deux jeux de valeurs écrits en dur, un
-        pour la victoire, un pour la défaite. Rien n'est repris de la partie qui vient de se
-        jouer.</td></tr>
-      <tr><td>Verdict et phrase</td><td><span class="verdict deco">décor</span>Choisis par le
-        commutateur Win / Loss du tiroir Debug, pas par l'issue d'une partie — il n'y a pas encore
-        de partie à gagner.</td></tr>
-    </tbody>
-  </table>
-
-  <p style="margin-top:26px">Résumé sans détour&nbsp;: <strong>tout ce qui décrit le plateau
-  adverse est vrai</strong>, parce que le plateau adverse existe vraiment dans le code. Tout ce
-  qui décrit une partie — son déroulé, son bilan, ses réglages — est en attente de la partie
-  elle-même. C'est exactement la frontière que ce document sert à franchir.</p>
-</section>
 
 <section>
-  <h2><span>07</span>Où ça se branche</h2>
-  <p>Les trois projectiles existent déjà et atterrissent déjà au bon endroit.</p>
-  <ul class="conseq">
-    <li><b>Canon</b><span>L'arc du missile, depuis la coque dont c'est le tour.</span></li>
-    <li><b>Frappe aérienne</b><span>La catapulte&nbsp;: l'avion quitte le pont, traverse,
-      lâche.</span></li>
-    <li><b>Torpille</b><span>La course immergée — la seule qui reste à plat.</span></li>
-    <li><b>Une touche sur son plateau</b><span>La brûlure, qui persiste.</span></li>
-    <li><b>La dernière case d'une coque</b><span>Le naufrage.</span></li>
-  </ul>
-  <p style="margin-top:24px">Voir le coup traverser demande de savoir une chose&nbsp;: les deux
-  moitiés ne sont pas deux plateaux, <strong>c'est le même plateau rendu deux fois</strong>. La
-  grille est tracée dans le shader de l'eau&nbsp;; basculer d'une moitié à l'autre ne change que
-  des visibilités et des uniformes.</p>
-  <ul class="conseq">
-    <li><b>Fenêtre par passe</b><span>Chaque caméra ne dessine le projectile que pendant sa
-      moitié du vol. Un uniforme d'opacité posé dans <code>board()</code>. <em>C'est la
-      v1.</em></span></li>
-    <li><b>Deux plateaux réels</b><span>Poser le plot adverse à mille unités de là. Le projectile
-      traverse pour de bon, mais la grille suppose une seule origine — une journée de travail, et
-      deux <em>endroits</em> au lieu d'un endroit montré deux fois.</span></li>
-  </ul>
-</section>
-
-<section>
-  <h2><span>08</span>Une partie, coup par coup</h2>
+  <h2><span>04</span>Une partie, coup par coup</h2>
   <p>Six échanges, une quarantaine de secondes.</p>
 
   <div class="log">
@@ -884,37 +673,8 @@ déjà.</p>
       perdu.</em></span></div>
   </div>
 
-  <p style="margin-top:26px">Deux bâtiments de premier rang au fond en six échanges, chaque camp
-  privé de son arme la plus lourde, et aucun menu ouvert.</p>
 </section>
 
-<section>
-  <h2><span>09</span>Écarté de la v1</h2>
-  <p>Bonnes idées, chacune payée en rythme. Listées pour être ajoutées délibérément.</p>
-  <div class="later">
-    <div>
-      <h5>L'écran de déploiement, enfin utile</h5>
-      <p>Le grain cloue les avions au pont. Le banc de brume retient le résultat un tour. La nuit
-      réduit de moitié ce que le plot révèle. L'interface est déjà construite&nbsp;: c'est la
-      profondeur la moins chère du projet.</p>
-    </div>
-    <div>
-      <h5>Les deux autres batteries</h5>
-      <p>Le missile du croiseur annonçant un relèvement&nbsp;; le sonar de l'escorteur révélant
-      sans endommager. Les deux font cinq règles au lieu de deux à la première partie.</p>
-    </div>
-    <div>
-      <h5>L'époque à voile comme jeu à part</h5>
-      <p>Bordée du galion, brûlot de la flûte, mortier du ketch. Après que la série moderne est
-      éprouvée, sinon on équilibre deux jeux à la fois.</p>
-    </div>
-    <div>
-      <h5>Déplacer, munitions, réparation</h5>
-      <p>Les trois transforment deux minutes en dix. C'est un autre jeu, et il mérite d'être
-      conçu comme tel.</p>
-    </div>
-  </div>
-</section>
 
 </div>
 

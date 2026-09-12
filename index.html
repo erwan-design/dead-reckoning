@@ -798,7 +798,7 @@
 
     <div class="ghd"><h6>Theatre</h6><span data-g="th"></span></div>
     <div class="opts c4" id="opts">
-      <button data-e="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 10.3h10.4l-1.6 2.2H3.4z"/><path d="M7 9.9V1.7"/><path d="M6.4 3.4 3.6 9.9h2.8z"/><path d="M7.6 4.2l2.9 5.7H7.6z"/></svg>Age of sail</button>
+      <button data-e="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.5 11.3h11"/><path d="M4.2 8.7a2.8 2.8 0 0 1 5.6 0"/><path d="M7 2.2v1.6M2.9 4.2l1.1 1.1M11.1 4.2 10 5.3"/></svg>Morning</button>
       <button data-e="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.9 8.3a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.7 10.2 4 12.2M7.3 10.2l-.7 2M9.9 10.2l-.7 2"/></svg>Squall</button>
       <button data-e="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</button>
       <button data-e="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.7 7.4a2.3 2.3 0 0 1 1-4.3 2.8 2.8 0 0 1 5.1.8 1.9 1.9 0 0 1-.5 3.5z"/><path d="M7.4 8.2 5.9 10.6h2.2l-1.5 2.4"/><path d="M3.6 9.9 3 11.9M10.4 9.9l-.6 2"/></svg>Storm</button>
@@ -841,7 +841,7 @@
     <h3>Deployment</h3>
     <div class="ghd"><h6>Theatre</h6><span data-g="th"></span></div>
     <div class="opts c4">
-      <button data-e="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 10.3h10.4l-1.6 2.2H3.4z"/><path d="M7 9.9V1.7"/><path d="M6.4 3.4 3.6 9.9h2.8z"/><path d="M7.6 4.2l2.9 5.7H7.6z"/></svg>Age of sail</button>
+      <button data-e="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.5 11.3h11"/><path d="M4.2 8.7a2.8 2.8 0 0 1 5.6 0"/><path d="M7 2.2v1.6M2.9 4.2l1.1 1.1M11.1 4.2 10 5.3"/></svg>Morning</button>
       <button data-e="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.9 8.3a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.7 10.2 4 12.2M7.3 10.2l-.7 2M9.9 10.2l-.7 2"/></svg>Squall</button>
       <button data-e="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</button>
       <button data-e="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.7 7.4a2.3 2.3 0 0 1 1-4.3 2.8 2.8 0 0 1 5.1.8 1.9 1.9 0 0 1-.5 3.5z"/><path d="M7.4 8.2 5.9 10.6h2.2l-1.5 2.4"/><path d="M3.6 9.9 3 11.9M10.4 9.9l-.6 2"/></svg>Storm</button>
@@ -915,7 +915,7 @@
       <button data-cam="0">Cam 01</button><button data-cam="1">Cam 02</button><button data-cam="2">Cam 03</button><button data-cam="3">Cam 04</button>
     </div>
     <h5>Théâtre</h5><div class="drow">
-      <button data-e="0">Galleon</button><button data-e="1">Squall</button><button data-e="2">Night</button><button data-e="3">Storm</button>
+      <button data-e="0">Morning</button><button data-e="1">Squall</button><button data-e="2">Night</button><button data-e="3">Storm</button>
     </div>
     <div class="cam" id="camro"></div>
     <h5>Format</h5><div class="drow">
@@ -3385,7 +3385,10 @@ sizeTargets();
    ENVIRONMENTS — two grades of the same sea, cross-faded
    ============================================================ */
 const ENVS = [
-  { name:'Galleon', era:1, blurb:'Seventeenth century &middot; first light &middot; courses and topsails', cond:'first light &middot; swell 1.1m &middot; courses &amp; topsails &middot; wind nne/06',
+  /* MORNING. It kept the seventeenth-century fleet because the palette was
+     built for it; but a theatre is a light, not a period, and this one is the
+     best light in the piece. It carries the modern fleet like the others. */
+  { name:'Morning', era:0, blurb:'Modern fleet &middot; first light &middot; swell 1.1m', cond:'05:20 local &middot; swell 1.1m &middot; vis 14km &middot; wind nne/06',
     sunAz:-1.48, sunEl:0.385, sunCol:[0xffd7b6,2.20],
     zenith:[0x0e3161,1], midSky:[0x2f6da8,1], haze:[0xdcc6ac,1.06], hazeWarm:[0xf7d6ac,1.14],
     deep:[0x16386f,1], shoal:[0x4f92da,1], shad:[0x3d669e,0.62], foam:[0xdaf0ea,1],
@@ -3733,7 +3736,7 @@ function flare(){
   const pts = [];
   for(let i=0;i<=180;i++) pts.push(FLR.arcP(i/180, new T.Vector3()));
   for(const t of FLR.trails) retrace(t, pts);
-  ANIM.flr = 0; ANIM.flrLit = false;
+  ANIM.flr = 0; ANIM.flrLit = false; CINE.init = false;
   for(const t of FLR.trails){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
   hiss(FLR.A, 0.24, 280, 2400, 1.0, 0.85);
   refreshUI();
@@ -4565,7 +4568,7 @@ const SCR = { attract: document.getElementById('scr-attract'),
    yet obeyed: the orders exist, the engagement does not read them. The theatre
    is the exception because the sea behind the card is the real one. */
 const SETUP = { wx:1, tod:1, fs:0 };
-const THN  = ['Age of sail', 'Squall', 'Night'];
+const THN  = ['Morning', 'Squall', 'Night', 'Storm'];
 const WXN  = ['Clear', 'Gale', 'Fog bank'];
 const TODN = ['Dawn', 'Midday', 'Dusk', 'Middle watch'];
 const TODH = ['05:20', '12:05', '19:40', '00:35'];
@@ -4574,7 +4577,7 @@ const FLEET = [
   { ships:['Destroyer', 'Carrier', 'Cruiser'], of:'Task Force Meridian' },
   { ships:['Galleon', 'Line ship', 'Fluyt'],   of:'Line of Battle' }
 ];
-const SEA = ['slight &middot; 0.9m', 'rough &middot; 3.4m', 'slight &middot; 1.2m'];
+const SEA = ['slight &middot; 1.1m', 'rough &middot; 3.4m', 'slight &middot; 1.2m'];
 const VIS = ['14 km', '6 km', '900 m'];
 const goNote = document.getElementById('gonote');
 /* the orders exist in two layouts now — one card, one lower half — so the
@@ -4781,8 +4784,10 @@ const CINE = { w:0, want:0, hold:0, done:false, init:false,
 const _c1 = new T.Vector3(), _c2 = new T.Vector3(), _c3 = new T.Vector3(),
       _cq = new T.Quaternion(), _ct = new T.Vector3(), _cl = new T.Vector3(),
       _orbP = new T.Vector3(), _navW = new T.Vector3();
+const _flrLook = new T.Vector3();
 function cineUpdate(dt){
-  let want = 0, obj = null, D = 30, H = 8, S = 6, L = 45, look = null, age = 0;
+  let want = 0, obj = null, D = 30, H = 8, S = 6, L = 45, look = null, age = 0,
+      LD = 118, LH = 58;
   if(ANIM.mis >= 0){
     const u = ANIM.mis;
     age = u*SALVO_DUR;
@@ -4796,6 +4801,23 @@ function cineUpdate(dt){
     /* low and close: a torpedo is only worth watching from the water */
     if(u < 0.80){ obj = TOR.grp; D = 26; H = 4.0; S = 5.0; L = 60; }
     else look = TOR.B;
+  } else if(ANIM.flr >= 0){
+    /* THE STAR SHELL IS WATCHED TWICE OVER. On the way up the subject is the
+       shell, from low down so it climbs out of the frame; once it is lit the
+       subject is no longer the light but the nine squares under it, so the
+       eye leaves the star and frames the block instead. Following the light
+       all the way would show the one thing that does not matter. */
+    const u = ANIM.flr;
+    age = u*FLR_DUR;
+    want = (age > 0.5 && u < 0.95) ? 1 : 0;
+    if(u < FLR_UP){ _flrLook.copy(FLR.star.position); LD = 132; LH = 26; }
+    else {
+      const a = (u - FLR_UP)/(1 - FLR_UP);
+      _flrLook.copy(FLR.lit.position);
+      /* it opens out as the block fills in, and comes down with the light */
+      LD = 210 - 40*a; LH = 150 - 58*a;
+    }
+    look = _flrLook;
   } else if(ANIM.cat >= 0){
     const u = ANIM.cat;
     age = u*CAT_DUR;
@@ -4838,7 +4860,7 @@ function cineUpdate(dt){
     _c2.subVectors(CINE.pos, look); _c2.y = 0;
     if(_c2.lengthSq() < 1.0) _c2.set(0.8, 0, 0.6);
     _c2.normalize();
-    _ct.copy(look).addScaledVector(_c2, 118); _ct.y = look.y + 58;
+    _ct.copy(look).addScaledVector(_c2, LD); _ct.y = look.y + LH;
     if(!CINE.init){ CINE.pos.copy(camera.position); CINE.look.copy(look); CINE.init = true; }
     CINE.pos.lerp(_ct, 1 - Math.exp(-dt*1.9));
     CINE.look.lerp(look, 1 - Math.exp(-dt*2.6));
