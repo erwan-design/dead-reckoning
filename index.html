@@ -366,6 +366,44 @@
      trays — so the frame holds nothing but the scene. It is the only state in
      the app where no control is reachable, and `h` brings them straight back. */
   body.bare .dbg, body.bare .nav{opacity:0!important;pointer-events:none}
+  /* the capture screen holds nothing, so it must not take the pointer: the
+     orbit, wheel and pan listeners all live on the canvas underneath it */
+  #scr-shot{pointer-events:none}
+  /* the hour runs continuously between the three theatres, so it is a slider
+     and not a row of buttons — the whole point is the values between them */
+  .hrow{display:flex;align-items:center;gap:10px;margin:2px 4px 4px}
+  .hrow input[type=range]{-webkit-appearance:none;appearance:none;flex:1 1 auto;
+      height:18px;background:none;cursor:pointer}
+  .hrow input[type=range]::-webkit-slider-runnable-track{height:2px;border-radius:2px;
+      background:linear-gradient(90deg, rgba(255,186,128,.55), rgba(198,216,230,.45) 50%,
+                 rgba(120,150,190,.55))}
+  .hrow input[type=range]::-moz-range-track{height:2px;border-radius:2px;
+      background:linear-gradient(90deg, rgba(255,186,128,.55), rgba(198,216,230,.45) 50%,
+                 rgba(120,150,190,.55))}
+  .hrow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+      width:13px;height:13px;border-radius:50%;margin-top:-5.5px;
+      background:rgba(202,249,236,.98);border:1px solid rgba(157,240,220,.7);
+      box-shadow:0 0 10px rgba(157,240,220,.55)}
+  .hrow input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1px solid
+      rgba(157,240,220,.7);border-radius:50%;background:rgba(202,249,236,.98)}
+  .hrow input[type=range]:focus-visible{outline:2px solid rgba(157,240,220,.8);
+      outline-offset:3px;border-radius:3px}
+  .hrow .hv{flex:0 0 auto;min-width:42px;text-align:right;
+      font:400 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;
+      color:rgba(180,246,230,.92);font-variant-numeric:tabular-nums}
+  .drow button.prim{color:rgba(5,20,22,.92);background:rgba(157,240,220,.92);
+      border-color:rgba(196,250,238,.7)}
+  body:not(.ipad) .drow button.prim:hover{background:rgba(188,248,235,.98)}
+  /* what the last save produced, in its own words */
+  .snap{margin:7px 4px 2px;font:400 9.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing:.1em;text-transform:uppercase;color:rgba(180,246,230,.80);
+      min-height:14px;transition:opacity 400ms ease}
+  /* where the eye is, so an angle that works can be noted and found again */
+  .cam{margin:9px 4px 2px;font:400 10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing:.12em;text-transform:uppercase;color:rgba(224,233,240,.42);
+      font-variant-numeric:tabular-nums;display:none}
+  body.s-shot .cam{display:block}
+  .cam b{font-weight:400;color:rgba(180,246,230,.92)}
   /* the screen switcher is the one thing that outlives the screen it is on */
   /* above the screen overlays, or the title card swallows every click on it */
   /* A COLLAPSED PANEL STILL HOLDS ITS BOX. Screens is 176 wide and sits at
@@ -799,12 +837,22 @@
     <h5>Layers</h5><div class="drow">
       <button data-a="radar">Radar</button><button data-a="con">Contacts</button><button data-a="rings">Impacts</button><button data-a="hit">Strike</button><button data-a="fleet">Fleet</button>
     </div>
-    <h5>Scene</h5><div class="drow">
-      <button data-e="0">Galleon</button><button data-e="1">Squall</button><button data-e="2">Night</button>
+    <h5>Flotte</h5><div class="drow">
+      <button data-era="0">Moderne</button><button data-era="1">Voile</button>
     </div>
     <h5>Camera</h5><div class="drow">
       <button data-cam="0">Cam 01</button><button data-cam="1">Cam 02</button><button data-cam="2">Cam 03</button><button data-cam="3">Cam 04</button>
     </div>
+    <h5>Heure</h5>
+    <div class="hrow">
+      <input type="range" id="hsl" min="0" max="1000" value="500" aria-label="Heure du jour">
+      <span class="hv" id="hvv">14:40</span>
+    </div>
+    <div class="cam" id="camro"></div>
+    <h5>Image</h5><div class="drow">
+      <button class="prim" id="snap">Enregistrer PNG</button>
+    </div>
+    <div class="snap" id="snapmsg"></div>
     <h5>Format</h5><div class="drow">
       <button data-ar="744/1133">iPad</button><button data-ar="1290/2796">iPhone</button><button data-ar="1/1">Carré</button><button data-ar="4/5">4:5</button><button data-ar="16/9">16:9</button>
     </div>
@@ -825,7 +873,7 @@
   <div class="ln" id="rsta">solution held</div>
 </div>
 <div class="half b"><b>Enemy plot</b></div>
-<div class="rd hint" id="hint">drag orbit &middot; scroll range &middot; shift-drag pan &middot; r reset</div>
+<div class="rd hint" id="hint">drag orbit &middot; scroll range &middot; shift-drag pan &middot; r reset &middot; h hide</div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.1/three.min.js"></script>
 <script>
@@ -3238,8 +3286,29 @@ function pushEnv(){ applyEnv(CUR); }
 const NIGHT = {};
 for(const f of ENV_V) NIGHT[f] = ENVS[2]['_'+f];
 for(const f of ENV_S) NIGHT[f] = ENVS[2][f];
+/* THE HOUR IS CONTINUOUS. The three theatres are three times of day with
+   their own sun, so running between them is a clock: dawn at 0, afternoon at
+   the middle, dark at 1. Nothing here is new light — it is the light that was
+   already authored, read between its keys. */
+const MIX = { name:'Hour', era:0 };
+for(const f of ENV_V) MIX['_'+f] = ENVS[1]['_'+f].clone();
+for(const f of ENV_S) MIX[f] = ENVS[1][f];
+/* the clock each theatre is lit for, in minutes past midnight */
+const HOUR_AT = [320, 880, 1308];
+function envAt(t){
+  const a = t < 0.5 ? 0 : 1, u = t < 0.5 ? t*2 : (t - 0.5)*2;
+  const A = ENVS[a], B = ENVS[a+1];
+  for(const f of ENV_V) MIX['_'+f].copy(A['_'+f]).lerp(B['_'+f], u);
+  for(const f of ENV_S) MIX[f] = A[f] + (B[f] - A[f])*u;
+  return MIX;
+}
+function hourLabel(t){
+  const a = t < 0.5 ? 0 : 1, u = t < 0.5 ? t*2 : (t - 0.5)*2;
+  const m = Math.round(HOUR_AT[a] + (HOUR_AT[a+1] - HOUR_AT[a])*u);
+  return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+}
 function stepEnv(dt){
-  const T = ENVS[ANIM.env], k = 1 - Math.exp(-dt*0.80);
+  const T = ANIM.hour >= 0 ? envAt(ANIM.hour) : ENVS[ANIM.env], k = 1 - Math.exp(-dt*0.80);
   for(const f of ENV_V) CUR[f].lerp(T['_'+f], k);
   for(const f of ENV_S) CUR[f] += (T[f] - CUR[f])*k;
   pushEnv();
@@ -3275,7 +3344,7 @@ function shot(i){
 const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
 const SINK_DUR = 11.0;
 const SALVO_DUR = 9.0;
-const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, env:1, envK:0 };
+const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, env:1, envK:0 };
 
 function setStrike(on){
   if(on && ANIM.fireGoal < 0.5){ FX.splash.material.uniforms.uT0.value = tt; boom(FIRE, 0.30);
@@ -3899,6 +3968,7 @@ function refreshUI(){
     if(d.pop !== undefined) continue;
     if(d.cam !== undefined){ b.classList.toggle('on', +d.cam === ANIM.shot); continue; }
     if(d.won !== undefined){ b.classList.toggle('on', (+d.won === 1) === ANIM.won); continue; }
+    if(d.era !== undefined){ b.classList.toggle('on', +d.era === ANIM.era); continue; }
     if(d.ar  !== undefined){
       const cs = getComputedStyle(document.getElementById('stage'));
       const cur = cs.getPropertyValue('--arw').trim() + '/' + cs.getPropertyValue('--arh').trim();
@@ -3918,6 +3988,18 @@ function refreshUI(){
   }
 }
 function closePops(){ for(const s of document.querySelectorAll('.slot')) s.classList.remove('open'); }
+/* SWAPPING THE ERA. The hulls are not the same hulls, so nothing carries
+   over: damage, manoeuvres in flight and the aircraft all go back to rest. */
+function setEra(era){
+  if(era === ANIM.era) return;
+  setStrike(false); setSink(false); clearDamage();
+  ANIM.mis = -1; ANIM.cat = -1; ANIM.bomb = -1; ANIM.tor = -1;
+  setStrike(true);
+  if(CAT.bomb) CAT.bomb.visible = false;
+  CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0,0,0);
+  for(const t of CAT.trails) t.material.uniforms.uFade.value = 0;
+  ANIM.era = era;
+}
 function onCtl(e){
   const b = e.target.closest('button'); if(!b) return;
   /* a chip that owns a menu just opens it */
@@ -3941,20 +4023,14 @@ function onCtl(e){
     overUI(); if(SCREEN === 'over' || SCREEN === 'over2') overPlay(SCREEN);
     refreshUI(); hideHint(); return;
   }
+  if(b.dataset.era !== undefined){ setEra(+b.dataset.era); refreshUI(); hideHint(); return; }
   if(b.dataset.e !== undefined){
     closePops();
     ANIM.env = +b.dataset.e;
-    const era = ENVS[ANIM.env].era;
-    if(era !== ANIM.era){
-      /* the hulls are not the same hulls, so nothing carries over */
-      setStrike(false); setSink(false); clearDamage();
-      ANIM.mis = -1; ANIM.cat = -1; ANIM.bomb = -1; ANIM.tor = -1;
-      setStrike(true);
-      if(CAT.bomb) CAT.bomb.visible = false;
-      CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0,0,0);
-      for(const t of CAT.trails) t.material.uniforms.uFade.value = 0;
-      ANIM.era = era;
-    }
+    /* picking a theatre picks its hour too; the slider takes over again the
+       moment it is touched */
+    ANIM.hour = -1;
+    setEra(ENVS[ANIM.env].era);
     refreshUI(); hideHint(); return;
   }
   if(b.dataset.cam !== undefined){ closePops(); shot(+b.dataset.cam); hideHint(); return; }
@@ -4133,6 +4209,8 @@ function setScreen(name, quiet){
      does not split kept whatever dressing the last pass left — which was
      the enemy's: night, no fleet, echoes lit. Dress it here instead. */
   if(!ANIM.split) board(false);
+  const L = name === 'shot' ? LIM_SHOT : LIM_GAME;
+  LIM.el = L.el; LIM.dist = L.dist;
   if(!ANIM.split) fit();
   if(name === 'attract'){
     /* the framing the piece was drawn for */
@@ -4191,6 +4269,11 @@ const HOME = { az: AD.camAz, el: AD.camEl, dist: AD.camDist, tgt: AD.target.clon
 const GOAL = { az: HOME.az, el: HOME.el, dist: HOME.dist, tgt: HOME.tgt.clone() };
 const CAM  = { az: HOME.az, el: HOME.el, dist: HOME.dist, tgt: HOME.tgt.clone() };
 const LIM  = { el:[0.045, 1.16], dist:[95, 2400], span: 1700 };
+/* the game screens keep the camera inside the framing the art was built for;
+   the capture screen is where you go looking, so it gets the whole dome —
+   from just off the water to straight overhead, and twice the reach. */
+const LIM_GAME = { el:[0.045, 1.16],  dist:[95, 2400] };
+const LIM_SHOT = { el:[0.012, 1.553], dist:[40, 3600] };
 
 /* a camera that rides the weapon, blended over the orbit rig */
 const CINE = { w:0, want:0, hold:0, init:false,
@@ -4330,6 +4413,43 @@ canvas.addEventListener('wheel', e => {
   dolly(Math.exp(e.deltaY*(e.ctrlKey ? 0.0034 : 0.0012)));
 }, {passive:false});
 canvas.addEventListener('dblclick', goHome);
+/* ---------- the capture screen's own instruments ---------- */
+const hSl = document.getElementById('hsl'), hVv = document.getElementById('hvv'),
+      camRo = document.getElementById('camro'), snapMsg = document.getElementById('snapmsg');
+hSl.addEventListener('input', () => {
+  ANIM.hour = +hSl.value/1000;
+  hVv.textContent = hourLabel(ANIM.hour);
+  refreshUI();
+});
+/* an angle worth keeping is an angle worth writing down */
+function camReadout(){
+  camRo.innerHTML = 'AZ <b>' + GOAL.az.toFixed(2) + '</b> &middot; EL <b>' + GOAL.el.toFixed(3)
+    + '</b> &middot; D <b>' + Math.round(GOAL.dist) + '</b>';
+}
+/* THE IMAGE IS THE CANVAS, not the screen: the tray and the pills are HTML
+   laid over it, so they are never in the pixels. Nothing has to be hidden.
+   The grab has to happen inside the frame, straight after the last pass —
+   the drawing buffer is gone by the time a click handler could reach it. */
+let SNAP = 0;
+function snapSay(t){ snapMsg.textContent = t; }
+function grabPNG(){
+  const w = canvas.width, h = canvas.height;
+  canvas.toBlob(blob => {
+    if(!blob){ snapSay('capture refusée'); return; }
+    const d = new Date(), p2 = n => String(n).padStart(2,'0');
+    const name = 'dead-reckoning-' + w + 'x' + h + '-' + p2(d.getHours()) + p2(d.getMinutes())
+               + p2(d.getSeconds()) + '.png';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    snapSay(w + ' \u00d7 ' + h + ' \u00b7 png');
+  }, 'image/png');
+}
+document.getElementById('snap').addEventListener('click', () => {
+  SNAP = 1; snapSay('\u2026');
+});
+
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if(k === 'r'){ goHome(); hideHint(); }
@@ -4581,6 +4701,9 @@ function frame(now){
   matComp.uniforms.tS.value = rtW1.texture;
   matComp.uniforms.uTime.value = tt;
   pass(matComp, null);
+  /* the buffer is only readable here, before the browser composites it away */
+  if(SNAP){ SNAP = 0; grabPNG(); }
+  if(SCREEN === 'shot' && dbgEl.classList.contains('open')) camReadout();
 
   if(guard >= 0 && document.visibilityState === 'visible' && dt < 0.05){
     guard += (dt - guard)*0.06;
