@@ -391,13 +391,31 @@
   .hrow .hv{flex:0 0 auto;min-width:42px;text-align:right;
       font:400 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;
       color:rgba(180,246,230,.92);font-variant-numeric:tabular-nums}
-  .drow button.prim{color:rgba(5,20,22,.92);background:rgba(157,240,220,.92);
-      border-color:rgba(196,250,238,.7)}
-  body:not(.ipad) .drow button.prim:hover{background:rgba(188,248,235,.98)}
+  /* THE SHUTTER stands on its own, opposite the two pills: it is the one
+     thing this screen is for, and it should not be behind a menu. */
+  .shut{position:absolute;right:20px;bottom:20px;z-index:9;display:none;
+      flex-direction:column;align-items:flex-end;gap:9px}
+  body.s-shot .shut{display:flex}
+  body.bare .shut{display:none}
+  .shut button{appearance:none;cursor:pointer;width:58px;height:58px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      color:rgba(198,248,234,.96);background:rgba(12,24,28,.52);
+      -webkit-backdrop-filter:blur(18px) saturate(130%);backdrop-filter:blur(18px) saturate(130%);
+      border:1px solid rgba(157,240,220,.42);
+      box-shadow:0 16px 40px rgba(3,7,16,.50), inset 0 1px 0 rgba(255,255,255,.10),
+                 0 0 26px rgba(157,240,220,.12);
+      transition:background 200ms ease,border-color 200ms ease,transform 140ms ease}
+  .shut svg{width:25px;height:25px;display:block;stroke:currentColor;fill:none;
+      stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round}
+  body:not(.ipad) .shut button:hover{background:rgba(22,46,50,.66);
+      border-color:rgba(157,240,220,.70)}
+  .shut button:active{transform:scale(.94);background:rgba(157,240,220,.20)}
+  .shut button{-webkit-tap-highlight-color:transparent}
   /* what the last save produced, in its own words */
-  .snap{margin:7px 4px 2px;font:400 9.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
-      letter-spacing:.1em;text-transform:uppercase;color:rgba(180,246,230,.80);
-      min-height:14px;transition:opacity 400ms ease}
+  .snap{font:400 9.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing:.1em;text-transform:uppercase;color:rgba(180,246,230,.86);
+      text-align:right;text-shadow:0 1px 2px rgba(4,7,13,.95), 0 0 16px rgba(4,7,13,.9);
+      min-height:14px;pointer-events:none}
   /* where the eye is, so an angle that works can be noted and found again */
   .cam{margin:9px 4px 2px;font:400 10px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;
       letter-spacing:.12em;text-transform:uppercase;color:rgba(224,233,240,.42);
@@ -845,14 +863,10 @@
     </div>
     <h5>Heure</h5>
     <div class="hrow">
-      <input type="range" id="hsl" min="0" max="1000" value="500" aria-label="Heure du jour">
+      <input type="range" id="hsl" min="320" max="1308" value="880" aria-label="Heure du jour">
       <span class="hv" id="hvv">14:40</span>
     </div>
     <div class="cam" id="camro"></div>
-    <h5>Image</h5><div class="drow">
-      <button class="prim" id="snap">Enregistrer PNG</button>
-    </div>
-    <div class="snap" id="snapmsg"></div>
     <h5>Format</h5><div class="drow">
       <button data-ar="744/1133">iPad</button><button data-ar="1290/2796">iPhone</button><button data-ar="1/1">Carré</button><button data-ar="4/5">4:5</button><button data-ar="16/9">16:9</button>
     </div>
@@ -864,6 +878,12 @@
     </div>
   </div>
   <button class="dtog" id="dtog">Debug</button>
+</div>
+<div class="shut" id="shut">
+  <div class="snap" id="snapmsg"></div>
+  <button id="snap" aria-label="Enregistrer une image">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.4h3.9l1.7-2.5h6.8l1.7 2.5H21v11.7H3z"/><circle cx="12" cy="13.2" r="3.6"/></svg>
+  </button>
 </div>
 <div class="srule"></div>
 <div class="half a">
@@ -3302,10 +3322,16 @@ function envAt(t){
   for(const f of ENV_S) MIX[f] = A[f] + (B[f] - A[f])*u;
   return MIX;
 }
-function hourLabel(t){
-  const a = t < 0.5 ? 0 : 1, u = t < 0.5 ? t*2 : (t - 0.5)*2;
-  const m = Math.round(HOUR_AT[a] + (HOUR_AT[a+1] - HOUR_AT[a])*u);
-  return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+/* The slider carries minutes, not a blend fraction: the two legs are 9h20
+   and 7h08 long, so a blend-linear travel would run the morning and the
+   evening at different speeds under a hand that sees a clock. */
+function blendAt(m){
+  return m <= HOUR_AT[1]
+    ? (m - HOUR_AT[0])/(HOUR_AT[1] - HOUR_AT[0])*0.5
+    : 0.5 + (m - HOUR_AT[1])/(HOUR_AT[2] - HOUR_AT[1])*0.5;
+}
+function hourLabel(m){
+  return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(Math.round(m)%60).padStart(2,'0');
 }
 function stepEnv(dt){
   const T = ANIM.hour >= 0 ? envAt(ANIM.hour) : ENVS[ANIM.env], k = 1 - Math.exp(-dt*0.80);
@@ -4417,8 +4443,9 @@ canvas.addEventListener('dblclick', goHome);
 const hSl = document.getElementById('hsl'), hVv = document.getElementById('hvv'),
       camRo = document.getElementById('camro'), snapMsg = document.getElementById('snapmsg');
 hSl.addEventListener('input', () => {
-  ANIM.hour = +hSl.value/1000;
-  hVv.textContent = hourLabel(ANIM.hour);
+  const m = +hSl.value;
+  ANIM.hour = blendAt(m);
+  hVv.textContent = hourLabel(m);
   refreshUI();
 });
 /* an angle worth keeping is an angle worth writing down */
