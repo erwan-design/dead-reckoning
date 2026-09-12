@@ -370,7 +370,10 @@
         </div>
         <p style="margin-top:10px">Une arme spéciale est prête&nbsp;? Touchez sa pastille, puis
         la case. Sinon, touchez simplement la case&nbsp;: c'est le canon.</p>
-        <p>Tirer une arme spéciale <b>ne fait pas avancer</b> la rotation des canons.</p>
+        <p>Armer ne consomme pas le tour&nbsp;: seule une case tirée le consomme. Une arme prête
+        le reste tant qu'elle n'a pas servi — elle ne se périme pas et ne se cumule jamais.</p>
+        <p>Tirer une arme spéciale <b>ne fait pas avancer</b> la rotation des canons, et relance
+        son propre rechargement à partir de ce tour-là.</p>
       </div>
 
       <div class="rule">
@@ -519,6 +522,29 @@ déjà.</p>
     </div>
   </div>
 
+  <h3>Le tour où une spéciale se débloque</h3>
+  <p>Elle ne s'impose pas et ne se périme pas. Quatre points.</p>
+  <ul class="conseq">
+    <li><b>On l'apprend une fois</b><span>Au tour où elle passe prête, sa pastille s'allume avec
+      une pulsation et le relevé le dit une seule fois, à la place où il annonce les touches.
+      Ensuite elle reste allumée, sans rien réclamer. <em>Pendant un échange de quatre secondes,
+      l'œil est sur le plot adverse&nbsp;: une pastille qui s'allume en silence au bord bas ne se
+      voit pas.</em></span></li>
+    <li><b>Elle attend sans se gâter</b><span>Prête est un <em>état</em>, pas un stock. Ne pas la
+      tirer ne la fait pas expirer — et n'en donne jamais deux. Le compteur s'arrête, il ne
+      s'accumule pas.</span></li>
+    <li><b>L'armer ne coûte pas le tour</b><span>Toucher la pastille arme, la retoucher désarme,
+      toucher l'autre spéciale échange. Seule une case tirée consomme le tour. <em>C'est ce qui
+      rend la règle « une touche » sûre&nbsp;: on ne peut pas perdre un tour en explorant.</em></span></li>
+    <li><b>Le rechargement repart du tir</b><span>Pas du moment où elle est devenue prête. Frappe
+      disponible au tour 5 et dépensée au tour 9&nbsp;: la suivante tombe au 13, pas au 9.</span></li>
+  </ul>
+  <p style="margin-top:24px">Rien n'interdit donc de garder sa frappe pour plus tard, et rien n'a
+  besoin de l'interdire&nbsp;: <strong>attendre ne coûte rien tout de suite et coûte quelque chose
+  plus tard</strong> — le rechargement suivant décalé d'autant, et la coque qui la porte peut
+  couler entre-temps.</p>
+
+  <h3>Ce qu'on perd avec une coque</h3>
   <ul class="conseq">
     <li><b>Chacun son tour</b><span>Les coques tirent en rotation, jamais la plus proche&nbsp;:
       une règle que personne ne peut suivre des yeux n'est pas une règle. La rotation raccourcit
@@ -528,7 +554,8 @@ déjà.</p>
     <li><b>Le rechargement ne bouge jamais</b><span>S'il ne reste que le porte-avions, il tire sa
       frappe au quatrième tour et le canon aux trois autres. L'accélérer rendrait une flotte
       décimée plus dangereuse qu'une flotte intacte.</span></li>
-    <li><b>Porte-avions coulé</b><span class="cost">Plus de frappe aérienne, définitivement.</span></li>
+    <li><b>Porte-avions coulé</b><span class="cost">Plus de frappe aérienne, définitivement —
+      y compris si elle était prête et gardée.</span></li>
     <li><b>Sous-marin coulé</b><span class="cost">Plus de torpille, définitivement.</span></li>
     <li><b>Les trois autres</b><span>Une position de tir en moins. On tire toujours chaque tour,
       donc il n'y a ni tour mort ni bouton « passer ».</span></li>
@@ -563,7 +590,8 @@ déjà.</p>
     <li><b>Son état</b><span>Les cases touchées en ambre. Une coulée reste en place, éteinte et
       barrée&nbsp;: <em>une pierre tombale, pas un trou.</em></span></li>
     <li><b>Si elle est prête</b><span>Un arc de rechargement se referme autour des deux
-      spéciales. Aucun chiffre.</span></li>
+      spéciales&nbsp;; au tour où il se referme, la pastille pulse une fois. Aucun
+      chiffre.</span></li>
     <li><b>À qui le tour</b><span>La pastille du canon suivant est allumée et saute les
       coulées.</span></li>
   </ul>
@@ -578,6 +606,7 @@ déjà.</p>
         précision, et le registre des coques adverses à plat.</span></div></li>
       <li><span class="kn">4</span><div><b>Le râtelier</b><span>Les cinq coques dans l'ordre de
         la rotation. Sarcelle plein&nbsp;: c'est son tour. Arc&nbsp;: rechargement en cours.
+        Cerclée&nbsp;: spéciale armée, la prochaine case touchée est pour elle.
         Barrée&nbsp;: coulée, et sa spéciale avec.</span></div></li>
       <li><span class="kn">5</span><div><b>La bascule d'axe</b><span>N'apparaît que lorsque la
         frappe est armée, disparaît dès qu'elle est tirée.</span></div></li>
