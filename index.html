@@ -510,7 +510,7 @@
       text-align:left!important}
   #rl .k{color:rgba(233,224,232,.50)}
   #rl .v{color:rgba(240,232,238,.82);font-variant-numeric:tabular-nums}
-  .col{position:absolute;top:84px;width:120px;display:flex;flex-direction:column;gap:8px}
+  .col{position:absolute;top:84px;width:138px;display:flex;flex-direction:column;gap:8px}
   .col.l{left:22px}
   .col.r{right:22px}
   .pan{box-sizing:border-box;padding:11px 12px 12px;border-radius:14px;
@@ -558,6 +558,18 @@
   .hl .x{fill:rgba(255,150,70,.42);stroke:rgba(255,186,128,.78);stroke-width:1}
   .hl.sunk .o{stroke:rgba(255,186,128,.80)}
   .hl.sunk .k{color:rgba(255,176,120,.80)}
+  /* ONE CONTACT, TWO LINES. The silhouette says how much of her is accounted
+     for; the line under it says where. They were two panels before, and the
+     second was the first one written out in words. */
+  .ct + .ct{margin-top:9px;padding-top:9px;border-top:1px solid rgba(206,224,236,.08)}
+  .ct .hl{margin-top:0}
+  .cr{margin-top:4px;padding-left:19px;line-height:1.55;
+      font-size:8.5px;letter-spacing:.15em;color:rgba(168,240,224,.72)}
+  .cr em{font-style:normal;display:block;letter-spacing:.22em;
+      color:rgba(233,224,232,.44)}
+  .ct.sunk .o{stroke:rgba(255,186,128,.80)}
+  .ct.sunk .k, .ct.sunk .cr{color:rgba(255,176,120,.78)}
+  .ct.sunk .cr em{color:rgba(255,176,120,.60)}
 
   /* how her shooting has gone */
   .gun{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:7px 8px}
@@ -604,8 +616,9 @@
   body.split.swap #rl{top:50%;bottom:auto}
   body.split.swap .half.a{top:22px}
   body.split.swap .half.b{top:calc(50% + 22px)}
-  body.split.swap #util{top:22px}
-  body.split.swap #rail{top:auto;bottom:calc(50% + 22px)}
+  /* the two rails do NOT travel with the boards. A control belongs to the
+     hand, not to the plot it acts on: the thumb is at the foot of the screen
+     whichever board happens to be on top. Only what DESCRIBES a board moves. */
 
   /* ---- HUD: lone actions are a disc, related ones share one capsule ---- */
   .rail{position:absolute;right:20px;top:50%;transform:translateY(-50%);z-index:6;
@@ -697,10 +710,6 @@
 <div class="rd" id="rl">
   <div class="col l">
     <div class="pan" id="rfleet"></div>
-    <div class="pan" id="rtrk"></div>
-  </div>
-  <div class="col r">
-    <div class="pan gun" id="rstat"></div>
     <div class="pan" id="rhulls"></div>
   </div>
 </div>
@@ -781,10 +790,11 @@
     <h3>Deployment</h3>
 
     <div class="ghd"><h6>Theatre</h6><span data-g="th"></span></div>
-    <div class="opts" id="opts">
+    <div class="opts c4" id="opts">
       <button data-e="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 10.3h10.4l-1.6 2.2H3.4z"/><path d="M7 9.9V1.7"/><path d="M6.4 3.4 3.6 9.9h2.8z"/><path d="M7.6 4.2l2.9 5.7H7.6z"/></svg>Age of sail</button>
       <button data-e="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.9 8.3a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.7 10.2 4 12.2M7.3 10.2l-.7 2M9.9 10.2l-.7 2"/></svg>Squall</button>
       <button data-e="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</button>
+      <button data-e="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.7 7.4a2.3 2.3 0 0 1 1-4.3 2.8 2.8 0 0 1 5.1.8 1.9 1.9 0 0 1-.5 3.5z"/><path d="M7.4 8.2 5.9 10.6h2.2l-1.5 2.4"/><path d="M3.6 9.9 3 11.9M10.4 9.9l-.6 2"/></svg>Storm</button>
     </div>
 
     <div class="ghd"><h6>Weather</h6><span data-g="wx"></span></div>
@@ -823,10 +833,11 @@
   <div class="dsplit">
     <h3>Deployment</h3>
     <div class="ghd"><h6>Theatre</h6><span data-g="th"></span></div>
-    <div class="opts">
+    <div class="opts c4">
       <button data-e="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 10.3h10.4l-1.6 2.2H3.4z"/><path d="M7 9.9V1.7"/><path d="M6.4 3.4 3.6 9.9h2.8z"/><path d="M7.6 4.2l2.9 5.7H7.6z"/></svg>Age of sail</button>
       <button data-e="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.9 8.3a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.7 10.2 4 12.2M7.3 10.2l-.7 2M9.9 10.2l-.7 2"/></svg>Squall</button>
       <button data-e="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</button>
+      <button data-e="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.7 7.4a2.3 2.3 0 0 1 1-4.3 2.8 2.8 0 0 1 5.1.8 1.9 1.9 0 0 1-.5 3.5z"/><path d="M7.4 8.2 5.9 10.6h2.2l-1.5 2.4"/><path d="M3.6 9.9 3 11.9M10.4 9.9l-.6 2"/></svg>Storm</button>
     </div>
     <div class="ghd"><h6>Weather</h6><span data-g="wx"></span></div>
     <div class="opts">
@@ -899,10 +910,8 @@
     <h5>Camera</h5><div class="drow">
       <button data-cam="0">Cam 01</button><button data-cam="1">Cam 02</button><button data-cam="2">Cam 03</button><button data-cam="3">Cam 04</button>
     </div>
-    <h5>Heure</h5>
-    <div class="hrow">
-      <input type="range" id="hsl" min="320" max="1308" value="880" aria-label="Heure du jour">
-      <span class="hv" id="hvv">14:40</span>
+    <h5>Théâtre</h5><div class="drow">
+      <button data-e="0">Galleon</button><button data-e="1">Squall</button><button data-e="2">Night</button><button data-e="3">Storm</button>
     </div>
     <div class="cam" id="camro"></div>
     <h5>Format</h5><div class="drow">
@@ -1336,10 +1345,12 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
         if(f4.x > -0.06 && f4.x < 1.06 && f4.y > -0.06 && f4.y < 1.06){
           vec2 e4 = abs(f4 - 0.5)*2.0;
           float m4 = max(e4.x, e4.y);
-          float fill4 = (1.0 - smoothstep(0.30, 1.0, m4))*0.085;
-          float bord4 = exp(-pow((1.0 - m4)/0.075, 2.0));
+          float fill4 = (1.0 - smoothstep(0.30, 1.0, m4))*0.028;
+          /* a finer bracket: nine squares share eight interior edges, and at
+             the width a lone cell wants they meet and double into a lattice */
+          float bord4 = exp(-pow((1.0 - m4)/0.052, 2.0));
           float cor4  = bord4*smoothstep(0.30, 0.78, min(e4.x, e4.y));
-          col += uLitCol*(fill4 + cor4*1.5)*uLitI*mix(0.4, 1.0, facing);
+          col += uLitCol*(fill4 + cor4*0.56)*uLitI*mix(0.4, 1.0, facing);
         }
       }
 
@@ -3343,7 +3354,21 @@ const ENVS = [
     zenith:[0x050917,1], midSky:[0x101e32,1], haze:[0x222c3e,1.0], hazeWarm:[0x553b2f,1.0],
     deep:[0x050916,1], shoal:[0x101f38,1], shad:[0x111729,0.84], foam:[0xa3b4be,1],
     gradeLo:[0x8fa8c6,1], gradeHi:[0xdadfe6,1],
-    fogStart:380, fogDist:760, exp:1.10, f0:0.105, fexp:2.45, sheen:0.06, gridI:0.44, swell:1.25, night:1 }
+    fogStart:380, fogDist:760, exp:1.10, f0:0.105, fexp:2.45, sheen:0.06, gridI:0.44, swell:1.25, night:1 },
+  /* STORM. Not Squall with the numbers turned up: a squall is weather you sail
+     through, a storm is weather that decides. The sun is nearly gone behind
+     the cloud, so the sea loses its shoal colour and keeps only the foam; the
+     fog closes to a quarter of clear and the grid has to shout through it.
+     It is the only theatre that brings its own rain. */
+  { name:'Storm', era:0, rain:true,
+    blurb:'Modern fleet &middot; full gale &middot; swell 7.8m',
+    cond:'16:20 local &middot; swell 7.8m &middot; vis 1.8km &middot; wind 280/52 gusting 70',
+    sunAz:-1.04, sunEl:0.50, sunCol:[0x8f9aa6,0.92],
+    zenith:[0x161b22,1], midSky:[0x2c3640,1], haze:[0x666f77,1.0], hazeWarm:[0x6f767a,1.0],
+    deep:[0x080d12,1], shoal:[0x1b2f3c,1], shad:[0x141d27,0.86], foam:[0xf2f7f8,1],
+    gradeLo:[0x9aaab4,1], gradeHi:[0xdfe6e8,1],
+    fogStart:190, fogDist:420, exp:1.06, f0:0.052, fexp:3.70, sheen:0.05, gridI:0.40,
+    swell:4.10, night:0 }
 ];
 for(const e of ENVS) for(const k of ['sunCol','zenith','midSky','haze','hazeWarm','deep','shoal','shad','foam','gradeLo','gradeHi'])
   e['_'+k] = Cs(e[k][0], e[k][1]);
@@ -3515,7 +3540,7 @@ const RAIN = { mesh:null, k:0 };
     uniform float uTime, uH, uLen, uSpeed;
     uniform vec3 uCen; uniform vec2 uWind;
     attribute float aSeed, aEnd;
-    varying float vD;
+    varying float vD, vA;
     void main(){
       /* every drop falls at its own rate, or the whole column pulses as one */
       float sp  = uSpeed*(0.74 + 0.54*aSeed);
@@ -3528,26 +3553,29 @@ const RAIN = { mesh:null, k:0 };
       p += uCen;
       vec4 mv = viewMatrix*vec4(p, 1.0);
       vD = -mv.z;
+      /* real rain is not one weight of line: a third of it is barely there,
+         and that spread is most of what makes it read as rain and not mesh */
+      vA = 0.18 + 0.82*aSeed*aSeed;
       gl_Position = projectionMatrix*mv;
     }`;
   const RAIN_FS = `
     precision highp float;
     uniform float uI, uNear, uFar;
     uniform vec3 uCol, uHaze;
-    varying float vD;
+    varying float vD, vA;
     void main(){
       /* far rain is the scene's own haze; very near rain is a smear across
          the lens and would read as a scratch, so it fades out too */
       float f = smoothstep(uNear, uFar, vD);
-      float n = smoothstep(8.0, 46.0, vD);
-      float a = uI*n*(1.0 - f*0.86)*0.62;
+      float n = smoothstep(14.0, 88.0, vD);
+      float a = uI*n*vA*(1.0 - f*0.90)*0.30;
       if(a < 0.004) discard;
       gl_FragColor = vec4(mix(uCol, uHaze, f*0.78), a);
     }`;
 
   RAIN.mesh = new T.LineSegments(g, new T.ShaderMaterial({
     uniforms: U({ uCen:{value:new T.Vector3()}, uI:{value:0},
-                  uH:{value:RAIN_TOP}, uLen:{value:7.4}, uSpeed:{value:140.0},
+                  uH:{value:RAIN_TOP}, uLen:{value:6.2}, uSpeed:{value:152.0},
                   uWind:{value:new T.Vector2(0.30, 0.11)},
                   uCol:{value:Cs(0xe4edf5, 1.0)},
                   uNear:{value:80.0}, uFar:{value:560.0} }),
@@ -3605,7 +3633,7 @@ const FLR = { grp:null, star:null, canopy:null, trails:[],
     transparent:true, blending:T.AdditiveBlending, depthWrite:false
   }));
   FLR.lit.rotation.y = AD.gridRot;
-  FLR.lit.scale.setScalar(1.75);
+  FLR.lit.scale.setScalar(2.15);
   FLR.lit.visible = false;
   labels.add(FLR.lit);
 
@@ -3652,7 +3680,7 @@ function flare(){
   FLR.lit.visible = true;
 
   FLR.B.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 150));  /* it bursts over the block */
-  FLR.D.copy(cellW(FLR.cx + 1.7, FLR.cz - 1.9, 14));   /* and dies low, downwind of it */
+  FLR.D.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 9));    /* and comes down in its middle */
   const pts = [];
   for(let i=0;i<=180;i++) pts.push(FLR.arcP(i/180, new T.Vector3()));
   for(const t of FLR.trails) retrace(t, pts);
@@ -3673,6 +3701,7 @@ function catapult(){
   for(let i=0;i<=180;i++) pts.push(catPath(0.10 + 0.82*(i/180), new T.Vector3()));
   for(const t of CAT.trails) retrace(t, pts);
   ANIM.bomb = -1; CAT.bomb.visible = false;
+  CINE.done = false;
   ANIM.cat = 0;
   FX.catSteam.material.uniforms.uT0.value = tt;
   hiss(CAT.world, 0.26, 3200, 700, 1.3, 0.6);
@@ -3885,7 +3914,10 @@ function updateFX(dt){
         CAT.bomb.visible = false;
         FX.hitFlash.material.uniforms.uOrigin.value.subVectors(CAT.target.pos, MIS.B);
         FX.hitFlash.material.uniforms.uT0.value = tt;
-        setSink(true, CAT.target); CINE.hold = 2.0; CINE.init = false; refreshUI();
+        setSink(true, CAT.target); CINE.hold = 2.0; CINE.init = false;
+        /* what there was to watch has happened: the circuit and the recovery
+           are the plane going home, and nobody needs to be strapped in for it */
+        CINE.done = true; refreshUI();
       }
     }
     const tp = Math.max(0, Math.min(1, (u - 0.10)/0.82));
@@ -3968,7 +4000,7 @@ function updateFX(dt){
       /* slow while the canopy holds, faster as it spills near the end */
       FLR.pos.lerpVectors(FLR.B, FLR.D, a*0.42 + a*a*0.58);
       /* the pendulum under the canopy, dying away as it descends */
-      const sw = Math.sin(a*11.0)*(1 - a*0.55);
+      const sw = Math.sin(a*11.0)*(1 - a)*(1 - a);
       FLR.pos.x += sw*5.2;
       FLR.pos.z += Math.cos(a*9.0)*3.0*(1 - a*0.55);
       /* the burst is brief and far brighter than the burn that follows it */
@@ -4214,8 +4246,7 @@ const railEl = document.getElementById('rail'), utilEl = document.getElementById
       dbgEl = document.getElementById('dbg'), navEl = document.getElementById('nav');
 const rSta = document.getElementById('rsta'), rOwn = document.getElementById('rown'),
       rTf = document.getElementById('rtf'),
-      rTrk = document.getElementById('rtrk'),
-      rStat = document.getElementById('rstat'), rFleet = document.getElementById('rfleet'),
+      rFleet = document.getElementById('rfleet'),
       rHulls = document.getElementById('rhulls');
 
 /* the panel's pictograms, in the same hand as the rest of the interface */
@@ -4252,22 +4283,11 @@ function plotReadout(){
     + '<div class="fl2">' + svg('sunk') + '<span class="v">' + pad(sunk) + '/' + pad(total)
     + '</span><span class="k">hulls sunk</span></div>';
 
-  /* every contact the beam has held: two lines each, the cells under the name */
-  const rows = ['<h6>Tracks</h6>'];
-  for(let i=0;i<total;i++){
-    const g = CON_GROUPS[i], done = g.hit.every(Boolean), sq = [];
-    for(let c=0;c<g.cells.length;c++) if(g.hit[c])
-      sq.push(colLetter(g.cells[c][0]) + (g.cells[c][1] + 1));
-    rows.push('<div class="tr' + (done ? ' sunk' : '') + '">'
-      + svg(done ? 'sunk' : 'hull')
-      + '<span class="k">' + pad(i+1) + '</span>'
-      + '<span class="st">' + (done ? 'sunk' : 'held') + '</span>'
-      + '<span class="c">' + (sq.join(' ') || '\u2014') + '</span></div>');
-  }
-  rTrk.innerHTML = rows.join('');
 
-  /* one segment per cell: pointed at the bow, rounded at the stern */
-  rHulls.innerHTML = '<h6>Enemy hulls</h6>' + CON_GROUPS.map((g, i) => {
+  /* ONE ROW PER CONTACT. The silhouette says how much of her is accounted
+     for and where along the hull; the refs under it say where on the plot.
+     Those were two panels saying the same thing in two ways. */
+  rHulls.innerHTML = '<h6>Contacts</h6>' + CON_GROUPS.map((g, i) => {
     const n = g.cells.length, u = 22, w = n*u, h = 16, m = h/2;
     let d = 'M1 ' + m + ' Q1 1, 7 1 H' + (w - 8)
           + ' Q' + (w - 1) + ' 1, ' + (w - 1) + ' ' + m
@@ -4279,16 +4299,17 @@ function plotReadout(){
     for(let c = 0; c < n; c++) if(g.hit[c])
       inner += '<rect class="x" x="' + (c*u + 4) + '" y="' + (m - 3.5)
              + '" width="' + (u - 8) + '" height="7" rx="2"/>';
-    return '<div class="hl' + (g.hit.every(Boolean) ? ' sunk' : '') + '">'
+    const done = g.hit.every(Boolean), sq = [];
+    for(let c=0;c<g.cells.length;c++) if(g.hit[c])
+      sq.push(colLetter(g.cells[c][0]) + (g.cells[c][1] + 1));
+    return '<div class="ct' + (done ? ' sunk' : '') + '">'
+      + '<div class="hl">'
       + '<span class="k">' + pad(i+1) + '</span>'
-      + '<svg viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true">' + inner + '</svg></div>';
+      + '<svg viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true">' + inner + '</svg></div>'
+      + '<div class="cr">' + (sq.join(' ') || '\u2014')
+      + (done ? '<em>sunk</em>' : '') + '</div></div>';
   }).join('');
 
-  rStat.innerHTML = '<h6>Gunnery</h6>'
-    + [['aim', pad(salvos), 'Salvos'], ['hit', pad(sqHit), 'Hits'],
-       ['pct', Math.round(100*sqHit/Math.max(1, salvos)) + '%', 'Accuracy']]
-      .map(r => svg(r[0]) + '<span class="v">' + r[1] + '</span><span class="k">' + r[2] + '</span>')
-      .join('');
 }
 
 function refreshUI(){
@@ -4405,6 +4426,9 @@ function onCtl(e){
     /* picking a theatre picks its hour too; the slider takes over again the
        moment it is touched */
     ANIM.hour = -1;
+    /* a storm arrives with its rain; leaving it takes the rain with it. The
+       debug switch still wins until the next theatre is picked. */
+    ANIM.rain = !!ENVS[ANIM.env].rain;
     setEra(ENVS[ANIM.env].era);
     refreshUI(); hideHint(); return;
   }
@@ -4676,7 +4700,7 @@ const LIM_GAME = { el:[0.045, 1.16],  dist:[95, 2400] };
 const LIM_SHOT = { el:[0.012, 1.553], dist:[40, 3600] };
 
 /* a camera that rides the weapon, blended over the orbit rig */
-const CINE = { w:0, want:0, hold:0, init:false,
+const CINE = { w:0, want:0, hold:0, done:false, init:false,
                pos:new T.Vector3(), look:new T.Vector3() };
 const _c1 = new T.Vector3(), _c2 = new T.Vector3(), _c3 = new T.Vector3(),
       _cq = new T.Quaternion(), _ct = new T.Vector3(), _cl = new T.Vector3(),
@@ -4699,7 +4723,7 @@ function cineUpdate(dt){
   } else if(ANIM.cat >= 0){
     const u = ANIM.cat;
     age = u*CAT_DUR;
-    want = (age > 1.4 && u < 0.965) ? 1 : 0;
+    want = (age > 1.4 && u < 0.965 && !(CINE.done && CINE.hold <= 0)) ? 1 : 0;
     if(ANIM.bomb >= 0 && ANIM.bomb < 1){ obj = CAT.bomb; D = 24; H = 6.5; S = 5.2; L = 34; }
     else if(CINE.hold > 0) look = CAT.tgtW;
     else { obj = CAT.plane; D = 46; H = 13.0; S = 10.5; L = 80; }
@@ -4814,14 +4838,10 @@ canvas.addEventListener('wheel', e => {
 }, {passive:false});
 canvas.addEventListener('dblclick', goHome);
 /* ---------- the capture screen's own instruments ---------- */
-const hSl = document.getElementById('hsl'), hVv = document.getElementById('hvv'),
-      camRo = document.getElementById('camro'), snapMsg = document.getElementById('snapmsg');
-hSl.addEventListener('input', () => {
-  const m = +hSl.value;
-  ANIM.hour = blendAt(m);
-  hVv.textContent = hourLabel(m);
-  refreshUI();
-});
+const camRo = document.getElementById('camro'), snapMsg = document.getElementById('snapmsg');
+/* the hour slider is gone from the tray: four theatres are four decisions,
+   where a continuous hour was a value nobody could name. envAt()/blendAt()
+   stay — ANIM.hour still overrides the theatre if anything ever sets it. */
 /* an angle worth keeping is an angle worth writing down */
 function camReadout(){
   camRo.innerHTML = 'AZ <b>' + GOAL.az.toFixed(2) + '</b> &middot; EL <b>' + GOAL.el.toFixed(3)
