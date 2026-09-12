@@ -230,6 +230,12 @@
       width:1px;background:rgba(206,224,236,.14)}
   .bsw svg{width:14px;height:14px;display:block;stroke:currentColor;fill:none;
       stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+  /* THE VERDICT SWITCH lives on the screen it decides rather than in the
+     tray: it is the one thing about this screen anyone would want to flip.
+     Top right on both, clear of the plot switch that sits over the seam. */
+  .bsw.res{top:22px}
+  .bsw button[data-won="1"].on{color:rgba(180,246,230,.98);background:rgba(157,240,220,.13)}
+  .bsw button[data-won="0"].on{color:rgba(255,196,150,.98);background:rgba(255,150,70,.14)}
   .bsw button[data-plot="0"].on{color:rgba(180,246,230,.98);background:rgba(157,240,220,.13)}
   .bsw button[data-plot="1"].on{color:rgba(255,196,150,.98);background:rgba(255,150,70,.14)}
   body:not(.ipad) .bsw button:hover{color:rgba(243,249,252,.92);background:rgba(255,255,255,.07)}
@@ -590,6 +596,16 @@
   .half .ln{display:block}
   .half i{font-style:normal;color:rgba(168,240,224,.5)}
   body.split .hint{display:none}
+  /* SWAP. The two halves change places, and everything that describes a board
+     goes with it: the readout belongs to the enemy plot, the settings and the
+     batteries to her own. Leave any of them behind and the labels start lying. */
+  /* #rl, not .rd: the readout's own rule is an ID, which outranks any number
+     of classes — the class-level rule never reached `top` at all. */
+  body.split.swap #rl{top:50%;bottom:auto}
+  body.split.swap .half.a{top:22px}
+  body.split.swap .half.b{top:calc(50% + 22px)}
+  body.split.swap #util{top:22px}
+  body.split.swap #rail{top:auto;bottom:calc(50% + 22px)}
 
   /* ---- HUD: lone actions are a disc, related ones share one capsule ---- */
   .rail{position:absolute;right:20px;top:50%;transform:translateY(-50%);z-index:6;
@@ -695,6 +711,7 @@
   <div class="cap">
     <div class="slot">
     <div class="pop">
+      <button data-a="swap"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4.6 11.2V2.8"/><path d="M3.1 4.3 4.6 2.8l1.5 1.5"/><path d="M9.4 2.8v8.4"/><path d="M10.9 9.7 9.4 11.2 7.9 9.7"/></svg>Swap boards</button>
       <button data-a="snd"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 5.3h2.2L7.6 3v8L4.8 8.7H2.6z"/><path d="M9.9 5.3a3.1 3.1 0 0 1 0 3.4"/></svg>Sound</button>
       <button data-cam="0"><em>01</em>Cam 01</button>
       <button data-cam="1"><em>02</em>Cam 02</button>
@@ -728,6 +745,10 @@
   <div class="bsw">
     <button data-plot="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 8.7h9.2l-1.6 2.2H4z"/><path d="M7 8.3V3.2"/><path d="M5.3 4.9 7 3.2l1.7 1.7"/></svg>Mine</button>
     <button data-plot="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.3 2.3h9.4v9.4H2.3z"/><path d="M2.3 5.4h9.4M2.3 8.6h9.4M5.4 2.3v9.4M8.6 2.3v9.4"/></svg>Theirs</button>
+  </div>
+  <div class="bsw res">
+    <button data-won="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.9 7.4 5.6 10.1 11.1 4.4"/></svg>Win</button>
+    <button data-won="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4.1 4.1 9.9 9.9M9.9 4.1 4.1 9.9"/></svg>Loss</button>
   </div>
   <div class="dsplit osplit">
     <div class="vflash"></div>
@@ -828,6 +849,10 @@
   </div>
 </div>
 <div class="scr" id="scr-over">
+  <div class="bsw res">
+    <button data-won="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.9 7.4 5.6 10.1 11.1 4.4"/></svg>Win</button>
+    <button data-won="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4.1 4.1 9.9 9.9M9.9 4.1 4.1 9.9"/></svg>Loss</button>
+  </div>
   <div class="aa">
     <div class="vflash"></div>
     <div class="kick">Action complete</div>
@@ -865,8 +890,11 @@
     <h5>Vue</h5><div class="drow">
       <button id="splitb" data-a="split">Split</button>
     </div>
+    <h5>Météo</h5><div class="drow">
+      <button data-a="rain">Pluie</button>
+    </div>
     <h5>Layers</h5><div class="drow">
-      <button data-a="radar">Radar</button><button data-a="con">Contacts</button><button data-a="rings">Impacts</button><button data-a="hit">Strike</button><button data-a="fleet">Fleet</button>
+      <button data-a="radar">Radar</button><button data-a="con">Contacts</button><button data-a="rings">Impacts</button><button data-a="hit">Strike</button><button data-a="fleet">Fleet</button><button data-a="sink">Sink</button>
     </div>
     <h5>Camera</h5><div class="drow">
       <button data-cam="0">Cam 01</button><button data-cam="1">Cam 02</button><button data-cam="2">Cam 03</button><button data-cam="3">Cam 04</button>
@@ -880,11 +908,8 @@
     <h5>Format</h5><div class="drow">
       <button data-ar="744/1133">iPad</button><button data-ar="1290/2796">iPhone</button>
     </div>
-    <h5>Result</h5><div class="drow">
-      <button data-won="1">Win</button><button data-won="0">Loss</button>
-    </div>
     <h5>Manoeuvres</h5><div class="drow">
-      <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="flare">Star shell</button><button data-a="sink">Sink</button><button data-a="snd">Sound</button><button class="danger" data-a="reset">Reset</button>
+      <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="flare">Star shell</button><button class="danger" data-a="reset">Reset</button>
     </div>
   </div>
   <button class="dtog" id="dtog">Debug</button>
@@ -1162,6 +1187,7 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
   uniform float uFireI;
   uniform vec3 uBlastP; uniform float uBlastI, uBlastR;
   uniform vec3 uFlareP, uFlareCol; uniform float uFlareI;
+  uniform vec4 uLitR; uniform vec3 uLitCol; uniform float uLitI;
   uniform float uRadarA, uRadarI, uRadarRad;
   /* contacts: xy = cell, z = its bearing from the plot centre, w = how well it reaches */
   uniform vec4  uCon[NCON];
@@ -1299,6 +1325,24 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
         }
       }
 
+      /* WHAT THE STAR SHELL LIT: nine squares, called out one by one, in a
+         cold white. No pulse — a reading is not an alarm, and the difference
+         between what you have learned and what you have hit should be legible
+         without reading the colour. */
+      if(uLitI > 0.002){
+        vec2 lo4 = uLitR.xy, hi4 = uLitR.zw;
+        vec2 cl4 = clamp(floor(gc), lo4, hi4 - 1.0);
+        vec2 f4  = gc - cl4;
+        if(f4.x > -0.06 && f4.x < 1.06 && f4.y > -0.06 && f4.y < 1.06){
+          vec2 e4 = abs(f4 - 0.5)*2.0;
+          float m4 = max(e4.x, e4.y);
+          float fill4 = (1.0 - smoothstep(0.30, 1.0, m4))*0.085;
+          float bord4 = exp(-pow((1.0 - m4)/0.075, 2.0));
+          float cor4  = bord4*smoothstep(0.30, 0.78, min(e4.x, e4.y));
+          col += uLitCol*(fill4 + cor4*1.5)*uLitI*mix(0.4, 1.0, facing);
+        }
+      }
+
       /* the struck square: brackets at its corners and a warm wash inside */
       if(uHitCell.z > 0.002){
         vec2 cc2 = gc - uHitCell.xy;
@@ -1411,6 +1455,9 @@ const waterUnis = U({
   uFlareP :{value:new T.Vector3()},
   uFlareCol:{value:Cs(0xdce7ff, 1.0)},
   uFlareI :{value:0.0},
+  uLitR   :{value:new T.Vector4(0,0,1,1)},
+  uLitCol :{value:Cs(0xd6e6ff, 1.0)},
+  uLitI   :{value:0.0},
   uSkip   :{value:new T.Vector2(999,999)}
 });
 
@@ -3401,7 +3448,7 @@ function shot(i){
 const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
 const SINK_DUR = 11.0;
 const SALVO_DUR = 9.0;
-const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, env:1, envK:0 };
+const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, swap:0, rain:false, env:1, envK:0 };
 
 function setStrike(on){
   if(on && ANIM.fireGoal < 0.5){ FX.splash.material.uniforms.uT0.value = tt; boom(FIRE, 0.30);
@@ -3435,16 +3482,96 @@ function torpedo(){
   refreshUI();
 }
 /* ------------------------------------------------------------
+   RAIN — a column of streaks that travels with the eye.
+   ------------------------------------------------------------
+   Line segments, not points: at any shutter a raindrop is a smear,
+   and dots read as snow. The column is a disc rather than a box —
+   the corners of a box are the first thing the eye catches when it
+   turns — and it rides the plot instead of being placed in the
+   world, because weather is everywhere and only ever seen here.
+   ------------------------------------------------------------ */
+const RAIN_N = 5400, RAIN_R = 540, RAIN_TOP = 300;
+const RAIN = { mesh:null, k:0 };
+{
+  const pos = new Float32Array(RAIN_N*2*3);
+  const sd  = new Float32Array(RAIN_N*2);
+  const en  = new Float32Array(RAIN_N*2);
+  for(let i=0;i<RAIN_N;i++){
+    const a = Math.random()*Math.PI*2, r = Math.sqrt(Math.random())*RAIN_R;
+    const x = Math.cos(a)*r, z = Math.sin(a)*r;
+    const y = Math.random()*RAIN_TOP, seed = Math.random();
+    for(let k=0;k<2;k++){
+      const j = i*2 + k;
+      pos[j*3] = x; pos[j*3+1] = y; pos[j*3+2] = z;
+      sd[j] = seed; en[j] = k;
+    }
+  }
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.BufferAttribute(pos, 3));
+  g.setAttribute('aSeed',    new T.BufferAttribute(sd, 1));
+  g.setAttribute('aEnd',     new T.BufferAttribute(en, 1));
+
+  const RAIN_VS = `
+    uniform float uTime, uH, uLen, uSpeed;
+    uniform vec3 uCen; uniform vec2 uWind;
+    attribute float aSeed, aEnd;
+    varying float vD;
+    void main(){
+      /* every drop falls at its own rate, or the whole column pulses as one */
+      float sp  = uSpeed*(0.74 + 0.54*aSeed);
+      float len = uLen*(0.70 + 0.70*aSeed);
+      float y   = mod(position.y - uTime*sp, uH);
+      vec3 p = vec3(position.x, y, position.z);
+      /* the tail is simply where the drop was a moment ago */
+      p.y  += aEnd*len;
+      p.xz -= uWind*aEnd*len;
+      p += uCen;
+      vec4 mv = viewMatrix*vec4(p, 1.0);
+      vD = -mv.z;
+      gl_Position = projectionMatrix*mv;
+    }`;
+  const RAIN_FS = `
+    precision highp float;
+    uniform float uI, uNear, uFar;
+    uniform vec3 uCol, uHaze;
+    varying float vD;
+    void main(){
+      /* far rain is the scene's own haze; very near rain is a smear across
+         the lens and would read as a scratch, so it fades out too */
+      float f = smoothstep(uNear, uFar, vD);
+      float n = smoothstep(8.0, 46.0, vD);
+      float a = uI*n*(1.0 - f*0.86)*0.62;
+      if(a < 0.004) discard;
+      gl_FragColor = vec4(mix(uCol, uHaze, f*0.78), a);
+    }`;
+
+  RAIN.mesh = new T.LineSegments(g, new T.ShaderMaterial({
+    uniforms: U({ uCen:{value:new T.Vector3()}, uI:{value:0},
+                  uH:{value:RAIN_TOP}, uLen:{value:7.4}, uSpeed:{value:140.0},
+                  uWind:{value:new T.Vector2(0.30, 0.11)},
+                  uCol:{value:Cs(0xe4edf5, 1.0)},
+                  uNear:{value:80.0}, uFar:{value:560.0} }),
+    vertexShader: RAIN_VS, fragmentShader: RAIN_FS,
+    transparent:true, depthWrite:false, blending:T.NormalBlending
+  }));
+  RAIN.mesh.frustumCulled = false;   /* the column has no meaningful bounds */
+  RAIN.mesh.renderOrder = 12;
+  RAIN.mesh.visible = false;
+  scene.add(RAIN.mesh);
+}
+
+/* ------------------------------------------------------------
    THE STAR SHELL — the fourth projectile, and the only one that
    does not damage. It climbs, bursts, and then hangs under a
    canopy burning magnesium while it drifts down, laying a pool of
    light on the water. What it buys is sight, not a hit.
    ------------------------------------------------------------ */
-const FLR_DUR = 17.0;       /* the whole run, launch to burn-out */
+const FLR_DUR = 11.5;       /* the whole run, launch to burn-out */
 const FLR_UP  = 0.15;       /* the share of it spent climbing */
 const FLR = { grp:null, star:null, canopy:null, trails:[],
               A:new T.Vector3(), B:new T.Vector3(), D:new T.Vector3(),
-              pos:new T.Vector3(), tmp:new T.Vector3(), H:34 };
+              pos:new T.Vector3(), tmp:new T.Vector3(), H:34,
+              cx:2, cz:8, lit:null, n:-1 };
 {
   /* the burning star itself: an additive point, left to the bloom to flare */
   const can = document.createElement('canvas'); can.width = can.height = 128;
@@ -3469,6 +3596,19 @@ const FLR = { grp:null, star:null, canopy:null, trails:[],
                               opacity:0.90, side:T.DoubleSide, depthWrite:false }));
   FLR.canopy.visible = false; scene.add(FLR.canopy);
 
+  /* the reading itself: how many of the nine squares hold something, laid
+     flat in the middle of the block like every other mark on this plot */
+  FLR.lit = new T.Mesh(labelGeo, new T.ShaderMaterial({
+    uniforms: U({ map:{value:glyph('0')}, uTint:{value:Cs(0xe4eeff, 1.0)},
+                  uI:{value:0}, uSkip:{value:new T.Vector2(999,999)} }),
+    vertexShader: LABEL_VS, fragmentShader: LABEL_FS,
+    transparent:true, blending:T.AdditiveBlending, depthWrite:false
+  }));
+  FLR.lit.rotation.y = AD.gridRot;
+  FLR.lit.scale.setScalar(1.75);
+  FLR.lit.visible = false;
+  labels.add(FLR.lit);
+
   FLR.arcP = function(t, out){
     out.lerpVectors(FLR.A, FLR.B, t);
     out.y += FLR.H*4.0*t*(1.0 - t);
@@ -3483,13 +3623,36 @@ const FLR = { grp:null, star:null, canopy:null, trails:[],
                  tint:0xdfeaff, tintI:1.45, order:9, add:true})
   ];
 }
+/* how many of the nine squares hold a hull — the whole answer the weapon
+   gives, and the reason it is worth a turn that does no damage */
+function litCount(x0, z0){
+  let n = 0;
+  for(let gx = x0; gx < x0 + 3; gx++)
+    for(let gz = z0; gz < z0 + 3; gz++)
+      for(const sh of SHIPS){
+        if(sh.era !== ANIM.era) continue;
+        const [a, b, cx, cz] = sh.cells;
+        if(gx >= a && gx < cx && gz >= b && gz < cz){ n++; break; }
+      }
+  return n;
+}
 function flare(){
   setSink(false);
   /* the escort carries the eyes: the smallest hull, the one most easily lost */
   const sh = shipNamed('escort') || shipNamed('destroyer');
   FLR.A.set(sh ? sh.pos.x : 0, 9, sh ? sh.pos.z : 0);
-  FLR.B.copy(cellW(4.4, 8.2, 152));       /* it bursts over the far end of the plot */
-  FLR.D.copy(cellW(6.2, 4.6, 14));        /* and dies low, having drifted back across it */
+  /* the block it is fired at: designated before it leaves the rail */
+  const x0 = FLR.cx - 1, z0 = FLR.cz - 1;
+  waterUnis.uLitR.value.set(x0, z0, x0 + 3, z0 + 3);
+  waterUnis.uLitI.value = 0;
+  const n = litCount(x0, z0);
+  if(n !== FLR.n){ FLR.n = n; FLR.lit.material.uniforms.map.value = glyph(String(n)); }
+  FLR.lit.position.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 0.62));
+  FLR.lit.material.uniforms.uI.value = 0;
+  FLR.lit.visible = true;
+
+  FLR.B.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 150));  /* it bursts over the block */
+  FLR.D.copy(cellW(FLR.cx + 1.7, FLR.cz - 1.9, 14));   /* and dies low, downwind of it */
   const pts = [];
   for(let i=0;i<=180;i++) pts.push(FLR.arcP(i/180, new T.Vector3()));
   for(const t of FLR.trails) retrace(t, pts);
@@ -3771,6 +3934,19 @@ function updateFX(dt){
     marks[11].w = 0;
   }
 
+  /* rain, eased in and out: weather does not switch on */
+  {
+    const want = ANIM.rain ? 1 : 0;
+    RAIN.k += (want - RAIN.k)*(1 - Math.exp(-dt*(want ? 1.1 : 1.9)));
+    RAIN.mesh.visible = RAIN.k > 0.004;
+    if(RAIN.mesh.visible){
+      RAIN.mesh.material.uniforms.uI.value = RAIN.k;
+      /* centred on what the eye is working, not on the eye: in the split the
+         camera is moved twice a frame and would drag the column with it */
+      RAIN.mesh.material.uniforms.uCen.value.set(CAM.tgt.x, 1.0, CAM.tgt.z);
+    }
+  }
+
   /* the star shell: a climb, a burst, then a long fall under its own light */
   if(ANIM.flr >= 0){
     ANIM.flr = Math.min(1, ANIM.flr + dt/FLR_DUR);
@@ -3813,8 +3989,20 @@ function updateFX(dt){
       /* the pool on the water: the lower it gets the less of the sea it reaches */
       waterUnis.uFlareP.value.copy(FLR.pos);
       waterUnis.uFlareI.value = burn*(0.55 + 0.45*Math.min(1, FLR.pos.y/120)) + flash*0.85;
+      /* the squares come up as the light comes down — it is the light that
+         reveals them, so they must not be finished before it is spent. The
+         count lands last, exactly as the star goes out. */
+      waterUnis.uLitI.value = a*a*(3 - 2*a);
+      FLR.lit.material.uniforms.uI.value =
+        0.78*Math.max(0, Math.min(1, (a - 0.58)/0.42));
     }
-    if(u >= 1){ ANIM.flr = -1; refreshUI(); }
+    if(u >= 1){
+      /* the reading outlives the light: that is the point of the weapon */
+      ANIM.flr = -1;
+      waterUnis.uLitI.value = 1;
+      FLR.lit.material.uniforms.uI.value = 0.78;
+      refreshUI();
+    }
   } else if(FLR.star.visible || waterUnis.uFlareI.value > 0){
     FLR.star.visible = false; FLR.canopy.visible = false;
     waterUnis.uFlareI.value = 0;
@@ -4168,6 +4356,8 @@ function refreshUI(){
                           || (a === 'radar' && ANIM.radar) || (a === 'con' && ANIM.con)
                           || (a === 'rings' && ANIM.rings) || (a === 'fleet' && ANIM.fleet)
                           || (a === 'split' && SPLIT[SCREEN] === 1)
+                          || (a === 'swap' && ANIM.swap)
+                          || (a === 'rain' && ANIM.rain)
                           || (a === 'ipad' && ANIM.ipad));
     if(a === 'split') b.setAttribute('aria-pressed', String(SPLIT[SCREEN] === 1));
   }
@@ -4229,6 +4419,12 @@ function onCtl(e){
   if(a === 'fleet') ANIM.fleet = !ANIM.fleet;
   if(a === 'hit')   setStrike(!(ANIM.fireGoal > 0.5));
   if(a === 'ipad'){ ANIM.ipad = !ANIM.ipad; document.body.classList.toggle('ipad', ANIM.ipad); fit(); }
+  if(a === 'rain'){ ANIM.rain = !ANIM.rain; refreshUI(); hideHint(); return; }
+  if(a === 'swap'){
+    ANIM.swap = ANIM.swap ? 0 : 1;
+    document.body.classList.toggle('swap', !!ANIM.swap);
+    refreshUI(); hideHint(); return;
+  }
   if(a === 'split'){
     ANIM.split = !ANIM.split;
     document.body.classList.toggle('split', ANIM.split);
@@ -4246,6 +4442,8 @@ function onCtl(e){
   if(a === 'sink') setSink(ANIM.sink < 0);
   if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true);
     ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
+    ANIM.flr = -1; waterUnis.uLitI.value = 0;
+    if(FLR.lit){ FLR.lit.visible = false; FLR.lit.material.uniforms.uI.value = 0; }
     if(ANIM.cat >= 0){ ANIM.cat = -1; CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0,0,0);
       for(const t of CAT.trails) t.material.uniforms.uFade.value = 0; } }
   refreshUI(); hideHint();
@@ -4893,8 +5091,10 @@ function frame(now){
         SH.uWC.value.set(lwx, lwz); SH.uCam.value.copy(_liveP);
       }
       /* viewport y counts from the bottom: H - Hh is the upper half. The
-         single-pass screens always take the upper half. */
-      const y = (ANIM.half || enemy) ? H - Hh : 0;
+         single-pass screens always take the upper half; swap only exchanges
+         the two boards of a real split, never the half a lone pass sits in. */
+      const up = ANIM.half || (ANIM.swap ? !enemy : enemy);
+      const y = up ? H - Hh : 0;
       renderer.setViewport(0, y, W, Hh);
       renderer.setScissor(0, y, W, Hh);
       renderer.render(scene, camera);
