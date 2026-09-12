@@ -901,9 +901,6 @@
     <h5>Vue</h5><div class="drow">
       <button id="splitb" data-a="split">Split</button>
     </div>
-    <h5>Météo</h5><div class="drow">
-      <button data-a="rain">Pluie</button>
-    </div>
     <h5>Layers</h5><div class="drow">
       <button data-a="radar">Radar</button><button data-a="con">Contacts</button><button data-a="rings">Impacts</button><button data-a="hit">Strike</button><button data-a="fleet">Fleet</button><button data-a="sink">Sink</button>
     </div>
@@ -1197,6 +1194,23 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
   uniform vec3 uBlastP; uniform float uBlastI, uBlastR;
   uniform vec3 uFlareP, uFlareCol; uniform float uFlareI;
   uniform vec4 uLitR; uniform vec3 uLitCol; uniform float uLitI;
+  uniform float uRainI;
+
+  /* ONE RING PER CELL of a jittered grid: a drop lands, its ring opens and
+     dies, and every cell keeps its own clock so the sea does not beat in
+     time. The ring never leaves its own cell, so a single lookup does — no
+     3x3 neighbourhood, which on a mesh this size is nine times the cost for
+     an effect that is meant to be barely there. */
+  float ripple(vec2 p, float t, float sc){
+    vec2 q  = p*sc;
+    vec2 id = floor(q), f = fract(q);
+    float h = hash21(id);
+    float u = fract(t*(0.60 + 0.52*h) + h*7.31);
+    vec2  c = vec2(0.32 + 0.36*h, 0.32 + 0.36*fract(h*31.7));
+    float d = length(f - c);
+    float ring = exp(-pow((d - u*0.30)/0.026, 2.0));
+    return ring*(1.0 - u)*(1.0 - u);
+  }
   uniform float uRadarA, uRadarI, uRadarRad;
   /* contacts: xy = cell, z = its bearing from the plot centre, w = how well it reaches */
   uniform vec4  uCon[NCON];
@@ -1394,6 +1408,19 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
       col = mix(col, fc, foam*0.94);
     }
 
+    /* ---- rain on the surface: rings, and only where they can be seen ----
+       Past a couple of hundred metres a ring is smaller than a pixel and all
+       it can do is alias, so it is faded out well before that. Two scales,
+       out of phase, or the grid it is built on starts to show. */
+    if(uRainI > 0.002){
+      float rNear = 1.0 - smoothstep(70.0, 290.0, vD);
+      if(rNear > 0.01){
+        float rp = ripple(vW.xz, uTime, 0.235)
+                 + ripple(vW.xz + 41.7, uTime*1.31, 0.375);
+        col += uFoam*rp*rNear*uRainI*(0.085 + 0.30*fres);
+      }
+    }
+
     /* ---- burning wreck: warm bounce on the water ---- */
     vec2 fv = vW.xz - uFire.xz;
     vec2 fdir = normalize(uCam.xz - uFire.xz);
@@ -1469,6 +1496,7 @@ const waterUnis = U({
   uLitR   :{value:new T.Vector4(0,0,1,1)},
   uLitCol :{value:Cs(0xd6e6ff, 1.0)},
   uLitI   :{value:0.0},
+  uRainI  :{value:0.0},
   uSkip   :{value:new T.Vector2(999,999)}
 });
 
@@ -3286,12 +3314,13 @@ const matComp = new T.ShaderMaterial({
     tD:{value:null}, tB:{value:null}, tW:{value:null}, tS:{value:null},
     uRes:{value:new T.Vector2()}, uTime:{value:0},
     uExp:{value:AD.exposure}, uB:{value:0.34}, uWi:{value:0.42}, uSt:{value:0.20},
-    uShadow:{value:Cs(0x93bfe2, 1.0)}, uHigh:{value:Cs(0xffe4c6, 1.0)}
+    uShadow:{value:Cs(0x93bfe2, 1.0)}, uHigh:{value:Cs(0xffe4c6, 1.0)},
+    uBolt:{value:0.0}
   },
   vertexShader:PV, fragmentShader:`
     precision highp float;
     uniform sampler2D tD, tB, tW, tS;
-    uniform vec2 uRes; uniform float uTime, uExp, uB, uWi, uSt;
+    uniform vec2 uRes; uniform float uTime, uExp, uB, uWi, uSt, uBolt;
     uniform vec3 uShadow, uHigh;
     varying vec2 vUv;
     float h21(vec2 p){ p = fract(p*vec2(443.897, 441.423)); p += dot(p, p+19.19); return fract(p.x*p.y); }
@@ -3307,6 +3336,18 @@ const matComp = new T.ShaderMaterial({
       c += texture2D(tB, vUv).rgb*uB;
       c += texture2D(tW, vUv).rgb*uWi;
       c += texture2D(tS, vUv).rgb*uSt*vec3(1.0, 0.80, 0.72);
+      /* LIGHTNING is not a light in the scene, it is the scene being lit:
+         it belongs here, before the tonemap, where a multiply is rolled off
+         by ACES instead of blowing the frame to paper white. The lift keeps
+         the shadows from staying black — a bolt fills them, that is what
+         makes it read as a bolt and not as an exposure change. */
+      if(uBolt > 0.001){
+        /* the lift is weighted to the top of the frame: a bolt comes from the
+           cloud, and a flash that is even everywhere reads as an exposure
+           change rather than as something happening in the sky */
+        float bh = 0.45 + 1.00*vUv.y;
+        c = c*(1.0 + uBolt*2.9*bh) + vec3(0.32, 0.39, 0.54)*uBolt*0.58*bh;
+      }
       float vig = 1.0 - 0.50*pow(clamp(r2*2.0, 0.0, 1.0), 1.30);
       c *= uExp*vig;
       c = aces(c);
@@ -3368,7 +3409,7 @@ const ENVS = [
     deep:[0x080d12,1], shoal:[0x1b2f3c,1], shad:[0x141d27,0.86], foam:[0xf2f7f8,1],
     gradeLo:[0x9aaab4,1], gradeHi:[0xdfe6e8,1],
     fogStart:190, fogDist:420, exp:1.06, f0:0.052, fexp:3.70, sheen:0.05, gridI:0.40,
-    swell:4.10, night:0 }
+    swell:4.10, night:0, bolt:true }
 ];
 for(const e of ENVS) for(const k of ['sunCol','zenith','midSky','haze','hazeWarm','deep','shoal','shad','foam','gradeLo','gradeHi'])
   e['_'+k] = Cs(e[k][0], e[k][1]);
@@ -3473,7 +3514,7 @@ function shot(i){
 const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
 const SINK_DUR = 11.0;
 const SALVO_DUR = 9.0;
-const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, swap:0, rain:false, env:1, envK:0 };
+const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, swap:0, env:1, envK:0 };
 
 function setStrike(on){
   if(on && ANIM.fireGoal < 0.5){ FX.splash.material.uniforms.uT0.value = tt; boom(FIRE, 0.30);
@@ -3515,8 +3556,9 @@ function torpedo(){
    turns — and it rides the plot instead of being placed in the
    world, because weather is everywhere and only ever seen here.
    ------------------------------------------------------------ */
-const RAIN_N = 5400, RAIN_R = 540, RAIN_TOP = 300;
+const RAIN_N = 3800, RAIN_R = 540, RAIN_TOP = 300;
 const RAIN = { mesh:null, k:0 };
+const BOLT = { t:-1, seq:[], dur:0, next:3.0 };
 {
   const pos = new Float32Array(RAIN_N*2*3);
   const sd  = new Float32Array(RAIN_N*2);
@@ -3555,7 +3597,7 @@ const RAIN = { mesh:null, k:0 };
       vD = -mv.z;
       /* real rain is not one weight of line: a third of it is barely there,
          and that spread is most of what makes it read as rain and not mesh */
-      vA = 0.18 + 0.82*aSeed*aSeed;
+      vA = 0.10 + 0.90*aSeed*aSeed*aSeed;
       gl_Position = projectionMatrix*mv;
     }`;
   const RAIN_FS = `
@@ -3567,8 +3609,8 @@ const RAIN = { mesh:null, k:0 };
       /* far rain is the scene's own haze; very near rain is a smear across
          the lens and would read as a scratch, so it fades out too */
       float f = smoothstep(uNear, uFar, vD);
-      float n = smoothstep(14.0, 88.0, vD);
-      float a = uI*n*vA*(1.0 - f*0.90)*0.30;
+      float n = smoothstep(22.0, 130.0, vD);
+      float a = uI*n*vA*(1.0 - f*0.92)*0.125;
       if(a < 0.004) discard;
       gl_FragColor = vec4(mix(uCol, uHaze, f*0.78), a);
     }`;
@@ -3966,11 +4008,42 @@ function updateFX(dt){
     marks[11].w = 0;
   }
 
+  /* LIGHTNING. Two to four strokes in a couple of tenths, the first the
+     hardest, then a gap of several seconds — a bolt is a burst and a wait,
+     never a strobe. Only the storm carries it. */
+  if(ENVS[ANIM.env].bolt){
+    BOLT.next -= dt;
+    if(BOLT.next <= 0 && BOLT.t < 0){
+      BOLT.t = 0; BOLT.seq = [];
+      const n = 2 + Math.floor(Math.random()*3);
+      let at = 0;
+      for(let i=0;i<n;i++){
+        BOLT.seq.push([at, i === 0 ? 1 : 0.28 + Math.random()*0.46]);
+        at += 0.042 + Math.random()*0.115;
+      }
+      BOLT.dur = at + 0.34;
+      BOLT.next = 5.5 + Math.random()*9.5;
+    }
+  } else { BOLT.t = -1; BOLT.next = 2.0; }
+  let bolt = 0;
+  if(BOLT.t >= 0){
+    BOLT.t += dt;
+    for(const st of BOLT.seq){
+      const d = BOLT.t - st[0];
+      if(d >= 0) bolt = Math.max(bolt, st[1]*Math.exp(-d*15.0));
+    }
+    if(BOLT.t > BOLT.dur) BOLT.t = -1;
+  }
+  matComp.uniforms.uBolt.value = bolt;
+
   /* rain, eased in and out: weather does not switch on */
   {
-    const want = ANIM.rain ? 1 : 0;
+    /* the theatre owns its own weather: one thing to set, nothing to keep
+       in step with it */
+    const want = ENVS[ANIM.env].rain ? 1 : 0;
     RAIN.k += (want - RAIN.k)*(1 - Math.exp(-dt*(want ? 1.1 : 1.9)));
     RAIN.mesh.visible = RAIN.k > 0.004;
+    waterUnis.uRainI.value = RAIN.k;
     if(RAIN.mesh.visible){
       RAIN.mesh.material.uniforms.uI.value = RAIN.k;
       /* centred on what the eye is working, not on the eye: in the split the
@@ -4378,7 +4451,7 @@ function refreshUI(){
                           || (a === 'rings' && ANIM.rings) || (a === 'fleet' && ANIM.fleet)
                           || (a === 'split' && SPLIT[SCREEN] === 1)
                           || (a === 'swap' && ANIM.swap)
-                          || (a === 'rain' && ANIM.rain)
+
                           || (a === 'ipad' && ANIM.ipad));
     if(a === 'split') b.setAttribute('aria-pressed', String(SPLIT[SCREEN] === 1));
   }
@@ -4426,9 +4499,6 @@ function onCtl(e){
     /* picking a theatre picks its hour too; the slider takes over again the
        moment it is touched */
     ANIM.hour = -1;
-    /* a storm arrives with its rain; leaving it takes the rain with it. The
-       debug switch still wins until the next theatre is picked. */
-    ANIM.rain = !!ENVS[ANIM.env].rain;
     setEra(ENVS[ANIM.env].era);
     refreshUI(); hideHint(); return;
   }
@@ -4443,7 +4513,6 @@ function onCtl(e){
   if(a === 'fleet') ANIM.fleet = !ANIM.fleet;
   if(a === 'hit')   setStrike(!(ANIM.fireGoal > 0.5));
   if(a === 'ipad'){ ANIM.ipad = !ANIM.ipad; document.body.classList.toggle('ipad', ANIM.ipad); fit(); }
-  if(a === 'rain'){ ANIM.rain = !ANIM.rain; refreshUI(); hideHint(); return; }
   if(a === 'swap'){
     ANIM.swap = ANIM.swap ? 0 : 1;
     document.body.classList.toggle('swap', !!ANIM.swap);
