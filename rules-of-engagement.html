@@ -184,7 +184,7 @@
   .rule ul li::before{content:'—';position:absolute;left:-17px;color:#a8481a}
   .rule b{font-weight:600;color:#191d23}
   .rule em{font-style:italic;color:#5d6470}
-  /* les trois armes, en blocs empilés : une table ne peut pas se comprimer
+  /* les quatre armes, en blocs empilés : une table ne peut pas se comprimer
      dans une colonne de 394, et elle poussait la page à déborder */
   .arms{margin:4px 0 0}
   .arm{padding:9px 0;border-bottom:1px solid rgba(25,29,35,.14)}
@@ -323,14 +323,17 @@
       </div>
 
       <div class="rule">
-        <h4><i>6</i>Les trois armes</h4>
+        <h4><i>6</i>Les quatre armes</h4>
         <div class="arms">
           <div class="arm"><b>Canon</b><span>Une case. Tous les navires en ont un.</span>
             <i>chaque tour</i></div>
           <div class="arm"><b>Frappe aérienne</b><span>Trois cases en ligne, horizontale ou
             verticale. Porte-avions.</span><i>tous les 4 tours</i></div>
           <div class="arm"><b>Torpille</b><span>Part d'une case du bord, remonte la voie et prend
-            le premier navire rencontré. Sous-marin.</span><i>tous les 3 tours</i></div>
+            le premier navire rencontré. Sous-marin.</span><i>tous les 5 tours</i></div>
+          <div class="arm"><b>Fusée de signalement</b><span>Éclaire neuf cases, trois sur trois,
+            et dit combien d'entre elles portent un navire — pas lesquelles. Ne fait aucun dégât.
+            Escorteur.</span><i>tous les 3 tours</i></div>
         </div>
         <p style="margin-top:10px">Sans rien toucher d'autre, la case que vous désignez est
         tirée au canon. Pour une arme spéciale prête&nbsp;: touchez sa pastille, <b>posez</b> le
@@ -357,7 +360,8 @@
         <ul>
           <li><b>Porte-avions</b> : plus de frappe aérienne.</li>
           <li><b>Sous-marin</b> : plus de torpille.</li>
-          <li><b>Les trois autres</b> : une position de tir en moins.</li>
+          <li><b>Escorteur</b> : plus de fusée — et c'est le plus facile à couler.</li>
+          <li><b>Les deux autres</b> : une position de tir en moins.</li>
         </ul>
         <p style="margin-top:8px">Aucune réparation, aucun renfort. Rien ne revient.</p>
       </div>
@@ -373,6 +377,8 @@
         <p>Le rechargement d'une arme spéciale <b>ne change jamais</b>, même s'il ne vous reste
         qu'un seul navire&nbsp;: entre deux frappes, le porte-avions tire au canon comme les
         autres.</p>
+        <p><b>Une arme prête ne se cumule pas.</b> Attendre quatre tours de plus ne donne pas
+        deux frappes&nbsp;: le compteur s'arrête sur « prête » et y reste jusqu'au tir.</p>
       </div>
 
     </div>
@@ -386,8 +392,19 @@
 
 <section>
   <h2><span>01</span>Les batteries, et ce qu'on perd avec elles</h2>
-  <p>Trois coques portent un canon, deux portent mieux&nbsp;: deux règles à apprendre, pas cinq.
-  Les deux époques partagent les mêmes emplacements.</p>
+  <p>Deux coques portent un canon et rien d'autre&nbsp;; trois portent mieux. Le rechargement
+  n'est pas un prix payé pour des dégâts, c'est un prix payé pour la <strong>certitude</strong>&nbsp;:
+  plus un coup est sûr de valoir quelque chose, plus il se fait attendre.</p>
+  <ul class="conseq">
+    <li><b>La fusée, tous les 3 tours</b><span>Elle ne fait aucun dégât. C'est ce qui lui vaut
+      d'être la plus fréquente.</span></li>
+    <li><b>La frappe, tous les 4</b><span>Trois cases d'un coup, mais elle peut n'en trouver
+      aucune — et près des bords elle en perd.</span></li>
+    <li><b>La torpille, tous les 5</b><span>Une seule case, et pourtant la plus rare&nbsp;: elle
+      est la seule qui ne peut pas revenir les mains vides. Ou elle touche, ou elle raye dix
+      cases d'un trait. <em>Sa force n'est pas la puissance, c'est qu'elle ne gâche jamais un
+      tour — et c'est plus cher que des dégâts.</em></span></li>
+  </ul>
 
   <div class="scroll">
     <table>
@@ -407,7 +424,7 @@
           <td class="num">2</td><td class="num">Torpille</td>
           <td class="d">Part du bord, remonte la voie, prend la première coque rencontrée. Une
             voie vide est un raté qui la déclare libre.</td>
-          <td><span class="ready hot">tous les 3 tours</span></td>
+          <td><span class="ready hot">tous les 5 tours</span></td>
         </tr>
         <tr>
           <td class="hull">Destroyer<i>galion</i></td>
@@ -421,8 +438,10 @@
         </tr>
         <tr>
           <td class="hull">Escorteur<i>pinasse</i></td>
-          <td class="num">2</td><td class="num">Canon</td><td class="d">Une case.</td>
-          <td><span class="ready">chaque tour</span></td>
+          <td class="num">2</td><td class="num">Fusée de signalement</td>
+          <td class="d">Éclaire un carré de trois sur trois et rend un seul chiffre&nbsp;: combien
+            de ces neuf cases portent une coque. Pas lesquelles. <b>Aucun dégât.</b></td>
+          <td><span class="ready hot">tous les 3 tours</span></td>
         </tr>
       </tbody>
     </table>
@@ -444,6 +463,14 @@
       <div id="p2"></div>
       <div class="legend"><span><i style="background:var(--mine)"></i>Course</span>
         <span><i style="background:var(--theirs)"></i>Touché</span></div>
+    </div>
+    <div class="plot">
+      <h4>Fusée de signalement</h4>
+      <p>Tirée sur <code>B9</code>. Les neuf cases s'éclairent et rendent <code>2</code>&nbsp;:
+      deux d'entre elles portent quelque chose, sans dire lesquelles.</p>
+      <div id="p3"></div>
+      <div class="legend"><span><i style="background:var(--mine)"></i>Éclairé</span>
+        <span><i style="background:rgba(206,224,236,.30)"></i>Coque, non révélée</span></div>
     </div>
   </div>
 
@@ -482,7 +509,9 @@
     <li><b>Porte-avions coulé</b><span class="cost">Plus de frappe aérienne, définitivement —
       y compris si elle était prête et gardée.</span></li>
     <li><b>Sous-marin coulé</b><span class="cost">Plus de torpille, définitivement.</span></li>
-    <li><b>Les trois autres</b><span>Une position de tir en moins. On tire toujours chaque tour,
+    <li><b>Escorteur coulé</b><span class="cost">Plus de fusée, définitivement — et c'est la
+      coque la plus facile à perdre. <em>La vue est la chose la plus fragile qu'on possède.</em></span></li>
+    <li><b>Les deux autres</b><span>Une position de tir en moins. On tire toujours chaque tour,
       donc il n'y a ni tour mort ni bouton « passer ».</span></li>
   </ul>
 </section>
@@ -740,6 +769,18 @@
            ' ' + y0 + 'L' + (PAD + r.to*C + C*0.86) + ' ' + (y0+4) +
            '" stroke="#9df0dc" stroke-width="1.6" fill="none" stroke-linejoin="round"/>';
     }
+    /* le carré éclairé, et le seul chiffre qu'il rend */
+    if(opts.lit){
+      var lx = opts.lit[0], lz = opts.lit[1];
+      for(var ax = 0; ax < 3; ax++) for(var az = 0; az < 3; az++){
+        s += '<rect x="' + (PAD + (lx+ax)*C + 1.5) + '" y="' + ((lz+az)*C + 1.5) +
+             '" width="' + (C-3) + '" height="' + (C-3) + '" rx="3" ' +
+             'fill="rgba(157,240,220,.09)" stroke="rgba(157,240,220,.62)" stroke-width="1.2"/>';
+      }
+      s += '<text x="' + (PAD + (lx+1.5)*C) + '" y="' + ((lz+1.5)*C + 7) +
+           '" fill="#cfe6ff" font-size="19" font-family="ui-monospace,Menlo,monospace" ' +
+           'text-anchor="middle">' + opts.count + '</text>';
+    }
     /* le doigt : le point de contact, qui désigne et ne valide pas */
     if(opts.finger){
       var fx = PAD + opts.finger[0]*C + C/2, fy = opts.finger[1]*C + C/2;
@@ -863,6 +904,11 @@
   grid(document.getElementById('p2'), {
     alt: 'Course de torpille vers l’ouest dans la ligne 7 depuis le bord, touchant G7',
     hull: hull, run: { row:6, from:9, to:6 }, hit: [[6,6]]
+  });
+  /* la fusée : neuf cases éclairées sur B9, deux d'entre elles occupées */
+  grid(document.getElementById('p3'), {
+    alt: 'Fusée de signalement sur B9 : les neuf cases s’éclairent et rendent 2',
+    hull: [[1,7],[1,8]], lit: [0, 7], count: 2
   });
 
   /* le geste, en trois temps : posé, basculé, levé — le doigt reste en F7 */

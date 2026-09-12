@@ -3419,7 +3419,12 @@ const ENVS = [
     deep:[0x080d12,1], shoal:[0x1b2f3c,1], shad:[0x141d27,0.86], foam:[0xf2f7f8,1],
     gradeLo:[0x9aaab4,1], gradeHi:[0xdfe6e8,1],
     fogStart:190, fogDist:420, exp:1.06, f0:0.052, fexp:3.70, sheen:0.05, gridI:0.40,
-    swell:4.10, night:0, bolt:true }
+    /* NOT NIGHT, BUT LIGHTS BURNING. uNight is a float, not a flag: at 0.58 the
+       running lights and their wash on the plating come up without the scene
+       pretending the sun has gone. A ship in a gale at 1.8 km burns them, and
+       the plot's own glow comes up with them — which is what lets the grid
+       read through the murk this theatre closes in. */
+    swell:4.10, night:0.58, bolt:true }
 ];
 for(const e of ENVS) for(const k of ['sunCol','zenith','midSky','haze','hazeWarm','deep','shoal','shad','foam','gradeLo','gradeHi'])
   e['_'+k] = Cs(e[k][0], e[k][1]);
@@ -4788,13 +4793,11 @@ const _flrLook = new T.Vector3();
 function cineUpdate(dt){
   let want = 0, obj = null, D = 30, H = 8, S = 6, L = 45, look = null, age = 0,
       LD = 118, LH = 58;
-  if(ANIM.mis >= 0){
-    const u = ANIM.mis;
-    age = u*SALVO_DUR;
-    want = (age > 1.1 && u < 0.88) ? 1 : 0;
-    if(u < 0.615){ obj = MIS.grp; D = 30; H = 7.5; S = 6.5; L = 70; }
-    else look = MIS.B;
-  } else if(ANIM.tor >= 0){
+  /* THE GUN KEEPS THE PLOT. It is the shot you fire every turn, and a camera
+     that leaves the board for it would make the ordinary thing ceremonial —
+     and would take the plot away four seconds out of five. The three specials
+     are rare enough to be worth watching; the missile is not one of them. */
+  if(ANIM.tor >= 0){
     const u = ANIM.tor;
     age = u*TOR_DUR;
     want = (age > 1.0 && u < 0.93) ? 1 : 0;
