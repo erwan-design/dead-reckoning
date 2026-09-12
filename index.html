@@ -361,7 +361,8 @@
   body:not(.s-play) .half, body:not(.s-play) .srule{opacity:0!important;pointer-events:none}
   /* the tray belongs to the engagement alone; Win/Loss is set from there and
      read on the screen it is about */
-  body:not(.s-play):not(.s-shot) .dbg{opacity:0!important;pointer-events:none}
+  body:not(.s-play):not(.s-shot):not(.s-setup):not(.s-setup2):not(.s-over):not(.s-over2)
+    .dbg{opacity:0!important;pointer-events:none}
   /* CAPTURE. `bare` takes every last thing off the glass — including the two
      trays — so the frame holds nothing but the scene. It is the only state in
      the app where no control is reachable, and `h` brings them straight back. */
@@ -369,35 +370,9 @@
   /* the capture screen holds nothing, so it must not take the pointer: the
      orbit, wheel and pan listeners all live on the canvas underneath it */
   #scr-shot{pointer-events:none}
-  /* SPLIT, THE CHIP. Deployment and after-action each have a split view of
-     themselves. One chip says so, in one place on all four states, and lights
-     when it is on — the same idiom as the plot switch below it. */
-  /* z-index 9, not 6: the screens are 8 and each one covers the whole stage
-     with pointer-events on, so anything below them is unclickable. The nav and
-     the debug tray are at 9 for exactly this reason. */
-  .splitb{position:absolute;right:26px;top:22px;z-index:9;
-      width:38px;height:38px;display:flex;align-items:center;justify-content:center;
-      appearance:none;cursor:pointer;border:1px solid rgba(206,224,236,.14);
-      border-radius:10px;background:rgba(10,16,24,.52);
-      backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-      color:rgba(233,240,246,.62);opacity:0;pointer-events:none;
-      transition:opacity 420ms ease, color 200ms ease, background 200ms ease,
-                 border-color 200ms ease}
-  body.s-setup .splitb, body.s-setup2 .splitb,
-  body.s-over .splitb, body.s-over2 .splitb{opacity:1;pointer-events:auto}
-  body.bare .splitb{opacity:0!important;pointer-events:none}
-  .splitb svg{width:15px;height:15px;display:block;stroke:currentColor;fill:none;
-      stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
-  .splitb .two{display:none}
-  body.s-halved .splitb .one{display:none}
-  body.s-halved .splitb .two{display:block}
-  body.s-halved .splitb{color:rgba(180,246,230,.98);background:rgba(157,240,220,.13);
-      border-color:rgba(157,240,220,.38)}
-  body:not(.ipad) .splitb:hover{color:rgba(243,249,252,.92);background:rgba(255,255,255,.07)}
-  body.ipad .splitb:active{background:rgba(255,255,255,.12)}
-  body.ipad .splitb{-webkit-tap-highlight-color:transparent}
-  /* the split deployment already writes a reading into that corner */
-  body.s-setup2 .dtop{padding-right:48px}
+  /* the split only applies to two screens; elsewhere it is dead weight */
+  body:not(.s-setup):not(.s-setup2):not(.s-over):not(.s-over2) #splitb{opacity:.24;
+      pointer-events:none}
 
   /* the hour runs continuously between the three theatres, so it is a slider
      and not a row of buttons — the whole point is the values between them */
@@ -713,29 +688,36 @@
     <div class="pan" id="rhulls"></div>
   </div>
 </div>
+<!-- TWO CHIPS BECOME ONE. Sound and the four framings are both settings,
+     not manoeuvres: they belong behind one entry rather than taking two
+     slots at the head of the board. The glyph is the icon sheet's Settings. -->
 <div class="rail in-a" id="util">
-  <div class="cap">
-    <button class="chip" data-a="snd" data-l="Sound"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 5.3h2.2L7.6 3v8L4.8 8.7H2.6z"/><path d="M9.9 5.3a3.1 3.1 0 0 1 0 3.4"/></svg></button>
-  </div>
   <div class="cap">
     <div class="slot">
     <div class="pop">
-    <button data-cam="0"><em>01</em>Cam 01</button>
-    <button data-cam="1"><em>02</em>Cam 02</button>
-    <button data-cam="2"><em>03</em>Cam 03</button>
+      <button data-a="snd"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 5.3h2.2L7.6 3v8L4.8 8.7H2.6z"/><path d="M9.9 5.3a3.1 3.1 0 0 1 0 3.4"/></svg>Sound</button>
+      <button data-cam="0"><em>01</em>Cam 01</button>
+      <button data-cam="1"><em>02</em>Cam 02</button>
+      <button data-cam="2"><em>03</em>Cam 03</button>
       <button data-cam="3"><em>04</em>Cam 04</button>
     </div>
-    <button class="chip" data-pop="cam" data-l="Camera"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.1 4.7h2.4l1-1.5h3l1 1.5h2.4v6.3H2.1z"/><circle cx="7" cy="7.8" r="1.9"/></svg></button>
+    <button class="chip" data-pop="set" data-l="Settings"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 3.6h10M2 7h10M2 10.4h10"/><path d="M8.7 2.1v3M4.5 5.5v3M9.9 8.9v3"/></svg></button>
     </div>
   </div>
 </div>
+<!-- THE THREE BATTERIES, EACH ON ITS OWN. A shared capsule says these
+     belong to one group; they are three separate weapons, so each takes a
+     disc of its own. Missile, Sink and Reset are not manoeuvres you choose —
+     they stay in the debug tray, where the rest of the scaffolding lives. -->
 <div class="rail in-a" id="rail">
   <div class="cap">
-    <button class="chip" data-a="fire" data-l="Missile"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 11.4 11.4 2.6"/><path d="M7.6 2.6h3.8v3.8"/><path d="m5.2 8.4 1.6 1.6"/></svg></button>
-    <button class="chip" data-a="cat" data-l="Catapult"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.8v10.4"/><path d="M1.8 7.7 7 5.9l5.2 1.8"/><path d="M4.5 11.5 7 10.7l2.5.8"/></svg></button>
     <button class="chip" data-a="tor" data-l="Torpedo"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.9 7c0 1-1.6 1.8-3.4 1.8S5.1 8 5.1 7s1.6-1.8 3.4-1.8S11.9 6 11.9 7z"/><path d="M5.1 5.6 3.7 4.4M5.1 8.4 3.7 9.6"/><circle cx="1.9" cy="7" r=".65"/></svg></button>
-    <button class="chip" data-a="sink" data-l="Sink"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.9v5.5"/><path d="M4.5 5.2 7 7.7l2.5-2.5"/><path d="M1.9 10.7c1.3-1 2.2-1 3.4 0s2.1 1 3.4 0 2.1-1 3.4 0"/></svg></button>
-    <button class="chip danger" data-a="reset" data-l="Reset"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M11.7 1.8v3H8.8"/></svg></button>
+  </div>
+  <div class="cap">
+    <button class="chip" data-a="cat" data-l="Catapult"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.8v10.4"/><path d="M1.8 7.7 7 5.9l5.2 1.8"/><path d="M4.5 11.5 7 10.7l2.5.8"/></svg></button>
+  </div>
+  <div class="cap">
+    <button class="chip" data-a="flare" data-l="Star shell"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5.8A5.4 5.4 0 0 1 12 5.8"/><path d="M7 6.2V9"/><path d="M7 10.4v2M4.9 10 3.7 12M9.1 10l1.2 2"/></svg></button>
   </div>
 </div>
 <div class="scr" id="scr-shot"></div>
@@ -866,10 +848,6 @@
     </div>
   </div>
 </div>
-<button class="splitb" id="splitb" aria-pressed="false" title="Split the view">
-  <svg class="one" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 2.5h9.2v3.3H2.4z"/><path d="M2.4 8.2h9.2v3.3H2.4z"/></svg>
-  <svg class="two" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.3 2.9h9.4v8.2H2.3z"/></svg>
-</button>
 <div class="nav in-a" id="nav">
   <div class="dpan">
     <h5>Screens</h5><div class="drow">
@@ -884,11 +862,11 @@
 </div>
 <div class="dbg in-a" id="dbg">
   <div class="dpan">
+    <h5>Vue</h5><div class="drow">
+      <button id="splitb" data-a="split">Split</button>
+    </div>
     <h5>Layers</h5><div class="drow">
       <button data-a="radar">Radar</button><button data-a="con">Contacts</button><button data-a="rings">Impacts</button><button data-a="hit">Strike</button><button data-a="fleet">Fleet</button>
-    </div>
-    <h5>Flotte</h5><div class="drow">
-      <button data-era="0">Moderne</button><button data-era="1">Voile</button>
     </div>
     <h5>Camera</h5><div class="drow">
       <button data-cam="0">Cam 01</button><button data-cam="1">Cam 02</button><button data-cam="2">Cam 03</button><button data-cam="3">Cam 04</button>
@@ -900,7 +878,7 @@
     </div>
     <div class="cam" id="camro"></div>
     <h5>Format</h5><div class="drow">
-      <button data-ar="744/1133">iPad</button><button data-ar="1290/2796">iPhone</button><button data-ar="1/1">Carré</button><button data-ar="4/5">4:5</button><button data-ar="16/9">16:9</button>
+      <button data-ar="744/1133">iPad</button><button data-ar="1290/2796">iPhone</button>
     </div>
     <h5>Result</h5><div class="drow">
       <button data-won="1">Win</button><button data-won="0">Loss</button>
@@ -1299,18 +1277,22 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
         }
       }
 
-      /* a hull that is gone: her whole footprint is called out */
+      /* A HULL THAT IS GONE: every square she sat on, one by one. Stretched
+         over the whole footprint it read as one long cell — but the plot
+         counts in squares, so a four-cell hull has to leave four marks. Each
+         gets exactly the struck-cell treatment, brackets and beat included. */
       if(uSunkI > 0.002){
-        vec2 lo = uSunkR.xy, hi = uSunkR.zw, sz = hi - lo;
-        vec2 c3 = (gc - lo)/sz;
-        if(c3.x > -0.08 && c3.x < 1.08 && c3.y > -0.08 && c3.y < 1.08){
-          vec2 e3 = abs(c3 - 0.5)*2.0;
+        vec2 lo = uSunkR.xy, hi = uSunkR.zw;
+        /* the square this fragment sits on, pinned inside the footprint: the
+           clamp is what lets the brackets spill past the outer edge by the
+           same margin a lone struck cell's do */
+        vec2 cl = clamp(floor(gc), lo, hi - 1.0);
+        vec2 f3 = gc - cl;
+        if(f3.x > -0.06 && f3.x < 1.06 && f3.y > -0.06 && f3.y < 1.06){
+          vec2 e3 = abs(f3 - 0.5)*2.0;
           float m3 = max(e3.x, e3.y);
-          float w3 = 0.15/max(sz.x, sz.y);
-          /* the same wash, brackets and beat as a struck cell, over a footprint
-             instead of one square — a sinking is a hit that covers more ground */
           float fill3 = (1.0 - smoothstep(0.30, 1.0, m3))*0.13;
-          float bord3 = exp(-pow((1.0 - m3)/w3, 2.0));
+          float bord3 = exp(-pow((1.0 - m3)/0.075, 2.0));
           float cor3  = bord3*smoothstep(0.30, 0.78, min(e3.x, e3.y));
           float pul3  = 0.70 + 0.30*sin(uTime*2.4);
           col += uSunkCol*(fill3 + cor3*1.9)*uSunkI*pul3*mix(0.4, 1.0, facing);
@@ -4178,13 +4160,16 @@ function refreshUI(){
     const a = d.a;
     /* she has no flight deck in 1680 */
     /* no flight deck and no boat in 1680 */
-    b.classList.toggle('na', (a === 'cat' || a === 'tor') && ANIM.era === 1);
+    b.classList.toggle('na', ((a === 'cat' || a === 'tor') && ANIM.era === 1)
+                          || (a === 'split' && SPLIT[SCREEN] === undefined));
     b.classList.toggle('on', (a === 'sink' && sinking) || (a === 'fire' && flying)
                           || (a === 'cat' && cating) || (a === 'tor' && running)
                           || (a === 'snd' && ANIM.snd) || (a === 'hit' && burning)
                           || (a === 'radar' && ANIM.radar) || (a === 'con' && ANIM.con)
                           || (a === 'rings' && ANIM.rings) || (a === 'fleet' && ANIM.fleet)
-                          || (a === 'split' && ANIM.split) || (a === 'ipad' && ANIM.ipad));
+                          || (a === 'split' && SPLIT[SCREEN] === 1)
+                          || (a === 'ipad' && ANIM.ipad));
+    if(a === 'split') b.setAttribute('aria-pressed', String(SPLIT[SCREEN] === 1));
   }
 }
 function closePops(){ for(const s of document.querySelectorAll('.slot')) s.classList.remove('open'); }
@@ -4251,6 +4236,10 @@ function onCtl(e){
   }
   if(a === 'fire') launch();
   if(a === 'cat' && ANIM.era === 0) catapult();
+  if(a === 'split'){
+    if(SPLIT[SCREEN] !== undefined){ SPLIT[SCREEN] = SPLIT[SCREEN] ? 0 : 1; setScreen(SCREEN); }
+    hideHint(); return;
+  }
   if(a === 'tor' && ANIM.era === 0) torpedo();
   /* the star shell exists in both eras: a signal rocket is not a modern idea */
   if(a === 'flare') flare();
@@ -4274,7 +4263,6 @@ const SCR = { attract: document.getElementById('scr-attract'),
               over2:   document.getElementById('scr-over2'),
               shot:    document.getElementById('scr-shot'),
             };
-const splitBtn = document.getElementById('splitb');
 /* DEPLOYMENT. Everything on this card but the theatre is written down and not
    yet obeyed: the orders exist, the engagement does not read them. The theatre
    is the exception because the sea behind the card is the real one. */
@@ -4401,8 +4389,6 @@ function setScreen(name, quiet){
                                 's-over', 's-over2', 's-shot');
   document.body.classList.add('s-' + v);
   document.body.classList.toggle('s-halved', v !== name);
-  splitBtn.setAttribute('aria-pressed', String(v !== name));
-  splitBtn.title = (v !== name) ? 'One view' : 'Split the view';
   const play = v === 'play';
   /* the split deployment shows one board, not two: the lower half is a panel,
      so the second pass would render straight under something opaque */
@@ -4463,12 +4449,6 @@ for(const k in SCR) SCR[k].addEventListener('click', e => {
   if(b.dataset.scr !== undefined){ setScreen(b.dataset.scr); return; }
   if(setupCtl(b)) return;
   onCtl(e);
-});
-splitBtn.addEventListener('click', () => {
-  if(SPLIT[SCREEN] === undefined) return;
-  SPLIT[SCREEN] = SPLIT[SCREEN] ? 0 : 1;
-  setScreen(SCREEN);
-  hideHint();
 });
 railEl.addEventListener('click', onCtl);
 utilEl.addEventListener('click', onCtl);
