@@ -4430,15 +4430,38 @@ function camReadout(){
    laid over it, so they are never in the pixels. Nothing has to be hidden.
    The grab has to happen inside the frame, straight after the last pass —
    the drawing buffer is gone by the time a click handler could reach it. */
-let SNAP = 0;
+let SNAP = 0, DL;
 function snapSay(t){ snapMsg.textContent = t; }
+/* Two routes out, because the file leaves by a different door depending on
+   where the page is opened. Published, the viewer's own save dialog handles
+   it; opened as a local file there is no viewer, and the browser's download
+   is the only way. Asked once, then remembered. */
+async function saver(){
+  if(DL !== undefined) return DL;
+  try{ DL = (window.claude && claude.use) ? await claude.use('downloads') : null; }
+  catch(e){ DL = null; }
+  return DL;
+}
 function grabPNG(){
   const w = canvas.width, h = canvas.height;
-  canvas.toBlob(blob => {
-    if(!blob){ snapSay('capture refusée'); return; }
+  canvas.toBlob(async blob => {
+    if(!blob){ snapSay('capture refus\u00e9e'); return; }
     const d = new Date(), p2 = n => String(n).padStart(2,'0');
     const name = 'dead-reckoning-' + w + 'x' + h + '-' + p2(d.getHours()) + p2(d.getMinutes())
                + p2(d.getSeconds()) + '.png';
+    const dl = await saver();
+    if(dl){
+      try{
+        await dl.save({ filename: name, data: blob });
+        snapSay(w + ' \u00d7 ' + h + ' \u00b7 enregistr\u00e9e');
+      }catch(e){
+        const c = e && e.code;
+        snapSay(c === 'declined' ? 'annul\u00e9e'
+              : c === 'rate_limited' ? 'une demande est d\u00e9j\u00e0 ouverte'
+              : 'enregistrement indisponible ici');
+      }
+      return;
+    }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click();
