@@ -258,6 +258,9 @@
     text-transform:uppercase;color:var(--ink-1);white-space:nowrap;width:26%}
   .verdict{display:inline-block;margin-right:9px;font:400 9.5px/1 var(--mono);letter-spacing:.14em;
     text-transform:uppercase;padding:4px 7px;border-radius:3px;white-space:nowrap}
+  .live{color:var(--mine);background:var(--mine-dim);border:1px solid var(--mine-line)}
+  .half{color:#ffd9a8;background:rgba(255,186,128,.12);border:1px solid rgba(255,186,128,.34)}
+  .deco{color:var(--ink-3);background:rgba(198,216,230,.06);border:1px solid var(--stroke-2)}
   .keep{color:var(--mine);background:var(--mine-dim);border:1px solid var(--mine-line)}
   .go{color:var(--theirs);background:var(--theirs-dim);border:1px solid var(--theirs-line)}
   @media (max-width:640px){
@@ -614,7 +617,88 @@ déjà.</p>
 </section>
 
 <section>
-  <h2><span>06</span>Où ça se branche</h2>
+  <h2><span>06</span>Ce que l'écran dit vraiment</h2>
+  <p>Trois statuts, et il vaut mieux savoir lequel on regarde. <strong>Vivant</strong>&nbsp;: calculé
+  à partir de l'état de la partie, change quand la partie change. <strong>À moitié</strong>&nbsp;:
+  une part est calculée, l'autre est une constante. <strong>Décor</strong>&nbsp;: écrit en dur, ne
+  bouge pas.</p>
+
+  <h3>Bataille — gouttière gauche</h3>
+  <table class="fate">
+    <tbody>
+      <tr><td>Enemy fleet</td><td><span class="verdict live">vivant</span>Les pastilles et le
+        <code>03/07</code> comptent les cases touchées sur les cases connues, prises directement
+        sur les coques adverses.</td></tr>
+      <tr><td>Hulls sunk</td><td><span class="verdict live">vivant</span><code>01/03</code>&nbsp;:
+        une coque n'est comptée coulée que lorsque toutes ses cases le sont.</td></tr>
+      <tr><td>Tracks</td><td><span class="verdict live">vivant</span>Une ligne par coque
+        rencontrée, avec ses vraies références de grille et son statut — <em>held</em> tant qu'il
+        reste une case à trouver, <em>sunk</em> ensuite.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Bataille — gouttière droite</h3>
+  <table class="fate">
+    <tbody>
+      <tr><td>Hits</td><td><span class="verdict live">vivant</span>Le nombre de cases adverses
+        touchées.</td></tr>
+      <tr><td>Enemy hulls</td><td><span class="verdict live">vivant</span>Les trois coques à plat,
+        à leur vraie longueur, remplies là où elles ont été touchées.</td></tr>
+      <tr><td>Salvos</td><td><span class="verdict half">à moitié</span>Coups au but (vivant)
+        <b>+ 7</b>. Les sept ratés sont les anneaux d'écume posés sur l'eau au chargement&nbsp;:
+        une constante, pas un compteur.</td></tr>
+      <tr><td>Accuracy</td><td><span class="verdict half">à moitié</span>Coups au but divisés par
+        les salves — donc elle hérite de la même constante. Elle bouge quand on touche, jamais
+        quand on manque.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Bataille — son propre plateau</h3>
+  <table class="fate">
+    <tbody>
+      <tr><td>Nom de la force</td><td><span class="verdict live">vivant</span><em>Task Force
+        Meridian</em> ou <em>Line of Battle</em> selon l'époque chargée.</td></tr>
+      <tr><td>Hulls · damaged</td><td><span class="verdict live">vivant</span>Le nombre de coques
+        de l'époque en cours, et le nombre qui porte une brûlure.</td></tr>
+      <tr><td>Ligne d'état</td><td><span class="verdict live">vivant</span><em>Hit G3 ·
+        burning</em>, <em>torpedo running</em>, <em>going down</em>… elle suit ce qui se passe à
+        l'instant, y compris pendant une manœuvre.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Déploiement</h3>
+  <table class="fate">
+    <tbody>
+      <tr><td>Theatre</td><td><span class="verdict live">vivant</span>Change réellement la
+        lumière, la mer et l'époque de la flotte.</td></tr>
+      <tr><td>Weather · Hour · Flagship</td><td><span class="verdict deco">décor</span>Les
+        lectures à droite du titre — état de la mer, visibilité, heure locale, nom de la force —
+        sont des tables fixes attachées au bouton choisi. Elles ne changent rien à la partie.
+        <em>C'est la première dette à payer&nbsp;: l'interface est déjà là.</em></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Fin de partie</h3>
+  <table class="fate">
+    <tbody>
+      <tr><td>Les six chiffres</td><td><span class="verdict deco">décor</span>Salves, coups,
+        précision, coques coulées, perdues, portée&nbsp;: deux jeux de valeurs écrits en dur, un
+        pour la victoire, un pour la défaite. Rien n'est repris de la partie qui vient de se
+        jouer.</td></tr>
+      <tr><td>Verdict et phrase</td><td><span class="verdict deco">décor</span>Choisis par le
+        commutateur Win / Loss du tiroir Debug, pas par l'issue d'une partie — il n'y a pas encore
+        de partie à gagner.</td></tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:26px">Résumé sans détour&nbsp;: <strong>tout ce qui décrit le plateau
+  adverse est vrai</strong>, parce que le plateau adverse existe vraiment dans le code. Tout ce
+  qui décrit une partie — son déroulé, son bilan, ses réglages — est en attente de la partie
+  elle-même. C'est exactement la frontière que ce document sert à franchir.</p>
+</section>
+
+<section>
+  <h2><span>07</span>Où ça se branche</h2>
   <p>Les trois projectiles existent déjà et atterrissent déjà au bon endroit.</p>
   <ul class="conseq">
     <li><b>Canon</b><span>L'arc du missile, depuis la coque dont c'est le tour.</span></li>
@@ -639,7 +723,7 @@ déjà.</p>
 </section>
 
 <section>
-  <h2><span>07</span>Une partie, coup par coup</h2>
+  <h2><span>08</span>Une partie, coup par coup</h2>
   <p>Six échanges, une quarantaine de secondes.</p>
 
   <div class="log">
@@ -695,7 +779,7 @@ déjà.</p>
 </section>
 
 <section>
-  <h2><span>08</span>Écarté de la v1</h2>
+  <h2><span>09</span>Écarté de la v1</h2>
   <p>Bonnes idées, chacune payée en rythme. Listées pour être ajoutées délibérément.</p>
   <div class="later">
     <div>
