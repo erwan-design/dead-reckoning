@@ -8,9 +8,15 @@
     transition:opacity 2200ms cubic-bezier(.2,.6,.2,1)}
   #stage{position:fixed;inset:0;overflow:hidden;background:#0b0c14}
   /* ---- and the stage can pretend to be a tablet held upright ---- */
-  body.ipad{background:#07080c;display:grid;place-items:center}
+  body.ipad{background:#07080c;display:grid;place-items:center;--arw:744;--arh:1133}
+  /* THE FRAME'S RATIO IS A VARIABLE so the capture screen can ask for a
+     format; the ResizeObserver on #stage re-fits the camera on its own.
+     The height is derived from the ratio rather than fixed, or a wide format
+     would hit the window's width and come back the same size as a square. */
   body.ipad #stage{position:relative;inset:auto;
-    height:min(1133px, calc(100vh - 56px));aspect-ratio:744/1133;width:auto;
+    aspect-ratio:var(--arw) / var(--arh);width:auto;
+    height:min(1133px, calc(100vh - 56px),
+               calc((100vw - 56px) * var(--arh) / var(--arw)));
     border-radius:30px;
     box-shadow:0 0 0 11px #14161d, 0 0 0 12px rgba(226,236,244,.10),
                0 0 0 13px rgba(0,0,0,.55), 0 44px 110px rgba(0,0,0,.62)}
@@ -355,7 +361,11 @@
   body:not(.s-play) .half, body:not(.s-play) .srule{opacity:0!important;pointer-events:none}
   /* the tray belongs to the engagement alone; Win/Loss is set from there and
      read on the screen it is about */
-  body:not(.s-play) .dbg{opacity:0!important;pointer-events:none}
+  body:not(.s-play):not(.s-shot) .dbg{opacity:0!important;pointer-events:none}
+  /* CAPTURE. `bare` takes every last thing off the glass — including the two
+     trays — so the frame holds nothing but the scene. It is the only state in
+     the app where no control is reachable, and `h` brings them straight back. */
+  body.bare .dbg, body.bare .nav{opacity:0!important;pointer-events:none}
   /* the screen switcher is the one thing that outlives the screen it is on */
   /* above the screen overlays, or the title card swallows every click on it */
   /* A COLLAPSED PANEL STILL HOLDS ITS BOX. Screens is 176 wide and sits at
@@ -642,6 +652,7 @@
     <button class="chip danger" data-a="reset" data-l="Reset"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M11.7 1.8v3H8.8"/></svg></button>
   </div>
 </div>
+<div class="scr" id="scr-shot"></div>
 <div class="scr" id="scr-over2">
   <div class="dtop">
     <div class="plab hostile" id="plab2">Enemy plot<em>Record of the engagement</em></div>
@@ -778,6 +789,7 @@
       <button data-scr="setup2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 2.5h9.2v3.3H2.4z"/><path d="M2.4 8.2h9.2v3.3H2.4z"/><path d="M4.4 9.9h5.2"/></svg>Deployment split</button>
       <button data-scr="over"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 2.4h8.8v6.2H2.6z"/><path d="M5.1 11.6h3.8"/><path d="M7 8.6v3"/><path d="M4.9 5.4 6.4 6.9l2.7-2.7"/></svg>After action</button>
       <button data-scr="over2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 2.5h9.2v3.3H2.4z"/><path d="M2.4 8.2h9.2v3.3H2.4z"/><path d="M4.8 9.9l1.3 1.3 2.6-2.6"/></svg>After action split</button>
+      <button data-scr="shot"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 4.1h2.4l1-1.5h3.6l1 1.5h2.4v7.3H1.8z"/><circle cx="7" cy="7.6" r="2.1"/></svg>Capture</button>
     </div>
   </div>
   <button class="dtog" id="ntog">Screens</button>
@@ -792,6 +804,9 @@
     </div>
     <h5>Camera</h5><div class="drow">
       <button data-cam="0">Cam 01</button><button data-cam="1">Cam 02</button><button data-cam="2">Cam 03</button><button data-cam="3">Cam 04</button>
+    </div>
+    <h5>Format</h5><div class="drow">
+      <button data-ar="744/1133">iPad</button><button data-ar="1290/2796">iPhone</button><button data-ar="1/1">Carré</button><button data-ar="4/5">4:5</button><button data-ar="16/9">16:9</button>
     </div>
     <h5>Result</h5><div class="drow">
       <button data-won="1">Win</button><button data-won="0">Loss</button>
@@ -3884,6 +3899,11 @@ function refreshUI(){
     if(d.pop !== undefined) continue;
     if(d.cam !== undefined){ b.classList.toggle('on', +d.cam === ANIM.shot); continue; }
     if(d.won !== undefined){ b.classList.toggle('on', (+d.won === 1) === ANIM.won); continue; }
+    if(d.ar  !== undefined){
+      const cs = getComputedStyle(document.getElementById('stage'));
+      const cur = cs.getPropertyValue('--arw').trim() + '/' + cs.getPropertyValue('--arh').trim();
+      b.classList.toggle('on', d.ar === cur); continue;
+    }
     if(d.e   !== undefined){ b.classList.toggle('on', +d.e   === ANIM.env);  continue; }
     const a = d.a;
     /* she has no flight deck in 1680 */
@@ -3905,6 +3925,12 @@ function onCtl(e){
     const sl = b.closest('.slot'), was = sl.classList.contains('open');
     closePops(); sl.classList.toggle('open', !was);
     hideHint(); return;
+  }
+  if(b.dataset.ar !== undefined){
+    const [w, h] = b.dataset.ar.split('/');
+    document.body.style.setProperty('--arw', w);
+    document.body.style.setProperty('--arh', h);
+    refreshUI(); hideHint(); return;
   }
   if(b.dataset.plot !== undefined){
     ANIM.halfEnemy = +b.dataset.plot === 1;
@@ -3967,7 +3993,8 @@ const SCR = { attract: document.getElementById('scr-attract'),
               setup:   document.getElementById('scr-setup'),
               setup2:  document.getElementById('scr-setup2'),
               over:    document.getElementById('scr-over'),
-              over2:   document.getElementById('scr-over2') };
+              over2:   document.getElementById('scr-over2'),
+              shot:    document.getElementById('scr-shot') };
 /* DEPLOYMENT. Everything on this card but the theatre is written down and not
    yet obeyed: the orders exist, the engagement does not read them. The theatre
    is the exception because the sea behind the card is the real one. */
@@ -4074,7 +4101,7 @@ function setupCtl(b){
   return false;
 }
 let SCREEN = 'attract';
-const SCREENS = ['attract', 'setup', 'setup2', 'play', 'over', 'over2'];
+const SCREENS = ['attract', 'setup', 'setup2', 'play', 'over', 'over2', 'shot'];
 function setScreen(name, quiet){
   if(SCREENS.indexOf(name) < 0) name = 'attract';
   SCREEN = name;
@@ -4082,7 +4109,7 @@ function setScreen(name, quiet){
   if(!quiet && location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
   for(const k in SCR) SCR[k].classList.toggle('on', k === name);
   document.body.classList.remove('s-attract', 's-setup', 's-setup2', 's-play',
-                                's-over', 's-over2');
+                                's-over', 's-over2', 's-shot');
   document.body.classList.add('s-' + name);
   const play = name === 'play';
   /* the split deployment shows one board, not two: the lower half is a panel,
@@ -4102,6 +4129,10 @@ function setScreen(name, quiet){
   ANIM.rings = !laying;
   ANIM.split = play || half; ANIM.half = half;
   document.body.classList.toggle('split', play);
+  /* board() is only reached from inside the split loop, so a screen that
+     does not split kept whatever dressing the last pass left — which was
+     the enemy's: night, no fleet, echoes lit. Dress it here instead. */
+  if(!ANIM.split) board(false);
   if(!ANIM.split) fit();
   if(name === 'attract'){
     /* the framing the piece was drawn for */
@@ -4122,6 +4153,10 @@ function setScreen(name, quiet){
     overUI(); overPlay(name);
     GOAL.az = AD.camAz - 0.30; GOAL.el = AD.camEl + 0.10; GOAL.dist = 600;
     GOAL.tgt.set(0, -30, 0); ANIM.glide = 3.4; ANIM.shot = -1; clampGoal();
+  } else if(name === 'shot'){
+    /* the framing the piece was drawn for — the best single image it has */
+    GOAL.az = AD.camAz; GOAL.el = AD.camEl; GOAL.dist = AD.camDist;
+    GOAL.tgt.copy(AD.target); ANIM.glide = 3.4; ANIM.shot = -1; clampGoal();
   } else if(name === 'over2'){
     overUI(); halfUI(); overPlay(name);
     GOAL.az = AD.gridRot + Math.PI; GOAL.el = 1.545; GOAL.dist = 645;
@@ -4299,6 +4334,8 @@ addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if(k === 'r'){ goHome(); hideHint(); }
   if(k === 'f'){ document.documentElement.requestFullscreen?.(); }
+  /* photo mode: everything off the glass, and back again */
+  if(k === 'h'){ document.body.classList.toggle('bare'); hideHint(); }
 });
 
 const hintEl = document.getElementById('hint');
