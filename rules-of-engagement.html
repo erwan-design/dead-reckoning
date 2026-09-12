@@ -229,6 +229,26 @@
     .beats .what{grid-column:2} .beats .why{grid-column:2;margin-top:4px}
   }
 
+  /* ---- le sort des commandes actuelles : deux états, donc deux colonnes ---- */
+  .fate{width:min(936px, calc(100vw - 64px));border-collapse:collapse;margin:26px 0 0;
+    border:1px solid var(--stroke);border-radius:4px;overflow:hidden;display:table}
+  .fate th{text-align:left;padding:14px 16px 12px;border-bottom:1px solid var(--stroke);
+    background:var(--raise);
+    font:400 10px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--ink-4)}
+  .fate td{padding:13px 16px;border-bottom:1px solid var(--stroke-2);vertical-align:top;
+    background:var(--raise);font-size:14px;line-height:1.6;color:var(--ink-2)}
+  .fate tr:last-child td{border-bottom:0}
+  .fate td:first-child{font:600 14px/1.5 var(--display);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ink-1);white-space:nowrap;width:26%}
+  .verdict{display:inline-block;margin-right:9px;font:400 9.5px/1 var(--mono);letter-spacing:.14em;
+    text-transform:uppercase;padding:4px 7px;border-radius:3px;white-space:nowrap}
+  .keep{color:var(--mine);background:var(--mine-dim);border:1px solid var(--mine-line)}
+  .go{color:var(--theirs);background:var(--theirs-dim);border:1px solid var(--theirs-line)}
+  @media (max-width:640px){
+    .fate{width:auto}
+    .fate td:first-child{width:auto;white-space:normal}
+  }
+
   /* ---- une liste simple, qui porte une conséquence ---- */
   .conseq{list-style:none;margin:24px 0 0;padding:0;display:grid;gap:0}
   .conseq li{display:grid;grid-template-columns:210px 1fr;gap:0 22px;padding:15px 0;
@@ -672,7 +692,86 @@ qui suit est l'autre moitié — <strong>pourquoi</strong> la règle est celle-l
 </section>
 
 <section>
-  <h2><span>09</span>Une partie, coup par coup</h2>
+  <h2><span>09</span>Ce qu'on a sous la main</h2>
+  <p>La réponse courte est décevante et c'est bon signe : <strong>presque rien.</strong> Un tour
+  se résume à toucher une case. Tout ce qui dépasse de ça est du décor, et le décor coûte de la
+  place sur un écran qui en a déjà peu.</p>
+
+  <h3>La moitié du haut ne porte aucun bouton</h3>
+  <p>C'est la surface de visée. On vient de dégager la grille pour qu'elle se lise ; y reposer
+  quoi que ce soit reviendrait sur ce travail. Le plot adverse ne reçoit que des marques, jamais
+  une commande.</p>
+
+  <h3>Le râtelier, c'est la flotte</h3>
+  <p>Le rail de droite ne porte plus des manœuvres, il porte <strong>les cinq coques</strong> —
+  une pastille chacune, dans l'ordre de la rotation. C'est la conséquence directe de l'idée de
+  départ : si la coque <em>est</em> la batterie, alors la liste des coques <em>est</em> la
+  barre d'outils. Une seule surface, et elle dit quatre choses à la fois.</p>
+  <ul class="conseq">
+    <li><b>Qui c'est</b><span>La silhouette à plat, la même que le registre du plateau adverse —
+      on reconnaît le porte-avions à sa longueur, pas à un libellé.</span></li>
+    <li><b>Son état</b><span>Les cases touchées s'allument en ambre sur la silhouette. Une coque
+      coulée reste en place, éteinte et barrée : <em>c'est une pierre tombale, pas un
+      trou.</em></span></li>
+    <li><b>Si elle est prête</b><span>Un arc de rechargement se referme autour de la pastille des
+      deux spéciales. Aucun chiffre : on voit l'arc se compléter.</span></li>
+    <li><b>À qui le tour</b><span>La pastille du canon suivant est allumée. Elle descend d'un
+      cran à chaque coup, et saute les coulées — <em>la rotation se lit sans qu'on
+      l'explique.</em></span></li>
+  </ul>
+  <p style="margin-top:24px">Toucher une pastille prête arme sa spéciale ; la toucher de nouveau
+  la désarme. Toucher une pastille coulée ne fait rien, et c'est voulu : elle reste pour qu'on
+  voie ce qui manque.</p>
+
+  <h3>Une seule commande contextuelle</h3>
+  <p>La frappe aérienne a besoin d'un axe. Une pastille de bascule <strong>horizontale /
+  verticale</strong> apparaît quand la frappe est armée, et disparaît dès qu'elle est tirée.
+  Elle n'existe que pendant les quelques secondes où elle a un sens.</p>
+  <p>La torpille n'a besoin de rien : son axe, c'est la case du bord qu'on touche. <em>Le plateau
+  est déjà la commande</em> — chaque fois qu'on peut faire porter un choix par le plateau plutôt
+  que par un bouton, c'est un bouton de moins.</p>
+
+  <h3>Ce que deviennent les commandes d'aujourd'hui</h3>
+  <table class="fate">
+    <thead><tr><th>Aujourd'hui</th><th>Pendant une partie</th></tr></thead>
+    <tbody>
+      <tr><td>Missile, catapulte, torpille</td>
+        <td><span class="verdict go">partent</span>Ce sont des déclencheurs de démonstration.
+        Dans une partie, ce ne sont plus des commandes mais des <em>résultats</em> : on ne
+        déclenche pas une torpille, on tire avec le sous-marin.</td></tr>
+      <tr><td>Sink</td>
+        <td><span class="verdict go">part</span>Un naufrage se mérite. Il arrive quand la
+        dernière case d'une coque est touchée, jamais parce qu'on a appuyé.</td></tr>
+      <tr><td>Reset</td>
+        <td><span class="verdict go">quitte le rail</span>Trop près du pouce pour un bouton qui
+        efface une partie. Il devient <em>Abandonner</em>, dans un menu, avec une confirmation —
+        le seul endroit du jeu qui en mérite une.</td></tr>
+      <tr><td>Menu caméra</td>
+        <td><span class="verdict go">part</span>Quatre cadrages sont un outil d'auteur. Il en
+        reste un geste — glisser et pincer sur son propre plateau — et une pastille
+        <em>recadrer</em> pour revenir au cadrage d'origine.</td></tr>
+      <tr><td>Son</td>
+        <td><span class="verdict keep">reste</span>Toujours accessible, jamais dangereux. C'est
+        la seule commande qui a sa place à côté du plot sans rien coûter.</td></tr>
+      <tr><td>Screens, Debug</td>
+        <td><span class="verdict go">partent du jeu</span>Ce sont les échafaudages du prototype.
+        Ils restent utiles tant qu'on construit, et ils ne survivent pas à la
+        construction.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Où ça tombe sous la main</h3>
+  <p>La tablette est tenue à deux mains, à la verticale. Les pouces atteignent le tiers bas et
+  les bords ; l'index va chercher le haut. <strong>Le râtelier est là où est le pouce, le plot
+  là où est l'œil</strong> — on arme en bas sans regarder, on vise en haut sans tendre le
+  bras.</p>
+  <p>Cela met l'armement et la visée à deux endroits différents, ce qui paraît un défaut et n'en
+  est pas un : ce sont deux gestes de nature différente, et les confondre ferait armer par
+  erreur en visant.</p>
+</section>
+
+<section>
+  <h2><span>10</span>Une partie, coup par coup</h2>
   <p>Six échanges, une quarantaine de secondes de jeu. Notre flotte est posée sur le plateau du
   bas ; la leur reste inconnue sur celui du haut.</p>
 
@@ -732,7 +831,7 @@ qui suit est l'autre moitié — <strong>pourquoi</strong> la règle est celle-l
 </section>
 
 <section>
-  <h2><span>10</span>Écarté de la v1</h2>
+  <h2><span>11</span>Écarté de la v1</h2>
   <p>Chacune de ces idées est bonne et chacune coûte du rythme. Elles sont listées pour être
   ajoutées délibérément, plutôt que par glissement.</p>
   <div class="later">
