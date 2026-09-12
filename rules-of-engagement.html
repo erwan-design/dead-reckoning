@@ -368,8 +368,13 @@
           <div class="arm"><b>Torpille</b><span>Part d'une case du bord, remonte la voie et prend
             le premier navire rencontré. Sous-marin.</span><i>tous les 3 tours</i></div>
         </div>
-        <p style="margin-top:10px">Une arme spéciale est prête&nbsp;? Touchez sa pastille, puis
-        la case. Sinon, touchez simplement la case&nbsp;: c'est le canon.</p>
+        <p style="margin-top:10px">Sans rien toucher d'autre, la case que vous désignez est
+        tirée au canon. Pour une arme spéciale prête&nbsp;: touchez sa pastille, <b>posez</b> le
+        doigt sur la case — l'empreinte s'affiche et suit le doigt — puis <b>levez</b>&nbsp;: le
+        tir part au lever. Il n'y a pas de bouton à valider.</p>
+        <p>Tant que le doigt n'est pas levé, rien n'est joué. La pastille <b>axe</b> fait pivoter
+        l'empreinte de la frappe aérienne&nbsp;; lever hors du plateau annule. La torpille n'a pas
+        d'axe à choisir&nbsp;: c'est la case du bord que vous touchez.</p>
         <p>Armer ne consomme pas le tour&nbsp;: seule une case tirée le consomme. Une arme prête
         le reste tant qu'elle n'a pas servi — elle ne se périme pas et ne se cumule jamais.</p>
         <p>Tirer une arme spéciale <b>ne fait pas avancer</b> la rotation des canons, et relance
@@ -435,7 +440,8 @@ déjà.</p>
     <li><span class="at">0,00 s</span><span class="what">La case s'allume</span>
       <span class="why">Sous le doigt, avant tout le reste. Le seul accusé de réception.</span></li>
     <li><span class="at">0,00 s</span><span class="what">Les pastilles s'éteignent</span>
-      <span class="why">La touche engage&nbsp;; il n'y a rien à confirmer.</span></li>
+      <span class="why">C'est le <b>lever</b> du doigt qui engage&nbsp;: le doigt posé montrait,
+      il ne validait pas. Rien d'autre à confirmer.</span></li>
     <li><span class="at">0,20 s</span><span class="what">Le tir part</span>
       <span class="why">De la coque dont c'est le tour.</span></li>
     <li><span class="at">1,40 s</span><span class="what">Il franchit la couture</span>
@@ -619,6 +625,81 @@ déjà.</p>
   frappe, qui n'existe que pendant les secondes où elle a un sens. La torpille n'en a pas besoin —
   son axe est la case du bord qu'on touche. <em>Chaque choix porté par le plateau est un bouton
   de moins.</em></p>
+  <h3>Armer, viser, tirer</h3>
+  <p>Le geste est celui du canon&nbsp;; il montre seulement davantage. Le canon allume déjà la case
+  sous le doigt avant tout le reste — une empreinte de trois cases ne demande pas un autre geste,
+  seulement d'en montrer plus longtemps. <strong>Le doigt posé désigne, le doigt levé
+  tire.</strong> C'est ce qui dispense d'un bouton «&nbsp;valider&nbsp;»&nbsp;: la
+  prévisualisation, c'est le doigt.</p>
+
+  <ul class="beats">
+    <li><span class="at">1</span><span class="what">On arme</span>
+      <span class="why">Une touche sur la pastille de la coque. Le plot ne bouge pas
+      encore&nbsp;; la bascule d'axe apparaît sous le pouce. Retoucher la pastille
+      désarme.</span></li>
+    <li><span class="at">2</span><span class="what">On pose le doigt</span>
+      <span class="why">L'empreinte s'allume autour de la case désignée et la suit tant que le
+      doigt glisse. <em>Rien n'est parti.</em></span></li>
+    <li><span class="at">3</span><span class="what">On bascule, ou non</span>
+      <span class="why">La pastille <em>axe</em> fait pivoter l'empreinte autour de la même case,
+      autant de fois qu'on veut&nbsp;: ni armer ni basculer ne consomme le tour. Le dernier axe
+      choisi est celui proposé au tir suivant.</span></li>
+    <li><span class="at">4</span><span class="what">On lève</span>
+      <span class="why">Le tir part. Lever <b>hors du plot</b> annule et rend la main, la spéciale
+      toujours prête.</span></li>
+  </ul>
+
+  <div class="plots">
+    <div class="plot">
+      <h4>Le doigt posé</h4>
+      <p style="min-height:42px">Désigné en <code>F7</code>. L'empreinte se pose à l'horizontale,
+      le dernier axe utilisé.</p>
+      <div id="g1"></div>
+      <div class="legend"><span><i style="background:var(--mine)"></i>Empreinte</span>
+        <span><i style="background:rgba(157,240,220,.4)"></i>Contact</span></div>
+    </div>
+    <div class="plot">
+      <h4>L'axe basculé</h4>
+      <p style="min-height:42px">Une touche sur <em>axe</em>&nbsp;: l'empreinte pivote sur place,
+      et cela ne coûte rien.</p>
+      <div id="g2"></div>
+      <div class="legend"><span><i style="background:var(--mine)"></i>Empreinte</span>
+        <span><i style="background:rgba(157,240,220,.4)"></i>Contact</span></div>
+    </div>
+    <div class="plot">
+      <h4>Le doigt levé</h4>
+      <p style="min-height:42px">Le tir part au lever. Les trois cases tranchent
+      ensemble&nbsp;; ici une seule trouve.</p>
+      <div id="g3"></div>
+      <div class="legend"><span><i style="background:var(--mine)"></i>Empreinte</span>
+        <span><i style="background:var(--theirs)"></i>Touché</span></div>
+    </div>
+  </div>
+
+  <ul class="conseq">
+    <li><b>Près du bord, ça dépasse</b><span>Les cases hors plateau sont perdues, et rien ne
+      l'interdit&nbsp;: c'est un mauvais coup, pas un coup illégal. C'est précisément ce à quoi
+      sert la bascule — <em>et cela se voit avant de lever.</em></span></li>
+    <li><b>La torpille n'a pas de bascule</b><span>Armée, seules les cases du bord
+      répondent&nbsp;: le reste du plot s'éteint. Poser le doigt sur le bord allume la voie
+      entière&nbsp;; lever la lance. Son axe est le bord qu'on touche, il n'y a rien à
+      choisir.</span></li>
+    <li><b>Une case déjà jouée</b><span>Elle ne répond pas au canon, et elle n'empêche rien à
+      l'empreinte&nbsp;: on peut recouvrir une case morte pour en atteindre deux
+      vivantes.</span></li>
+  </ul>
+
+  <div class="plots" style="grid-template-columns:minmax(0,300px)">
+    <div class="plot">
+      <h4>Torpille armée</h4>
+      <p>Le plot s'éteint sauf son pourtour. Le doigt posé en <code>J7</code> allume la voie
+      jusqu'au bord opposé&nbsp;; ce qui l'arrête n'est pas encore connu.</p>
+      <div id="g4"></div>
+      <div class="legend"><span><i style="background:rgba(157,240,220,.4)"></i>Contact</span>
+        <span><i style="background:rgba(10,13,20,.9)"></i>Ne répond pas</span></div>
+    </div>
+  </div>
+
   <table class="fate">
     <thead><tr><th>Aujourd'hui</th><th>Pendant une partie</th></tr></thead>
     <tbody>
@@ -853,6 +934,14 @@ déjà.</p>
       s += '<rect x="' + (PAD + x*C) + '" y="' + (y*C) + '" width="' + C + '" height="' + C +
            '" fill="rgba(157,240,220,.035)" stroke="rgba(157,240,220,.16)" stroke-width="1"/>';
     }
+    /* ce qui ne répond pas pendant que la torpille est armée */
+    if(opts.edgeOnly){
+      for(var ex = 0; ex < 10; ex++) for(var ey = 0; ey < 10; ey++){
+        if(ex === 0 || ex === 9 || ey === 0 || ey === 9) continue;
+        s += '<rect x="' + (PAD + ex*C) + '" y="' + (ey*C) + '" width="' + C + '" height="' + C +
+             '" fill="rgba(10,13,20,.62)" stroke="rgba(10,13,20,.62)" stroke-width="1"/>';
+      }
+    }
     /* la coque posée sous le tir, connue seulement là où elle a été touchée */
     (opts.hull || []).forEach(function(c){
       s += '<rect x="' + (PAD + c[0]*C + 3) + '" y="' + (c[1]*C + 3) + '" width="' + (C-6) +
@@ -864,6 +953,12 @@ déjà.</p>
       s += '<rect x="' + (PAD + c[0]*C + 2) + '" y="' + (c[1]*C + 2) + '" width="' + (C-4) +
            '" height="' + (C-4) + '" rx="3" fill="rgba(157,240,220,.20)" ' +
            'stroke="#9df0dc" stroke-width="1.4"/>';
+    });
+    /* l'empreinte qui suit le doigt : posée, pas encore tirée */
+    (opts.foot || []).forEach(function(c){
+      s += '<rect x="' + (PAD + c[0]*C + 2) + '" y="' + (c[1]*C + 2) + '" width="' + (C-4) +
+           '" height="' + (C-4) + '" rx="3" fill="rgba(157,240,220,.11)" ' +
+           'stroke="#9df0dc" stroke-width="1.4" stroke-dasharray="3.5 2.5"/>';
     });
     /* les cases réellement prises */
     (opts.hit || []).forEach(function(c){
@@ -884,6 +979,13 @@ déjà.</p>
       s += '<path d="M' + (PAD + r.to*C + C*0.86) + ' ' + (y0-4) + 'L' + (PAD + r.to*C + C/2) +
            ' ' + y0 + 'L' + (PAD + r.to*C + C*0.86) + ' ' + (y0+4) +
            '" stroke="#9df0dc" stroke-width="1.6" fill="none" stroke-linejoin="round"/>';
+    }
+    /* le doigt : le point de contact, qui désigne et ne valide pas */
+    if(opts.finger){
+      var fx = PAD + opts.finger[0]*C + C/2, fy = opts.finger[1]*C + C/2;
+      s += '<circle cx="' + fx + '" cy="' + fy + '" r="' + (C*0.62) + '" fill="rgba(157,240,220,.13)" ' +
+           'stroke="rgba(157,240,220,.55)" stroke-width="1.2"/>';
+      s += '<circle cx="' + fx + '" cy="' + fy + '" r="2.6" fill="#9df0dc"/>';
     }
     /* le bord : lettres en pied, chiffres à gauche */
     for(var i = 0; i < 10; i++){
@@ -1001,6 +1103,25 @@ déjà.</p>
   grid(document.getElementById('p2'), {
     alt: 'Course de torpille vers l’ouest dans la ligne 7 depuis le bord, touchant G7',
     hull: hull, run: { row:6, from:9, to:6 }, hit: [[6,6]]
+  });
+
+  /* le geste, en trois temps : posé, basculé, levé — le doigt reste en F7 */
+  grid(document.getElementById('g1'), {
+    alt: 'Doigt posé en F7, empreinte horizontale de E7 à G7, rien de tiré',
+    foot: [[4,6],[5,6],[6,6]], finger: [5,6]
+  });
+  grid(document.getElementById('g2'), {
+    alt: 'Même doigt en F7, empreinte basculée à la verticale de F6 à F8',
+    foot: [[5,5],[5,6],[5,7]], finger: [5,6]
+  });
+  grid(document.getElementById('g3'), {
+    alt: 'Tir parti à la verticale de F6 à F8, seule F7 touche',
+    mark: [[5,5],[5,6],[5,7]], hit: [[5,6]]
+  });
+  grid(document.getElementById('g4'), {
+    alt: 'Torpille armée : seul le pourtour du plot répond, doigt posé en J7, ' +
+         'la voie s’allume dans la ligne 7',
+    edgeOnly: true, run: { row:6, from:9, to:0 }, finger: [9,6]
   });
 })();
 </script>
