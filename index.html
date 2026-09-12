@@ -372,7 +372,10 @@
   /* SPLIT, THE CHIP. Deployment and after-action each have a split view of
      themselves. One chip says so, in one place on all four states, and lights
      when it is on — the same idiom as the plot switch below it. */
-  .splitb{position:absolute;right:26px;top:22px;z-index:6;
+  /* z-index 9, not 6: the screens are 8 and each one covers the whole stage
+     with pointer-events on, so anything below them is unclickable. The nav and
+     the debug tray are at 9 for exactly this reason. */
+  .splitb{position:absolute;right:26px;top:22px;z-index:9;
       width:38px;height:38px;display:flex;align-items:center;justify-content:center;
       appearance:none;cursor:pointer;border:1px solid rgba(206,224,236,.14);
       border-radius:10px;background:rgba(10,16,24,.52);
