@@ -153,6 +153,19 @@
   .ghd span{font:400 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.24em;
       text-transform:uppercase;color:rgba(180,246,230,.80);font-variant-numeric:tabular-nums}
   .opts.c4{grid-template-columns:repeat(4,1fr)}
+  /* CONDITIONS ARE READ, NOT CHOSEN. The theatre carries its own hour, sea,
+     visibility and rain now. A weather control standing beside it could only
+     disagree with it — pick Storm, then Clear, and the card announced a slight
+     sea and 14 km of visibility through a full gale. A reading cannot lie. */
+  .cond{display:grid;grid-template-columns:1fr 1fr;gap:1px;border-radius:14px;
+      overflow:hidden;background:rgba(206,224,236,.09)}
+  .cond div{padding:11px 13px;background:rgba(255,255,255,.028)}
+  .cond b{display:block;font-weight:400;
+      font:400 7.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.26em;
+      text-transform:uppercase;color:rgba(224,233,240,.40)}
+  .cond span{display:block;margin-top:6px;
+      font:400 10px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.13em;
+      text-transform:uppercase;color:rgba(198,248,234,.88)}
   /* a segmented row of words needs less room than a row of pictures */
   .opts.txt button{height:38px;flex-direction:row;gap:0}
   .go .l2{display:none}
@@ -608,6 +621,8 @@
   .half .ln{display:block}
   .half i{font-style:normal;color:rgba(168,240,224,.5)}
   body.split .hint{display:none}
+  /* traditional: one cell a turn, and no battery to choose from */
+  body.trad #rail{opacity:0!important;pointer-events:none}
   /* THE ENEMY READOUT LEAVES ITS GLASS. Two panes stacked in the gutter made a
      column of furniture standing beside a board that is already framed. The
      same lines set plainly under the label read as the plot's own caption —
@@ -840,19 +855,13 @@
       <button data-e="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.7 7.4a2.3 2.3 0 0 1 1-4.3 2.8 2.8 0 0 1 5.1.8 1.9 1.9 0 0 1-.5 3.5z"/><path d="M7.4 8.2 5.9 10.6h2.2l-1.5 2.4"/><path d="M3.6 9.9 3 11.9M10.4 9.9l-.6 2"/></svg>Storm</button>
     </div>
 
-    <div class="ghd"><h6>Weather</h6><span data-g="wx"></span></div>
-    <div class="opts" id="opt-wx">
-      <button data-wx="0"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="2.6"/><path d="M7 1.3v1.5M7 11.2v1.5M1.3 7h1.5M11.2 7h1.5M3 3l1.1 1.1M9.9 9.9 11 11M11 3 9.9 4.1M4.1 9.9 3 11"/></svg>Clear</button>
-      <button data-wx="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.9 8.1a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.9 10.1 4.1 12.4M7.4 10.1l-.8 2.3M9.9 10.1l-.8 2.3"/></svg>Gale</button>
-      <button data-wx="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.7 4.6c1.5-.9 2.6-.9 4.1 0s2.6.9 4.1 0"/><path d="M1.7 7.3c1.7-1 2.9-1 4.6 0s2.9 1 4.6 0"/><path d="M2.4 10c1.5-.9 2.6-.9 4.1 0s2.6.9 4.1 0"/></svg>Fog bank</button>
-    </div>
+    <div class="ghd"><h6>Conditions</h6><span data-g="th2"></span></div>
+    <div class="cond" data-g="cond"></div>
 
-    <div class="ghd"><h6>Hour of the watch</h6><span data-g="tod"></span></div>
-    <div class="opts c4" id="opt-tod">
-      <button data-tod="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.5 11.3h11"/><path d="M4.2 8.7a2.8 2.8 0 0 1 5.6 0"/><path d="M7 2.2v1.6M2.9 4.2l1.1 1.1M11.1 4.2 10 5.3"/></svg>Dawn</button>
-      <button data-tod="1"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="2.5"/><path d="M7 1.4v1.4M7 11.2v1.4M1.4 7h1.4M11.2 7h1.4M3.1 3.1 4.1 4.1M9.9 9.9l1 1M10.9 3.1 9.9 4.1M4.1 9.9l-1 1"/></svg>Midday</button>
-      <button data-tod="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.5 11.3h11"/><path d="M4.2 8.7a2.8 2.8 0 0 1 5.6 0"/><path d="M7 1.9v3.3"/><path d="M5.5 3.6 7 5.2l1.5-1.6"/></svg>Dusk</button>
-      <button data-tod="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Middle</button>
+    <div class="ghd"><h6>Rules</h6><span data-g="md"></span></div>
+    <div class="opts" data-g="modes">
+      <button data-md="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.3 2.3h9.4v9.4H2.3z"/><path d="M2.3 5.4h9.4M2.3 8.6h9.4M5.4 2.3v9.4M8.6 2.3v9.4"/></svg>Traditional</button>
+      <button data-md="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5.8A5.4 5.4 0 0 1 12 5.8"/><path d="M7 6.2V9"/><path d="M7 10.4v2M4.9 10 3.7 12M9.1 10l1.2 2"/></svg>Enhanced</button>
     </div>
 
     <div class="ghd"><h6>Flagship</h6><span data-g="fs"></span></div>
@@ -882,19 +891,15 @@
       <button data-e="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</button>
       <button data-e="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.7 7.4a2.3 2.3 0 0 1 1-4.3 2.8 2.8 0 0 1 5.1.8 1.9 1.9 0 0 1-.5 3.5z"/><path d="M7.4 8.2 5.9 10.6h2.2l-1.5 2.4"/><path d="M3.6 9.9 3 11.9M10.4 9.9l-.6 2"/></svg>Storm</button>
     </div>
-    <div class="ghd"><h6>Weather</h6><span data-g="wx"></span></div>
-    <div class="opts">
-      <button data-wx="0"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="2.6"/><path d="M7 1.3v1.5M7 11.2v1.5M1.3 7h1.5M11.2 7h1.5M3 3l1.1 1.1M9.9 9.9 11 11M11 3 9.9 4.1M4.1 9.9 3 11"/></svg>Clear</button>
-      <button data-wx="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.9 8.1a2.4 2.4 0 0 1 1-4.5 2.9 2.9 0 0 1 5.3.9 2 2 0 0 1-.5 3.6z"/><path d="M4.9 10.1 4.1 12.4M7.4 10.1l-.8 2.3M9.9 10.1l-.8 2.3"/></svg>Gale</button>
-      <button data-wx="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.7 4.6c1.5-.9 2.6-.9 4.1 0s2.6.9 4.1 0"/><path d="M1.7 7.3c1.7-1 2.9-1 4.6 0s2.9 1 4.6 0"/><path d="M2.4 10c1.5-.9 2.6-.9 4.1 0s2.6.9 4.1 0"/></svg>Fog bank</button>
+    <div class="ghd"><h6>Conditions</h6><span data-g="th2"></span></div>
+    <div class="cond" data-g="cond"></div>
+
+    <div class="ghd"><h6>Rules</h6><span data-g="md"></span></div>
+    <div class="opts" data-g="modes">
+      <button data-md="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.3 2.3h9.4v9.4H2.3z"/><path d="M2.3 5.4h9.4M2.3 8.6h9.4M5.4 2.3v9.4M8.6 2.3v9.4"/></svg>Traditional</button>
+      <button data-md="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5.8A5.4 5.4 0 0 1 12 5.8"/><path d="M7 6.2V9"/><path d="M7 10.4v2M4.9 10 3.7 12M9.1 10l1.2 2"/></svg>Enhanced</button>
     </div>
-    <div class="ghd"><h6>Hour of the watch</h6><span data-g="tod"></span></div>
-    <div class="opts c4">
-      <button data-tod="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.5 11.3h11"/><path d="M4.2 8.7a2.8 2.8 0 0 1 5.6 0"/><path d="M7 2.2v1.6M2.9 4.2l1.1 1.1M11.1 4.2 10 5.3"/></svg>Dawn</button>
-      <button data-tod="1"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="2.5"/><path d="M7 1.4v1.4M7 11.2v1.4M1.4 7h1.4M11.2 7h1.4M3.1 3.1 4.1 4.1M9.9 9.9l1 1M10.9 3.1 9.9 4.1M4.1 9.9l-1 1"/></svg>Midday</button>
-      <button data-tod="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.5 11.3h11"/><path d="M4.2 8.7a2.8 2.8 0 0 1 5.6 0"/><path d="M7 1.9v3.3"/><path d="M5.5 3.6 7 5.2l1.5-1.6"/></svg>Dusk</button>
-      <button data-tod="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Middle</button>
-    </div>
+
     <div class="ghd"><h6>Flagship</h6><span data-g="fs"></span></div>
     <div class="opts txt">
       <button data-fs="0"></button><button data-fs="1"></button><button data-fs="2"></button>
@@ -3451,19 +3456,22 @@ const ENVS = [
   /* MORNING. It kept the seventeenth-century fleet because the palette was
      built for it; but a theatre is a light, not a period, and this one is the
      best light in the piece. It carries the modern fleet like the others. */
-  { name:'Morning', era:0, blurb:'Modern fleet &middot; first light &middot; swell 1.1m', cond:'05:20 local &middot; swell 1.1m &middot; vis 14km &middot; wind nne/06',
+  { name:'Morning',
+    cells:[['Hour','05:20 local'],['Sea','slight 1.1 m'],['Visibility','14 km'],['Wind','nne 06']], era:0, blurb:'Modern fleet &middot; first light &middot; swell 1.1m', cond:'05:20 local &middot; swell 1.1m &middot; vis 14km &middot; wind nne/06',
     sunAz:-1.48, sunEl:0.385, sunCol:[0xffd7b6,2.20],
     zenith:[0x0e3161,1], midSky:[0x2f6da8,1], haze:[0xdcc6ac,1.06], hazeWarm:[0xf7d6ac,1.14],
     deep:[0x16386f,1], shoal:[0x4f92da,1], shad:[0x3d669e,0.62], foam:[0xdaf0ea,1],
     gradeLo:[0x93bfe2,1], gradeHi:[0xffe4c6,1],
     fogStart:700, fogDist:1150, exp:1.38, f0:0.085, fexp:3.05, sheen:0.26, gridI:0.205, swell:1.0, night:0 },
-  { name:'Squall', era:0, blurb:'Modern fleet &middot; afternoon squall &middot; swell 3.4m', cond:'14:40 local &middot; swell 3.4m &middot; vis 6km &middot; wind 250/28',
+  { name:'Squall',
+    cells:[['Hour','14:40 local'],['Sea','rough 3.4 m'],['Visibility','6 km'],['Wind','250/28']], era:0, blurb:'Modern fleet &middot; afternoon squall &middot; swell 3.4m', cond:'14:40 local &middot; swell 3.4m &middot; vis 6km &middot; wind 250/28',
     sunAz:-0.86, sunEl:0.60, sunCol:[0xc9d6e2,1.32],
     zenith:[0x27333f,1], midSky:[0x4d6070,1], haze:[0x9fb0b8,1.0], hazeWarm:[0xb3c1c5,1.0],
     deep:[0x0f1b24,1], shoal:[0x2b5064,1], shad:[0x27384a,0.76], foam:[0xeef7f7,1],
     gradeLo:[0xa9c0cc,1], gradeHi:[0xe6eef0,1],
     fogStart:380, fogDist:640, exp:1.16, f0:0.060, fexp:3.45, sheen:0.09, gridI:0.30, swell:2.25, night:0 },
-  { name:'Night', era:0, blurb:'Modern fleet &middot; after dark &middot; running lights burning', cond:'21:48 local &middot; swell 1.4m &middot; vis 9km &middot; running lights burning',
+  { name:'Night',
+    cells:[['Hour','21:48 local'],['Sea','slight 1.4 m'],['Visibility','9 km'],['Lights','burning']], era:0, blurb:'Modern fleet &middot; after dark &middot; running lights burning', cond:'21:48 local &middot; swell 1.4m &middot; vis 9km &middot; running lights burning',
     sunAz:-0.70, sunEl:0.088, sunCol:[0xff9e6a,0.58],
     zenith:[0x050917,1], midSky:[0x101e32,1], haze:[0x222c3e,1.0], hazeWarm:[0x553b2f,1.0],
     deep:[0x050916,1], shoal:[0x101f38,1], shad:[0x111729,0.84], foam:[0xa3b4be,1],
@@ -3474,7 +3482,8 @@ const ENVS = [
      the cloud, so the sea loses its shoal colour and keeps only the foam; the
      fog closes to a quarter of clear and the grid has to shout through it.
      It is the only theatre that brings its own rain. */
-  { name:'Storm', era:0, rain:true,
+  { name:'Storm',
+    cells:[['Hour','16:20 local'],['Sea','phenomenal 7.8 m'],['Visibility','1.8 km'],['Wind','280/52 gusting']], era:0, rain:true,
     blurb:'Modern fleet &middot; full gale &middot; swell 7.8m',
     cond:'16:20 local &middot; swell 7.8m &middot; vis 1.8km &middot; wind 280/52 gusting 70',
     sunAz:-1.04, sunEl:0.50, sunCol:[0x8f9aa6,0.92],
@@ -3852,7 +3861,7 @@ const FLR = { grp:null, star:null, canopy:null, trails:[],
     transparent:true, blending:T.AdditiveBlending, depthWrite:false
   }));
   FLR.lit.rotation.y = AD.gridRot;
-  FLR.lit.scale.setScalar(2.15);
+  FLR.lit.scale.setScalar(2.95);
   FLR.lit.visible = false;
   labels.add(FLR.lit);
 
@@ -4794,18 +4803,15 @@ const SCR = { attract: document.getElementById('scr-attract'),
 /* DEPLOYMENT. Everything on this card but the theatre is written down and not
    yet obeyed: the orders exist, the engagement does not read them. The theatre
    is the exception because the sea behind the card is the real one. */
-const SETUP = { wx:1, tod:1, fs:0 };
+const SETUP = { md:1, fs:0 };
 const THN  = ['Morning', 'Squall', 'Night', 'Storm'];
 const WXN  = ['Clear', 'Gale', 'Fog bank'];
-const TODN = ['Dawn', 'Midday', 'Dusk', 'Middle watch'];
-const TODH = ['05:20', '12:05', '19:40', '00:35'];
+const MODEN = ['Traditional &middot; guns only', 'Enhanced &middot; three batteries'];
 /* she is not the same ship in 1680 as she is now */
 const FLEET = [
   { ships:['Destroyer', 'Carrier', 'Cruiser'], of:'Task Force Meridian' },
   { ships:['Galleon', 'Line ship', 'Fluyt'],   of:'Line of Battle' }
 ];
-const SEA = ['slight &middot; 1.1m', 'rough &middot; 3.4m', 'slight &middot; 1.2m'];
-const VIS = ['14 km', '6 km', '900 m'];
 const goNote = document.getElementById('gonote');
 /* the orders exist in two layouts now — one card, one lower half — so the
    renderer walks whichever panels are present rather than named elements */
@@ -4822,15 +4828,17 @@ function setupUI(){
     }
     for(const b of root.querySelectorAll('[data-e]'))
       b.classList.toggle('on', +b.dataset.e === ANIM.env);
-    for(const b of root.querySelectorAll('[data-wx]'))
-      b.classList.toggle('on', +b.dataset.wx === SETUP.wx);
-    for(const b of root.querySelectorAll('[data-tod]'))
-      b.classList.toggle('on', +b.dataset.tod === SETUP.tod);
+    for(const b of root.querySelectorAll('[data-md]'))
+      b.classList.toggle('on', +b.dataset.md === SETUP.md);
+
     /* each group states its own reading, so a panel can be read at a glance */
     const g = k => root.querySelector('[data-g="' + k + '"]');
     if(g('th'))  g('th').innerHTML  = THN[ANIM.env];
-    if(g('wx'))  g('wx').innerHTML  = 'sea ' + SEA[SETUP.wx] + ' &middot; vis ' + VIS[SETUP.wx];
-    if(g('tod')) g('tod').innerHTML = TODH[SETUP.tod] + ' local';
+    if(g('th2')) g('th2').innerHTML = ENVS[ANIM.env].name;
+    if(g('md'))  g('md').innerHTML  = MODEN[SETUP.md];
+    for(const el of document.querySelectorAll('[data-g="cond"]'))
+      el.innerHTML = (ENVS[ANIM.env].cells || [])
+        .map(c => '<div><b>' + c[0] + '</b><span>' + c[1] + '</span></div>').join('');
     if(g('fs'))  g('fs').innerHTML  = F.of;
     if(g('fs2')) g('fs2').innerHTML = F.ships[SETUP.fs];
     if(g('hulls2')) g('hulls2').textContent =
@@ -4890,8 +4898,11 @@ function fakeGo(b){
 }
 function setupCtl(b){
   const d = b.dataset;
-  if(d.wx   !== undefined){ SETUP.wx  = +d.wx;  setupUI(); return true; }
-  if(d.tod  !== undefined){ SETUP.tod = +d.tod; setupUI(); return true; }
+  /* THE RULES ARE A REAL CHOICE, not a label. Traditional is the game as it
+     has always been played: one cell a turn, and nothing else. So the battery
+     rail goes altogether — an empty rail is the honest picture of it. */
+  if(d.md   !== undefined){ SETUP.md  = +d.md;
+    document.body.classList.toggle('trad', SETUP.md === 0); setupUI(); return true; }
   if(d.fs   !== undefined){ SETUP.fs  = +d.fs;  setupUI(); return true; }
   if(d.fake !== undefined){ fakeGo(b); return true; }
   return false;
