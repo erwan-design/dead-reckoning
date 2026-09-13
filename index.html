@@ -608,6 +608,19 @@
   .half .ln{display:block}
   .half i{font-style:normal;color:rgba(168,240,224,.5)}
   body.split .hint{display:none}
+  /* THE ENEMY READOUT LEAVES ITS GLASS. Two panes stacked in the gutter made a
+     column of furniture standing beside a board that is already framed. The
+     same lines set plainly under the label read as the plot's own caption —
+     which is exactly how her own board's lines already read, one half below.
+     Glass is for what floats over the scene; a caption belongs to it. */
+  /* 182, not 210: the board's left edge projects at 211, and the contact
+     hairlines run the full width of the block — they would have touched it */
+  body.split #rl .col.l{top:62px;left:26px;width:182px;gap:18px}
+  body.split #rl .col.l .pan{padding:0;background:none;border:0;box-shadow:none;
+      -webkit-backdrop-filter:none;backdrop-filter:none;
+      text-shadow:0 1px 2px rgba(4,7,13,.95), 0 0 18px rgba(4,7,13,.9)}
+  /* without a pane to sit in, the heading needs the label's own spacing */
+  body.split #rl .col.l .pan h6{margin-bottom:7px;letter-spacing:.30em}
   /* SWAP. The two halves change places, and everything that describes a board
      goes with it: the readout belongs to the enemy plot, the settings and the
      batteries to her own. Leave any of them behind and the labels start lying. */
