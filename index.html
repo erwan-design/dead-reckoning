@@ -786,6 +786,15 @@
   .pop svg{width:14px;height:14px;flex:0 0 auto;display:block;stroke:currentColor;fill:none;
       stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;opacity:.92}
   .pop em{font-style:normal;width:15px;text-align:center;flex:0 0 auto;letter-spacing:.06em}
+  /* a hairline between groups, inset so it reads as a pause, not a border */
+  .pop .sep{display:block;height:1px;margin:3px 12px;background:rgba(206,224,236,.12)}
+  /* ENDING IS RED AND TAKES TWO TAPS. The first arms it and says so; the
+     second, within three seconds, ends the battle. A menu row sits a thumb's
+     width from Swap and Sound, and a slip there should cost nothing. */
+  .pop button.danger{color:rgba(255,124,104,.80)}
+  body:not(.ipad) .pop button.danger:hover{color:rgba(255,166,146,.98);background:rgba(255,104,84,.13)}
+  .pop button.danger.arm{color:rgba(255,184,166,.98);background:rgba(255,104,84,.20)}
+  body.ipad .pop button.danger:active{color:rgba(255,184,166,.98);background:rgba(255,104,84,.24)}
   @media (max-height:680px){ .cap{width:40px} .chip{width:34px;height:34px}
       .rail{gap:10px} .chip svg{width:14px;height:14px} }
   @media (max-width:760px){ .rd{font-size:8.5px;letter-spacing:.14em;left:14px;top:14px}
@@ -825,13 +834,23 @@
 <div class="rail in-a" id="util">
   <div class="cap">
     <div class="slot">
+    <!-- GROUPED BY WHAT THEY TOUCH: how the two boards sit, where the eye is,
+         what you hear, and — alone at the foot, in red — the one item that
+         ends something. A hairline between groups, no headings: four groups
+         of one to four rows read at a glance without being named. -->
     <div class="pop">
       <button data-a="swap"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4.6 11.2V2.8"/><path d="M3.1 4.3 4.6 2.8l1.5 1.5"/><path d="M9.4 2.8v8.4"/><path d="M10.9 9.7 9.4 11.2 7.9 9.7"/></svg>Swap boards</button>
+      <i class="sep" aria-hidden="true"></i>
+      <!-- each framing drawn as the board looks from it: three-quarter, grazing,
+           steep, and square overhead -->
+      <button data-cam="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 10.6 4.6 4.4h7.6l-2.8 6.2z"/><path d="M3.2 7.5h7.6M8.4 4.4l-2.8 6.2"/></svg>Cam 01</button>
+      <button data-cam="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.6 6.6h10.8"/><path d="M1.6 10.6l2-2h6.8l2 2z"/></svg>Cam 02</button>
+      <button data-cam="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.4 2.6h7.2l1 8.8H2.4z"/><path d="M2.9 7h8.2M7 2.6v8.8"/></svg>Cam 03</button>
+      <button data-cam="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 2.6h8.8v8.8H2.6z"/><path d="M2.6 7h8.8M7 2.6v8.8"/></svg>Cam 04</button>
+      <i class="sep" aria-hidden="true"></i>
       <button data-a="snd"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 5.3h2.2L7.6 3v8L4.8 8.7H2.6z"/><path d="M9.9 5.3a3.1 3.1 0 0 1 0 3.4"/></svg>Sound</button>
-      <button data-cam="0"><em>01</em>Cam 01</button>
-      <button data-cam="1"><em>02</em>Cam 02</button>
-      <button data-cam="2"><em>03</em>Cam 03</button>
-      <button data-cam="3"><em>04</em>Cam 04</button>
+      <i class="sep" aria-hidden="true"></i>
+      <button class="danger" data-a="end"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.6 12.4V1.8"/><path d="M3.6 2.4h7.2L9.2 5l1.6 2.6H3.6"/></svg>End battle</button>
     </div>
     <button class="chip" data-pop="set" data-l="Settings"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 3.6h10M2 7h10M2 10.4h10"/><path d="M8.7 2.1v3M4.5 5.5v3M9.9 8.9v3"/></svg></button>
     </div>
@@ -2058,7 +2077,7 @@ function bob(obj, amt, tilt, k){
                  pa:0, pv:0, ra:0, rv:0 });
 }
 
-const TONE = { hull:0x333a48, sup:0x434b59, deck:0x525a68, accent:0x21262f,
+const TONE = { hull:0x5a616c, sup:0x434b59, deck:0x525a68, accent:0x21262f,
                mark:0x767e8d, lamp:0x0c1418 };
 function shipMat(o){
   o = o || {};
@@ -4985,7 +5004,13 @@ function refreshUI(){
     }
   }
 }
-function closePops(){ for(const s of document.querySelectorAll('.slot')) s.classList.remove('open'); }
+function closePops(){ for(const s of document.querySelectorAll('.slot')) s.classList.remove('open'); disarmEnd(); }
+let endT = 0;
+function disarmEnd(){
+  clearTimeout(endT);
+  const b = document.querySelector('.pop [data-a="end"]');
+  if(b && b.classList.contains('arm')){ b.classList.remove('arm'); b.lastChild.textContent = 'End battle'; }
+}
 /* SWAPPING THE ERA. The hulls are not the same hulls, so nothing carries
    over: damage, manoeuvres in flight and the aircraft all go back to rest. */
 function setEra(era){
@@ -5042,6 +5067,16 @@ function onCtl(e){
   if(a === 'fleet') ANIM.fleet = !ANIM.fleet;
   if(a === 'hit')   setStrike(!(ANIM.fireGoal > 0.5));
   if(a === 'ipad'){ ANIM.ipad = !ANIM.ipad; document.body.classList.toggle('ipad', ANIM.ipad); fit(); }
+  if(a === 'end'){
+    if(!b.classList.contains('arm')){
+      b.classList.add('arm'); b.lastChild.textContent = 'Confirm end';
+      clearTimeout(endT); endT = setTimeout(disarmEnd, 3000);
+      hideHint(); return;
+    }
+    /* ended from the menu is a battle given up, so it lands on the loss */
+    closePops(); ANIM.won = false;
+    setScreen('over'); hideHint(); return;
+  }
   if(a === 'swap'){
     ANIM.swap = ANIM.swap ? 0 : 1;
     document.body.classList.toggle('swap', !!ANIM.swap);
