@@ -3987,7 +3987,14 @@ const FLR = { grp:null, star:null, canopy:null, trails:[],
     new T.SphereGeometry(1, 16, 9, 0, Math.PI*2, 0, Math.PI*0.54),
     new T.MeshBasicMaterial({ color:TC(0xe8eef5), transparent:true,
                               opacity:0.90, side:T.DoubleSide, depthWrite:false }));
-  FLR.canopy.visible = false; scene.add(FLR.canopy);
+  FLR.canopy.visible = false;
+  /* ONE RIG. Canopy, shroud lines and canister hang from a single pivot at
+     the canopy, so the whole thing can heel in the wind as one body — lines
+     still meeting the rim, canister still under them. The star stays in the
+     scene: a sprite does not tilt, only its place on the rig does. */
+  FLR.rig = new T.Group(); scene.add(FLR.rig);
+  FLR.rig.add(FLR.canopy);
+  FLR.hx = 0; FLR.hz = 0;
 
   /* THE CANISTER. A flash that hangs from nothing reads as a light with no
      source. So the canopy carries something: a short cylinder, dark, with the
@@ -3999,7 +4006,7 @@ const FLR = { grp:null, star:null, canopy:null, trails:[],
      vanished into the dusk — pale is what it should have been */
   FLR.can = new T.Mesh(new T.CylinderGeometry(0.52, 0.52, 2.5, 14, 1),
                        new T.MeshBasicMaterial({ color:TC(0xdcdfe4) }));
-  FLR.can.visible = false; scene.add(FLR.can);
+  FLR.can.visible = false; FLR.rig.add(FLR.can);
   /* four shroud lines from the canister's head to the canopy rim. They are
      built at full size and scaled with the canopy as it opens, so the chute
      comes out of the canister instead of appearing above it. */
@@ -4013,7 +4020,7 @@ const FLR = { grp:null, star:null, canopy:null, trails:[],
     g.setAttribute('position', new T.Float32BufferAttribute(pts, 3));
     FLR.lines = new T.LineSegments(g, new T.LineBasicMaterial({
       color:TC(0xd2dce6), transparent:true, opacity:0.0, depthWrite:false }));
-    FLR.lines.visible = false; scene.add(FLR.lines);
+    FLR.lines.visible = false; FLR.rig.add(FLR.lines);
   }
   FLR.canCol = FLR.canopy.material.color.clone();
   FLR.wetP = new T.Vector3();
@@ -4474,24 +4481,39 @@ function updateFX(dt){
       /* the chute opens out of the canister over the first moments of the fall */
       const open = Math.min(1, a/0.05);
       FLR.star.visible = true;
+      /* IT HEELS. The same swing and gusts that carry the canister sideways
+         tip the rig: when the load swings out along x the rig leans that way
+         about its canopy. A few degrees, never more than about four — the
+         camera takes the same lean, so this is also the whole roll of the
+         shot, and seven read as a boat in a swell — and gone
+         by the last tenth of the fall so it meets the water upright and the
+         wet phase starts from a still rig. */
+      const hf = Math.min(1, (1 - a)/0.12)*open;
+      FLR.hx = (Math.sin(a*11.0)*0.066*(1 - a) + Math.sin(a*5.3 + 2.0)*0.030)*hf;
+      FLR.hz = (Math.cos(a*9.0)*0.042*(1 - a) + Math.sin(a*4.1 + 3.0)*0.021)*hf;
+      const L = 13*open;
+      FLR.rig.rotation.set(-FLR.hz, 0, FLR.hx);
+      /* the pivot is placed from the canister, not the other way round: the
+         canister keeps the path the camera and the squares are built on */
+      FLR.rig.position.set(0, L, 0).applyEuler(FLR.rig.rotation).add(FLR.pos);
       /* the burning end is the canister's foot, a little under its centre */
-      FLR.star.position.set(FLR.pos.x, FLR.pos.y - FLR_FOOT, FLR.pos.z);
+      FLR.star.position.set(0, -L - FLR_FOOT, 0).applyEuler(FLR.rig.rotation).add(FLR.rig.position);
       /* smaller in the burn than before: a glow the size of the whole rig
          swallowed the canister and left the light looking sourceless again */
       FLR.star.scale.setScalar(20 + 120*flash + 8*burn);
       FLR.star.material.opacity = Math.min(1, burn + flash);
       FLR.canopy.visible = burn > 0.02;
-      FLR.canopy.position.set(FLR.pos.x, FLR.pos.y + 13*open, FLR.pos.z);
+      FLR.canopy.position.set(0, 0, 0);
       FLR.canopy.scale.setScalar(7.5*open);
       FLR.canopy.material.opacity = 0.86*Math.min(1, a/0.04);
       FLR.canopy.material.color.copy(FLR.canCol);
-      /* no tilt: the shroud lines meet the rim, and a tilted dome would leave
-         them ending in the air */
+      /* the dome itself never tilts on its own: it tilts with the rig, so the
+         shroud lines keep meeting its rim */
       FLR.canopy.rotation.z = 0;
       FLR.can.visible = true; FLR.can.rotation.set(0, 0, 0);
-      FLR.can.position.copy(FLR.pos);
+      FLR.can.position.set(0, -L, 0);
       FLR.lines.visible = FLR.can.visible;
-      FLR.lines.position.copy(FLR.pos);
+      FLR.lines.position.set(0, -L, 0);
       FLR.lines.scale.set(open, open, open);
       FLR.lines.material.opacity = 0.62*Math.min(1, a/0.04)*(flash > 0.3 ? 0 : 1);
       const tf = Math.max(0, 1 - a/0.22);
@@ -4517,7 +4539,10 @@ function updateFX(dt){
       ANIM.flrWet = 0;
       FLR.wetP.copy(FLR.pos);
       FLR.wetI = waterUnis.uFlareI.value;
-      FLR.wetH = FLR.canopy.position.y;
+      FLR.wetH = FLR.rig.position.y;
+      /* the wet phase works in the sea's own coordinates */
+      FLR.rig.position.set(0, 0, 0); FLR.rig.rotation.set(0, 0, 0);
+      FLR.hx = 0; FLR.hz = 0;
       FLR.star.visible = false; FLR.lines.visible = false;
       hiss(FLR.pos, 0.22, 3600, 700, 1.1, 1.2);
       refreshUI();
@@ -4558,6 +4583,7 @@ function updateFX(dt){
       for(const t of FLR.trails) t.material.uniforms.uFade.value = 0;
     }
   } else if(FLR.star.visible || FLR.can.visible || waterUnis.uFlareI.value > 0){
+    FLR.rig.position.set(0, 0, 0); FLR.rig.rotation.set(0, 0, 0); FLR.hx = 0; FLR.hz = 0;
     FLR.star.visible = false; FLR.canopy.visible = false;
     FLR.can.visible = false; FLR.lines.visible = false;
     waterUnis.uFlareI.value = 0;
@@ -5279,8 +5305,7 @@ const CINE = { w:0, want:0, hold:0, done:false, kick:0, roll:0, rollWant:0, init
 const _c1 = new T.Vector3(), _c2 = new T.Vector3(), _c3 = new T.Vector3(),
       _cq = new T.Quaternion(), _ct = new T.Vector3(), _cl = new T.Vector3(),
       _orbP = new T.Vector3(), _navW = new T.Vector3();
-const _flrLook = new T.Vector3(), _flrDir = new T.Vector3(), _flrSway = new T.Vector3(),
-      _flrPair = new T.Vector3(), _flrSide = new T.Vector3();
+const _flrLook = new T.Vector3(), _flrDir = new T.Vector3(), _flrPair = new T.Vector3();
 function cineUpdate(dt){
   let want = 0, obj = null, D = 30, H = 8, S = 6, L = 45, look = null, age = 0,
       LD = 118, LH = 58, lookDir = null, lookSway = null, lookLag = 2.6;
@@ -5326,31 +5351,18 @@ function cineUpdate(dt){
       _flrLook.copy(FLR.star.position).lerp(_flrPair, e);
       LD = 132 + (128 + sp*1.05 - 132)*e;
       LH = 26 + (22 + sp*0.26 - 26)*e;
-      /* THE EYE RIDES WITH IT. The camera drifts on its own slow periods, as if
-         held rather than mounted, and its aim follows the canopy with a lag —
-         so the frame answers every gust a beat late, the way a camera
-         following a falling light would. */
-      /* IT HAS TO BE SEEN, SO IT IS AN ANGLE, NOT A DISTANCE. The first version
-         moved the camera six units at two hundred and fifty away — about a
-         degree — and the aim followed the star, so the frame cancelled what
-         little there was. Now the swing is scaled to the stand-off, the aim is
-         pushed off the star sideways so the light visibly drifts across the
-         frame, and the camera rocks about its own axis with the canopy. */
-      const k = (1 - 0.45*ah)*e;
-      /* periods of two to three seconds, not seven: over an eight-second fall a
-         seven-second wave is one drift, and a drift does not read as wind */
-      const sx = Math.sin(tt*2.35)*0.62 + Math.sin(tt*3.90 + 1.1)*0.38;
-      const sy = Math.sin(tt*1.95 + 0.6)*0.60 + Math.sin(tt*3.40)*0.40;
-      _flrSide.set(-_flrDir.z, 0, _flrDir.x);
-      /* about forty per cent of the first pass, which rocked the whole frame
-         like a small boat: enough to read as a light caught in the wind, not
-         so much that the board under it swims */
-      _flrLook.addScaledVector(_flrSide, LD*0.036*sx*k);
-      _flrLook.y += LD*0.019*sy*k;
-      _flrSway.set(0, 0, 0).addScaledVector(_flrSide, -LD*0.015*sx*k);
-      _flrSway.y = LD*0.010*Math.sin(tt*2.60 + 2.2)*k;
-      lookSway = _flrSway;
-      CINE.rollWant = (Math.sin(tt*2.10 + 0.4)*0.019 + Math.sin(tt*3.70)*0.007)*k;
+      /* THE EYE HEELS WITH THE CHUTE. It used to rock on periods of its own,
+         so camera and canopy swung out of step and the shot looked unsteady
+         rather than windblown. Now it has no motion of its own: its roll is
+         the rig's heel as seen from where it stands — the part of the tilt
+         that lies across the frame — so the horizon leans exactly as the
+         canopy does, and the aim follows the drift with its usual lag. The
+         camera sits on the +_flrDir side looking back along it, so the
+         frame's right is (dir.z, 0, -dir.x). */
+      const dl = Math.hypot(_flrDir.x, _flrDir.z) || 1;
+      const heel = (FLR.hx*_flrDir.z - FLR.hz*_flrDir.x)/dl;
+      lookSway = null;
+      CINE.rollWant = heel*e;
       /* the lag is only for the fall. Through the hand-off from the climb the
          aim has to travel a long way fast, and a lazy aim there let the star
          run off the right edge of the frame */
