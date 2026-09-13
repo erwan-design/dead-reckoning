@@ -712,6 +712,12 @@
   .chip:active{background:rgba(255,255,255,.13)}
   .chip svg{width:16px;height:16px;display:block;stroke:currentColor;fill:none;
       stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;opacity:.94}
+  .chip.cyc{flex-direction:column;gap:4px;padding-top:2px}
+  .chip.cyc .cg{display:block;height:16px}
+  .cdots{display:flex;gap:3px}
+  .cdots i{width:3px;height:3px;border-radius:50%;background:rgba(224,233,240,.24);
+      transition:background 200ms ease,box-shadow 200ms ease}
+  .cdots i.on{background:rgba(170,242,224,.96);box-shadow:0 0 4px rgba(157,240,220,.8)}
   .chip .i1{display:none}
   .chip.on .i0{display:none}
   .chip.on .i1{display:block}
@@ -834,19 +840,13 @@
 <div class="rail in-a" id="util">
   <div class="cap">
     <div class="slot">
-    <!-- GROUPED BY WHAT THEY TOUCH: how the two boards sit, where the eye is,
-         what you hear, and — alone at the foot, in red — the one item that
-         ends something. A hairline between groups, no headings: four groups
-         of one to four rows read at a glance without being named. -->
+    <!-- GROUPED BY WHAT THEY TOUCH: how the two boards sit, what you hear,
+         and — alone at the foot, in red — the one item that ends something.
+         A hairline between groups, no headings. The framings are not here:
+         they are used too often to sit behind a menu, so they have a button
+         of their own under this one. -->
     <div class="pop">
       <button data-a="swap"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4.6 11.2V2.8"/><path d="M3.1 4.3 4.6 2.8l1.5 1.5"/><path d="M9.4 2.8v8.4"/><path d="M10.9 9.7 9.4 11.2 7.9 9.7"/></svg>Swap boards</button>
-      <i class="sep" aria-hidden="true"></i>
-      <!-- each framing drawn as the board looks from it: three-quarter, grazing,
-           steep, and square overhead -->
-      <button data-cam="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 10.6 4.6 4.4h7.6l-2.8 6.2z"/><path d="M3.2 7.5h7.6M8.4 4.4l-2.8 6.2"/></svg>Cam 01</button>
-      <button data-cam="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.6 6.6h10.8"/><path d="M1.6 10.6l2-2h6.8l2 2z"/></svg>Cam 02</button>
-      <button data-cam="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.4 2.6h7.2l1 8.8H2.4z"/><path d="M2.9 7h8.2M7 2.6v8.8"/></svg>Cam 03</button>
-      <button data-cam="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 2.6h8.8v8.8H2.6z"/><path d="M2.6 7h8.8M7 2.6v8.8"/></svg>Cam 04</button>
       <i class="sep" aria-hidden="true"></i>
       <button data-a="snd"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 5.3h2.2L7.6 3v8L4.8 8.7H2.6z"/><path d="M9.9 5.3a3.1 3.1 0 0 1 0 3.4"/></svg>Sound</button>
       <i class="sep" aria-hidden="true"></i>
@@ -854,6 +854,12 @@
     </div>
     <button class="chip" data-pop="set" data-l="Settings"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 3.6h10M2 7h10M2 10.4h10"/><path d="M8.7 2.1v3M4.5 5.5v3M9.9 8.9v3"/></svg></button>
     </div>
+  </div>
+  <!-- ONE BUTTON, FOUR FRAMINGS. Each press moves to the next and the fourth
+       wraps to the first. It shows the framing it is on — drawn as the board
+       looks from there — and four dots say which of the four that is. -->
+  <div class="cap">
+    <button class="chip cyc" data-a="cyc" data-l="Cam 01"><span class="cg"></span><span class="cdots" aria-hidden="true"><i></i><i></i><i></i><i></i></span></button>
   </div>
 </div>
 <!-- THE THREE BATTERIES, EACH ON ITS OWN. A shared capsule says these
@@ -2751,6 +2757,27 @@ function catBank(a){
   /* the one spotted on the bow catapult */
   const cp = plane(); cp.position.set(4.2, 10.3, -6); carrier.add(cp);
   CAT.plane = cp; CAT.rest.copy(cp.position);
+  /* NAVIGATION LIGHTS on the one that flies. Red on the port wingtip, green
+     on the starboard, white at the tail, a red beacon on the spine and white
+     strobes at both tips. The nose is +z, so port — her left — is +x. An
+     aircraft burns them by day as well, so they are always on; the glow is
+     held low while the sun is up and opens out once it has gone. */
+  {
+    const bulb = new T.SphereGeometry(0.12, 8, 6);
+    CAT.lights = [];
+    for(const [hex, x, y, z, size, inten, kind] of [
+      [RED,  3.86, -0.06, -0.62, 1.25, 2.4, 'nav'],
+      [GRN, -3.86, -0.06, -0.62, 1.25, 2.4, 'nav'],
+      [WHT,  0.00,  0.02, -3.92, 1.3, 1.8, 'nav'],
+      [RED,  0.00,  0.70, -0.70, 2.2, 3.0, 'beacon'],
+      [WHT,  3.86, -0.06, -1.02, 2.3, 3.6, 'strobe'],
+      [WHT, -3.86, -0.06, -1.02, 2.3, 3.6, 'strobe']]){
+      const m = new T.Mesh(bulb, new T.MeshBasicMaterial({ color:TC(hex) }));
+      m.position.set(x, y, z); cp.add(m);
+      const h = glowHalo(hex, size, inten, 0.45); m.add(h);
+      CAT.lights.push({ m, h, kind, inten });
+    }
+  }
   navLights(carrier, [[RED,3.0,2.6,-16.6,10.0,-14.0],[GRN,3.0,2.6,12.2,10.0,-14.0],
                       [WHT,3.4,3.0,10.4,30.5,-6.0],[WHT,2.2,2.4,0,10.0,-56.0]], [2,3]);
   const p = cellW(POS.carrier[0], POS.carrier[1]);
@@ -2941,6 +2968,98 @@ const TOR = { grp:null, A:new T.Vector3(), B:new T.Vector3(), trails:[],
                  drift:[0.16, 0.05, -0.12], tint:0xf6fffd, tintI:1.15, order:9, add:true})
   ];
 }
+
+/* ---- SHE CUTS THE WATER. Foam laid behind her said where she had been; it
+   did not say she was going through anything. So at the nose there is the
+   sea parting: a V of white water pushed off her bow, and spray thrown out
+   to both sides and falling back. Both are lit like foam — dim at night —
+   and sit behind the same fog as the sea they belong to. ---- */
+const SEAFX_VS = G_HEAD + `
+  attribute float aA; attribute float aS;
+  uniform float uVH;
+  varying float vA; varying vec3 vWp; varying float vDi;
+  void main(){
+    vec4 wp = modelMatrix*vec4(position, 1.0);
+    vWp = wp.xyz; vDi = length(uCam - wp.xyz); vA = aA;
+    vec4 mv = viewMatrix*wp;
+    gl_Position = projectionMatrix*mv;
+    gl_PointSize = aS*projectionMatrix[1][1]*uVH*0.5/max(-mv.z, 1.0);
+  }`;
+const SPRAY_FS = G_HEAD + G_SKY + G_FOG + `
+  uniform vec3 uTint;
+  varying float vA; varying vec3 vWp; varying float vDi;
+  void main(){
+    float a = smoothstep(0.5, 0.10, length(gl_PointCoord - 0.5))*vA;
+    if(a < 0.01) discard;
+    vec3 c = applyFog(uTint*(1.0 - 0.72*uNight), vWp, vDi, normalize(uCam - vWp));
+    gl_FragColor = vec4(c, a);
+  }`;
+const BOW_VS = G_HEAD + `
+  varying vec2 vUv; varying vec3 vWp; varying float vDi;
+  void main(){
+    vUv = uv;
+    vec4 wp = modelMatrix*vec4(position, 1.0);
+    vWp = wp.xyz; vDi = length(uCam - wp.xyz);
+    gl_Position = projectionMatrix*viewMatrix*wp;
+  }`;
+const BOW_FS = G_HEAD + G_SKY + G_FOG + `
+  uniform sampler2D map; uniform vec3 uTint; uniform float uI;
+  varying vec2 vUv; varying vec3 vWp; varying float vDi;
+  void main(){
+    float a = texture2D(map, vUv).a*uI;
+    if(a < 0.01) discard;
+    vec3 c = applyFog(uTint*(1.0 - 0.72*uNight), vWp, vDi, normalize(uCam - vWp));
+    gl_FragColor = vec4(c, a);
+  }`;
+{
+  /* the bow wave: nose at the top of the canvas, two arms spreading back */
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 256;
+  const x = cv.getContext('2d');
+  x.lineCap = 'round';
+  for(const [w, a] of [[34, 0.14], [17, 0.32], [7, 0.80]]){
+    x.strokeStyle = 'rgba(255,255,255,' + a + ')'; x.lineWidth = w;
+    x.beginPath(); x.moveTo(10, 252); x.quadraticCurveTo(50, 118, 64, 28);
+    x.quadraticCurveTo(78, 118, 118, 252); x.stroke();
+  }
+  const rg = x.createRadialGradient(64, 32, 0, 64, 32, 30);
+  rg.addColorStop(0, 'rgba(255,255,255,0.95)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = rg; x.fillRect(0, 0, 128, 90);
+  /* and the arms thin out as the wave runs down her side */
+  x.globalCompositeOperation = 'destination-in';
+  const lg = x.createLinearGradient(0, 0, 0, 256);
+  lg.addColorStop(0, 'rgba(0,0,0,1)'); lg.addColorStop(0.5, 'rgba(0,0,0,0.75)'); lg.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = lg; x.fillRect(0, 0, 128, 256);
+  const geo = new T.PlaneGeometry(1, 1); geo.rotateX(-Math.PI/2); geo.rotateY(Math.PI);
+  const bow = new T.Mesh(geo, new T.ShaderMaterial({
+    uniforms: U({ map:{value:new T.CanvasTexture(cv)}, uTint:{value:Cs(0xeaf5f3, 1.0)}, uI:{value:0} }),
+    vertexShader: BOW_VS, fragmentShader: BOW_FS, transparent:true, depthWrite:false
+  }));
+  /* the canvas nose sits a tenth down from its top: put that point just
+     ahead of her nose, on the surface above her */
+  bow.scale.set(9.0, 1, 15); bow.position.set(0, 0.50, 5.25 - 0.40*15);
+  bow.renderOrder = 8; TOR.grp.add(bow); TOR.bow = bow;
+
+  /* the spray: a pool of points recycled in turn */
+  const N = 180;
+  const g = new T.BufferGeometry();
+  const P = new Float32Array(N*3), A = new Float32Array(N), S = new Float32Array(N);
+  g.setAttribute('position', new T.BufferAttribute(P, 3).setUsage(T.DynamicDrawUsage));
+  g.setAttribute('aA', new T.BufferAttribute(A, 1).setUsage(T.DynamicDrawUsage));
+  g.setAttribute('aS', new T.BufferAttribute(S, 1).setUsage(T.DynamicDrawUsage));
+  const m = new T.ShaderMaterial({
+    uniforms: U({ uTint:{value:Cs(0xe8f3f3, 1.0)}, uVH:{value:800} }),
+    vertexShader: SEAFX_VS, fragmentShader: SPRAY_FS, transparent:true, depthWrite:false
+  });
+  const pts = new T.Points(g, m); pts.frustumCulled = false; pts.renderOrder = 12;
+  /* point sizes are in pixels, so they are scaled by the height of whichever
+     viewport is being drawn — a half of the split, or the whole screen */
+  const vp = new T.Vector4();
+  pts.onBeforeRender = r => { r.getCurrentViewport(vp); m.uniforms.uVH.value = vp.w; };
+  scene.add(pts);
+  TOR.spray = { N, P, A, S, g, V:new Float32Array(N*3),
+                age:new Float32Array(N).fill(9), life:new Float32Array(N).fill(1), next:0, acc:0 };
+}
+const _tf = new T.Vector3(), _tr = new T.Vector3(), _tn = new T.Vector3();
 
 /* ---- 6. survey posts : the plot made physical, and the source of the rake ---- */
 {
@@ -4277,6 +4396,8 @@ function updateFX(dt){
       TOR.grp.position.y = waterY(TOR.grp.position.x, TOR.grp.position.z, tt) - 0.45;
       /* the boil she drags on the surface, right above her */
       marks[14].set(TOR.grp.position.x, TOR.grp.position.z, 9.2, Math.min(1, u*8));
+      /* the water parting at her nose: it breathes a little with the swell */
+      TOR.bow.material.uniforms.uI.value = Math.min(1, u*10)*(0.82 + 0.10*Math.sin(tt*11.0));
     } else {
       if(!ANIM.torHit){
         ANIM.torHit = true; TOR.grp.visible = false; marks[14].w = 0;
@@ -4294,6 +4415,46 @@ function updateFX(dt){
     if(TOR.grp.visible) TOR.grp.visible = false;
     marks[14].w = marks[15].w = 0;
     for(const t of TOR.trails) t.material.uniforms.uFade.value = 0;
+  }
+  /* the spray she throws: made at the nose while she runs, then left to
+     fly out, fall and fade on its own after she has gone */
+  if(TOR.spray){
+    const S = TOR.spray;
+    if(ANIM.tor >= 0 && ANIM.tor < 0.80 && TOR.grp.visible){
+      S.acc += dt*150;
+      TOR.grp.getWorldDirection(_tf); _tf.y = 0; _tf.normalize();
+      _tr.set(_tf.z, 0, -_tf.x);
+      TOR.grp.localToWorld(_tn.set(0, 0.45, 4.8));
+      const sea = waterY(_tn.x, _tn.z, tt);
+      while(S.acc >= 1){
+        S.acc -= 1;
+        const i = S.next; S.next = (S.next + 1) % S.N;
+        const side = Math.random() < 0.5 ? -1 : 1, sp = 2.0 + Math.random()*3.6, fw = 2.0 + Math.random()*4.0;
+        S.P[i*3]   = _tn.x + _tr.x*side*0.55;
+        S.P[i*3+1] = sea + 0.12;
+        S.P[i*3+2] = _tn.z + _tr.z*side*0.55;
+        S.V[i*3]   = _tr.x*side*sp + _tf.x*fw;
+        S.V[i*3+1] = 2.4 + Math.random()*3.6;
+        S.V[i*3+2] = _tr.z*side*sp + _tf.z*fw;
+        S.age[i] = 0; S.life[i] = 0.30 + Math.random()*0.36;
+      }
+    }
+    let dirty = false;
+    for(let i=0;i<S.N;i++){
+      if(S.age[i] >= S.life[i]){ if(S.A[i] !== 0){ S.A[i] = 0; dirty = true; } continue; }
+      dirty = true;
+      S.age[i] += dt;
+      S.V[i*3+1] -= 15.0*dt;
+      S.P[i*3] += S.V[i*3]*dt; S.P[i*3+1] += S.V[i*3+1]*dt; S.P[i*3+2] += S.V[i*3+2]*dt;
+      const k = Math.min(1, S.age[i]/S.life[i]);
+      S.A[i] = Math.pow(1 - k, 1.6)*0.82;
+      S.S[i] = 0.26 + 0.60*k;
+    }
+    if(dirty){
+      S.g.attributes.position.needsUpdate = true;
+      S.g.attributes.aA.needsUpdate = true;
+      S.g.attributes.aS.needsUpdate = true;
+    }
   }
 
   /* detonation */
@@ -4318,6 +4479,19 @@ function updateFX(dt){
     if(b >= 1){ ANIM.blast = -1; waterUnis.uBlastI.value = 0; }
   }
 
+  /* the plane's lights: steady navigation lights, a beacon that pulses about
+     once a second, and strobes that double-flash — only while she flies */
+  if(CAT.lights){
+    const airborne = ANIM.cat >= 0;
+    const bt = tt % 1.1, st = tt % 1.4;
+    const beacon = Math.exp(-bt*9.0);
+    const strobe = (st < 0.05 || (st > 0.13 && st < 0.18)) ? 1 : 0;
+    for(const L of CAT.lights){
+      const on = L.kind === 'nav' ? 1 : L.kind === 'beacon' ? 0.15 + 0.85*beacon : (airborne ? strobe : 0);
+      L.m.visible = on > 0.02;
+      L.h.material.uniforms.uI.value = L.inten*on;
+    }
+  }
   /* catapult stroke, circuit and recovery */
   if(ANIM.cat >= 0){
     ANIM.cat = Math.min(1, ANIM.cat + dt/CAT_DUR);
@@ -4919,6 +5093,7 @@ function plotReadout(){
 }
 
 function refreshUI(){
+  camChip();
   const burning = ANIM.fireGoal > 0.5, sinking = ANIM.sink >= 0, flying = ANIM.mis >= 0,
         cating = ANIM.cat >= 0, running = ANIM.tor >= 0;
   /* struck counts hulls that carry a scar, not manoeuvres in flight */
@@ -5004,8 +5179,30 @@ function refreshUI(){
     }
   }
 }
+/* the four framings, drawn as the board looks from each: three-quarter,
+   grazing, steep, and square overhead — and a plain camera when the eye has
+   been moved by hand and is on none of them */
+/* a function, not a table: refreshUI runs during start-up, before a const
+   declared this far down the script would exist */
+function camGlyph(k){
+  return k >= 0 ? [
+    '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 10.6 4.6 4.4h7.6l-2.8 6.2z"/><path d="M3.2 7.5h7.6M8.4 4.4l-2.8 6.2"/></svg>',
+    '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.6 6.6h10.8"/><path d="M1.6 10.6l2-2h6.8l2 2z"/></svg>',
+    '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.4 2.6h7.2l1 8.8H2.4z"/><path d="M2.9 7h8.2M7 2.6v8.8"/></svg>',
+    '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 2.6h8.8v8.8H2.6z"/><path d="M2.6 7h8.8M7 2.6v8.8"/></svg>'
+  ][k] : '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 4.6h2.6l1.1-1.6h3l1.1 1.6h2.6v6.6H1.8z"/><circle cx="7" cy="7.8" r="2"/></svg>';
+}
+function camChip(){
+  const b = document.querySelector('#util [data-a="cyc"]'); if(!b) return;
+  const k = ANIM.shot >= 0 && ANIM.shot < 4 ? ANIM.shot : -1;
+  const g = b.querySelector('.cg');
+  if(g.dataset.k !== String(k)){ g.innerHTML = camGlyph(k); g.dataset.k = String(k); }
+  b.dataset.l = k >= 0 ? 'Cam 0' + (k + 1) : 'Free camera';
+  b.querySelectorAll('.cdots i').forEach((d, j) => d.classList.toggle('on', j === k));
+}
 function closePops(){ for(const s of document.querySelectorAll('.slot')) s.classList.remove('open'); disarmEnd(); }
-let endT = 0;
+/* var, not let: closePops can run during start-up, above this line */
+var endT = 0;
 function disarmEnd(){
   clearTimeout(endT);
   const b = document.querySelector('.pop [data-a="end"]');
@@ -5067,6 +5264,11 @@ function onCtl(e){
   if(a === 'fleet') ANIM.fleet = !ANIM.fleet;
   if(a === 'hit')   setStrike(!(ANIM.fireGoal > 0.5));
   if(a === 'ipad'){ ANIM.ipad = !ANIM.ipad; document.body.classList.toggle('ipad', ANIM.ipad); fit(); }
+  if(a === 'cyc'){
+    closePops();
+    shot((ANIM.shot < 0 ? 0 : ANIM.shot + 1) % 4);
+    hideHint(); return;
+  }
   if(a === 'end'){
     if(!b.classList.contains('arm')){
       b.classList.add('arm'); b.lastChild.textContent = 'Confirm end';
