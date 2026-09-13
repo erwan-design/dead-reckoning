@@ -153,11 +153,17 @@
   .ghd span{font:400 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.24em;
       text-transform:uppercase;color:rgba(180,246,230,.80);font-variant-numeric:tabular-nums}
   .opts.c4{grid-template-columns:repeat(4,1fr)}
+  /* two choices share the whole width: a pair in a three-column grid leaves a
+     hole where a third option would be, and reads as one that went missing */
+  .opts.c2{grid-template-columns:repeat(2,1fr)}
   /* CONDITIONS ARE READ, NOT CHOSEN. The theatre carries its own hour, sea,
      visibility and rain now. A weather control standing beside it could only
      disagree with it — pick Storm, then Clear, and the card announced a slight
      sea and 14 km of visibility through a full gale. A reading cannot lie. */
-  .cond{display:grid;grid-template-columns:1fr 1fr;gap:1px;border-radius:14px;
+  /* no heading of its own: it is not a fifth choice, it is what the theatre
+     just above it amounts to. Six pixels of air say « belongs with », where a
+     heading would have said « and now, another thing ». */
+  .cond{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:1px;border-radius:14px;
       overflow:hidden;background:rgba(206,224,236,.09)}
   .cond div{padding:11px 13px;background:rgba(255,255,255,.028)}
   .cond b{display:block;font-weight:400;
@@ -505,6 +511,9 @@
   .drow button.on{color:rgba(170,242,224,.98);background:rgba(157,240,220,.13);
       border-color:rgba(157,240,220,.34)}
   .drow button.na{opacity:.24;pointer-events:none}
+  /* an option that does not exist yet says so by being unreachable, not by
+     being hidden: the choice is part of the picture even when it cannot be made */
+  .opts button.na{opacity:.26;pointer-events:none}
   .drow button.danger{color:rgba(255,124,104,.66);border-color:rgba(255,124,104,.16)}
   body:not(.ipad) .drow button.danger:hover{color:rgba(255,166,146,.98);background:rgba(255,104,84,.13)}
   /* ---- two boards, one above the other ---- */
@@ -855,18 +864,19 @@
       <button data-e="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.7 7.4a2.3 2.3 0 0 1 1-4.3 2.8 2.8 0 0 1 5.1.8 1.9 1.9 0 0 1-.5 3.5z"/><path d="M7.4 8.2 5.9 10.6h2.2l-1.5 2.4"/><path d="M3.6 9.9 3 11.9M10.4 9.9l-.6 2"/></svg>Storm</button>
     </div>
 
-    <div class="ghd"><h6>Conditions</h6><span data-g="th2"></span></div>
     <div class="cond" data-g="cond"></div>
 
     <div class="ghd"><h6>Rules</h6><span data-g="md"></span></div>
-    <div class="opts" data-g="modes">
+    <div class="opts c2" data-g="modes">
       <button data-md="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.3 2.3h9.4v9.4H2.3z"/><path d="M2.3 5.4h9.4M2.3 8.6h9.4M5.4 2.3v9.4M8.6 2.3v9.4"/></svg>Traditional</button>
       <button data-md="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5.8A5.4 5.4 0 0 1 12 5.8"/><path d="M7 6.2V9"/><path d="M7 10.4v2M4.9 10 3.7 12M9.1 10l1.2 2"/></svg>Enhanced</button>
     </div>
 
-    <div class="ghd"><h6>Flagship</h6><span data-g="fs"></span></div>
-    <div class="opts txt" id="opt-fs">
-      <button data-fs="0"></button><button data-fs="1"></button><button data-fs="2"></button>
+    <div class="ghd"><h6>Opponent</h6><span data-g="op"></span></div>
+    <div class="opts" data-g="opps">
+      <button data-op="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.6 3.6h6.8v6.8H3.6z"/><path d="M5.6 1.8v1.8M8.4 1.8v1.8M5.6 10.4v1.8M8.4 10.4v1.8M1.8 5.6h1.8M1.8 8.4h1.8M10.4 5.6h1.8M10.4 8.4h1.8"/></svg>Machine</button>
+      <button data-op="1"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="5" cy="5" r="1.8"/><path d="M1.9 11.4a3.1 3.1 0 0 1 6.2 0"/><circle cx="9.8" cy="5.6" r="1.4"/><path d="M8.6 11.4a2.7 2.7 0 0 1 3.5-2.3"/></svg>Friend</button>
+      <button data-op="2"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="9.8" r="1.2"/><path d="M4.3 7.9a3.8 3.8 0 0 1 5.4 0"/><path d="M2.2 5.7a6.8 6.8 0 0 1 9.6 0"/></svg>Wardroom</button>
     </div>
 
   </div>
@@ -891,18 +901,19 @@
       <button data-e="2"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M10.1 8.6A4.3 4.3 0 0 1 5.4 3.9a4.5 4.5 0 1 0 4.7 4.7z"/></svg>Night</button>
       <button data-e="3"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.7 7.4a2.3 2.3 0 0 1 1-4.3 2.8 2.8 0 0 1 5.1.8 1.9 1.9 0 0 1-.5 3.5z"/><path d="M7.4 8.2 5.9 10.6h2.2l-1.5 2.4"/><path d="M3.6 9.9 3 11.9M10.4 9.9l-.6 2"/></svg>Storm</button>
     </div>
-    <div class="ghd"><h6>Conditions</h6><span data-g="th2"></span></div>
     <div class="cond" data-g="cond"></div>
 
     <div class="ghd"><h6>Rules</h6><span data-g="md"></span></div>
-    <div class="opts" data-g="modes">
+    <div class="opts c2" data-g="modes">
       <button data-md="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.3 2.3h9.4v9.4H2.3z"/><path d="M2.3 5.4h9.4M2.3 8.6h9.4M5.4 2.3v9.4M8.6 2.3v9.4"/></svg>Traditional</button>
       <button data-md="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5.8A5.4 5.4 0 0 1 12 5.8"/><path d="M7 6.2V9"/><path d="M7 10.4v2M4.9 10 3.7 12M9.1 10l1.2 2"/></svg>Enhanced</button>
     </div>
 
-    <div class="ghd"><h6>Flagship</h6><span data-g="fs"></span></div>
-    <div class="opts txt">
-      <button data-fs="0"></button><button data-fs="1"></button><button data-fs="2"></button>
+    <div class="ghd"><h6>Opponent</h6><span data-g="op"></span></div>
+    <div class="opts" data-g="opps">
+      <button data-op="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.6 3.6h6.8v6.8H3.6z"/><path d="M5.6 1.8v1.8M8.4 1.8v1.8M5.6 10.4v1.8M8.4 10.4v1.8M1.8 5.6h1.8M1.8 8.4h1.8M10.4 5.6h1.8M10.4 8.4h1.8"/></svg>Machine</button>
+      <button data-op="1"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="5" cy="5" r="1.8"/><path d="M1.9 11.4a3.1 3.1 0 0 1 6.2 0"/><circle cx="9.8" cy="5.6" r="1.4"/><path d="M8.6 11.4a2.7 2.7 0 0 1 3.5-2.3"/></svg>Friend</button>
+      <button data-op="2"><svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="9.8" r="1.2"/><path d="M4.3 7.9a3.8 3.8 0 0 1 5.4 0"/><path d="M2.2 5.7a6.8 6.8 0 0 1 9.6 0"/></svg>Wardroom</button>
     </div>
     <button class="go prim" data-fake="1"><span class="l1">Begin engagement</span><span class="l2">Standing by</span><i>&#8594;</i></button>
   </div>
@@ -4803,7 +4814,14 @@ const SCR = { attract: document.getElementById('scr-attract'),
 /* DEPLOYMENT. Everything on this card but the theatre is written down and not
    yet obeyed: the orders exist, the engagement does not read them. The theatre
    is the exception because the sea behind the card is the real one. */
-const SETUP = { md:1, fs:0 };
+/* Only the machine exists. The other two are drawn and marked unavailable
+   rather than left out: the choice is part of the design, and a control that
+   pretends to work is the thing this card just stopped doing with the weather. */
+const SETUP = { md:1, op:0 };
+const OPPN = ['Machine &middot; it works the plot itself',
+              'Friend &middot; one tablet, turn about',
+              'Wardroom &middot; not yet at sea'];
+const OPP_OK = [true, false, false];
 const THN  = ['Morning', 'Squall', 'Night', 'Storm'];
 const WXN  = ['Clear', 'Gale', 'Fog bank'];
 const MODEN = ['Traditional &middot; guns only', 'Enhanced &middot; three batteries'];
@@ -4818,29 +4836,29 @@ const goNote = document.getElementById('gonote');
 const SETUP_PANELS = ['scr-setup', 'scr-setup2'];
 function setupUI(){
   const F = FLEET[ANIM.era];
-  if(SETUP.fs > 2) SETUP.fs = 0;
+
   for(const id of SETUP_PANELS){
     const root = document.getElementById(id); if(!root) continue;
-    const fs = root.querySelectorAll('[data-fs]');
-    for(let i = 0; i < fs.length; i++){
-      fs[i].textContent = F.ships[i];
-      fs[i].classList.toggle('on', i === SETUP.fs);
-    }
     for(const b of root.querySelectorAll('[data-e]'))
       b.classList.toggle('on', +b.dataset.e === ANIM.env);
     for(const b of root.querySelectorAll('[data-md]'))
       b.classList.toggle('on', +b.dataset.md === SETUP.md);
+    for(const b of root.querySelectorAll('[data-op]')){
+      const i = +b.dataset.op;
+      b.classList.toggle('on', i === SETUP.op);
+      b.classList.toggle('na', !OPP_OK[i]);
+    }
 
     /* each group states its own reading, so a panel can be read at a glance */
     const g = k => root.querySelector('[data-g="' + k + '"]');
     if(g('th'))  g('th').innerHTML  = THN[ANIM.env];
-    if(g('th2')) g('th2').innerHTML = ENVS[ANIM.env].name;
     if(g('md'))  g('md').innerHTML  = MODEN[SETUP.md];
     for(const el of document.querySelectorAll('[data-g="cond"]'))
       el.innerHTML = (ENVS[ANIM.env].cells || [])
         .map(c => '<div><b>' + c[0] + '</b><span>' + c[1] + '</span></div>').join('');
-    if(g('fs'))  g('fs').innerHTML  = F.of;
-    if(g('fs2')) g('fs2').innerHTML = F.ships[SETUP.fs];
+    if(g('op'))  g('op').innerHTML  = OPPN[SETUP.op];
+    /* the panel's own corner names the force, now that no ship is picked */
+    if(g('fs2')) g('fs2').innerHTML = F.of;
     if(g('hulls2')) g('hulls2').textContent =
       String(SHIPS.filter(x => x.era === ANIM.era).length).padStart(2, '0');
   }
@@ -4903,7 +4921,8 @@ function setupCtl(b){
      rail goes altogether — an empty rail is the honest picture of it. */
   if(d.md   !== undefined){ SETUP.md  = +d.md;
     document.body.classList.toggle('trad', SETUP.md === 0); setupUI(); return true; }
-  if(d.fs   !== undefined){ SETUP.fs  = +d.fs;  setupUI(); return true; }
+  if(d.op   !== undefined){ if(!OPP_OK[+d.op]) return true;
+    SETUP.op = +d.op; setupUI(); return true; }
   if(d.fake !== undefined){ fakeGo(b); return true; }
   return false;
 }
