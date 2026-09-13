@@ -3531,11 +3531,16 @@ const ENVS = [
        band through the middle, and at the horizon two different warms: salmon
        away from the sun, gold toward it. Shadows go violet, which is what the
        blue of the sky does to them when the sun is this low and this orange. */
-    sunAz:-1.48, sunEl:0.125, sunCol:[0xff9d52,2.55],
-    zenith:[0x1c2352,1], midSky:[0xc27f86,1], haze:[0xf29a78,1.10], hazeWarm:[0xffc15e,1.30],
-    deep:[0x2b284a,1], shoal:[0xa47f8c,1], shad:[0x5f5896,0.78], foam:[0xffe1c4,1],
-    gradeLo:[0xa9a3d6,1], gradeHi:[0xffc080,1],
-    fogStart:480, fogDist:1300, exp:1.38, f0:0.135, fexp:2.55, sheen:0.55, gridI:0.205, swell:0.34, night:0 },
+    /* SOFTENED. At full strength every warm was pure — orange light, gold
+       haze, salmon sky — and a whole screen of it glared. The same bands stay,
+       each greyed toward pastel: peach light instead of orange, a powder rose
+       sky, a haze with some grey in it, and a lower exposure so the sun path is
+       the only thing allowed to be bright. */
+    sunAz:-1.48, sunEl:0.125, sunCol:[0xffac78,1.90],
+    zenith:[0x242b4e,1], midSky:[0xb08b92,1], haze:[0xd9a592,1.0], hazeWarm:[0xf0bf8c,1.12],
+    deep:[0x2c2d42,1], shoal:[0x8a8290,1], shad:[0x68668a,0.80], foam:[0xf2e6da,1],
+    gradeLo:[0xb0aec8,1], gradeHi:[0xf2cca8,1],
+    fogStart:480, fogDist:1300, exp:1.24, f0:0.135, fexp:2.55, sheen:0.40, gridI:0.205, swell:0.34, night:0 },
   { name:'Squall',
     cells:[['Hour','14:40 local'],['Sea','rough 3.4 m'],['Visibility','6 km'],['Wind','250/28']], era:0, blurb:'Modern fleet &middot; afternoon squall &middot; swell 3.4m', cond:'14:40 local &middot; swell 3.4m &middot; vis 6km &middot; wind 250/28',
     sunAz:-0.86, sunEl:0.60, sunCol:[0xc9d6e2,1.32],
@@ -3953,7 +3958,7 @@ const SPRAY = { mesh:null, k:0 };
    ------------------------------------------------------------ */
 const FLR_DUR = 9.8;        /* the whole run, launch to touchdown */
 const FLR_WET = 2.6;        /* and after it: the chute lies on the water, then goes under */
-const FLR_FOOT = 1.8;       /* half the canister: the height its centre rides above the sea */
+const FLR_FOOT = 1.25;      /* half the canister: the height its centre rides above the sea */
 const FLR_UP  = 0.15;       /* the share of it spent climbing */
 const _wetCol = TC(0x5a6878);
 const FLR = { grp:null, star:null, canopy:null, trails:[],
@@ -3989,14 +3994,17 @@ const FLR = { grp:null, star:null, canopy:null, trails:[],
      burning end at its foot. It is opaque and drawn with depth, and the star
      sprite tests against it — so against its own glow it stands out as a
      silhouette instead of dissolving into white. */
-  FLR.can = new T.Mesh(new T.CylinderGeometry(0.78, 0.78, 3.6, 14, 1),
-                       new T.MeshBasicMaterial({ color:TC(0x2a2f36) }));
+  /* pale metal, lit by the star at its foot: the first version read pale
+     only by accident (its colour was being ignored), and made properly dark it
+     vanished into the dusk — pale is what it should have been */
+  FLR.can = new T.Mesh(new T.CylinderGeometry(0.52, 0.52, 2.5, 14, 1),
+                       new T.MeshBasicMaterial({ color:TC(0xdcdfe4) }));
   FLR.can.visible = false; scene.add(FLR.can);
   /* four shroud lines from the canister's head to the canopy rim. They are
      built at full size and scaled with the canopy as it opens, so the chute
      comes out of the canister instead of appearing above it. */
   {
-    const RIM_R = 7.44, RIM_Y = 12.06, HEAD = 1.9, pts = [];
+    const RIM_R = 7.44, RIM_Y = 12.06, HEAD = 1.3, pts = [];
     for(let i=0;i<4;i++){
       const ang = i*Math.PI/2 + Math.PI/4;
       pts.push(0, HEAD, 0, Math.cos(ang)*RIM_R, RIM_Y, Math.sin(ang)*RIM_R);
@@ -5334,12 +5342,15 @@ function cineUpdate(dt){
       const sx = Math.sin(tt*2.35)*0.62 + Math.sin(tt*3.90 + 1.1)*0.38;
       const sy = Math.sin(tt*1.95 + 0.6)*0.60 + Math.sin(tt*3.40)*0.40;
       _flrSide.set(-_flrDir.z, 0, _flrDir.x);
-      _flrLook.addScaledVector(_flrSide, LD*0.095*sx*k);
-      _flrLook.y += LD*0.050*sy*k;
-      _flrSway.set(0, 0, 0).addScaledVector(_flrSide, -LD*0.040*sx*k);
-      _flrSway.y = LD*0.028*Math.sin(tt*2.60 + 2.2)*k;
+      /* about forty per cent of the first pass, which rocked the whole frame
+         like a small boat: enough to read as a light caught in the wind, not
+         so much that the board under it swims */
+      _flrLook.addScaledVector(_flrSide, LD*0.036*sx*k);
+      _flrLook.y += LD*0.019*sy*k;
+      _flrSway.set(0, 0, 0).addScaledVector(_flrSide, -LD*0.015*sx*k);
+      _flrSway.y = LD*0.010*Math.sin(tt*2.60 + 2.2)*k;
       lookSway = _flrSway;
-      CINE.rollWant = (Math.sin(tt*2.10 + 0.4)*0.050 + Math.sin(tt*3.70)*0.018)*k;
+      CINE.rollWant = (Math.sin(tt*2.10 + 0.4)*0.019 + Math.sin(tt*3.70)*0.007)*k;
       /* the lag is only for the fall. Through the hand-off from the climb the
          aim has to travel a long way fast, and a lazy aim there let the star
          run off the right edge of the frame */
