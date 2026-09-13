@@ -1135,6 +1135,7 @@ const SH = {
   uMidSky    : {value:Cs(0x2f6da8, 1.0)},
   uHaze      : {value:Cs(0xdcc6ac, 1.06)},
   uHazeWarm  : {value:Cs(0xf7d6ac, 1.14)},
+  uGlow      : {value:0.0},
   uDeep      : {value:Cs(0x16386f, 1.0)},
   uOccA      : {value:occA},
   uOccB      : {value:occB},
@@ -1165,6 +1166,7 @@ precision highp float;
 uniform float uTime;
 uniform vec3  uCam, uSunDir, uSunCol;
 uniform vec3  uZenith, uMidSky, uHaze, uHazeWarm, uDeep;
+uniform float uGlow;
 uniform vec4  uOccA[NOCC];
 uniform vec4  uOccB[NOCC];
 uniform float uFogStart, uFogDist, uFogH, uNight, uHide, uFogPush;
@@ -1196,8 +1198,16 @@ vec3 skyColor(vec3 d){
   vec3 c = mix(uZenith, uMidSky, smoothstep(0.0, 1.0, pow(k, 1.35)));
   c = mix(c, uHaze, pow(k, 5.6));
   float sd = max(dot(normalize(d), uSunDir), 0.0);
-  c += uSunCol * pow(sd, 22.0) * 0.62;
-  c += uSunCol * pow(sd, 3.2)  * 0.115;
+  /* uGlow is Morning's clear air, zero elsewhere. It shrinks the halo round
+     the sun — thirty degrees of it, in frame with a sun on the horizon, fed the
+     bloom until the whole picture went to cream — and gives back a small hot
+     disc instead, with the warmth laid in a band along the horizon on the
+     sun's side, so the sky above can stay blue. */
+  c += uSunCol * pow(sd, 22.0) * 0.62 * (1.0 - 0.84*uGlow);
+  c += uSunCol * pow(sd, 3.2)  * 0.115 * (1.0 - 0.82*uGlow);
+  c += uSunCol * pow(sd, 1400.0) * 1.8 * uGlow;
+  c += uSunCol * pow(sd, 160.0) * 0.22 * uGlow;
+  c += uHazeWarm * pow(sd, 2.4) * pow(k, 30.0) * 1.6 * uGlow;
   c *= mix(1.0, 0.42, smoothstep(0.0, -0.22, d.y));
   return c;
 }
@@ -1335,7 +1345,7 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
   uniform vec4  uMark[NMARK];
   uniform vec3  uFire;
   uniform vec2  uGridCS;
-  uniform float uCell, uGridI, uF0, uFExp, uSheen;
+  uniform float uCell, uGridI, uF0, uFExp, uSheen, uRipple;
   uniform vec3 uShad;
   uniform float uFireI;
   uniform vec3 uBlastP; uniform float uBlastI, uBlastR;
@@ -1375,7 +1385,7 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
       vec2 q = vW.xz*0.085 + vec2(uTime*0.021, uTime*-0.013);
       float e = 0.55;
       float n0 = fbm(q), nx = fbm(q+vec2(e,0.0)), nz = fbm(q+vec2(0.0,e));
-      N = normalize(N + vec3(-(nx-n0), 0.0, -(nz-n0))*0.12*lod);
+      N = normalize(N + vec3(-(nx-n0), 0.0, -(nz-n0))*0.12*lod*uRipple);
     }
     N = normalize(mix(N, vec3(0.0,1.0,0.0), smoothstep(900.0, 2100.0, vD)));
     vec3 V = normalize(uCam - vW);
@@ -1649,6 +1659,7 @@ const waterUnis = U({
   uF0     :{value:0.085},
   uFExp   :{value:3.05},
   uSheen  :{value:0.26},
+  uRipple :{value:1.0},
   uShad   :{value:Cs(0x3d669e, 0.62)},
   uFireI  :{value:0.0},
   uBlastP :{value:new T.Vector3()},
@@ -3681,39 +3692,31 @@ sizeTargets();
    ENVIRONMENTS — two grades of the same sea, cross-faded
    ============================================================ */
 const ENVS = [
-  /* MORNING. It kept the seventeenth-century fleet because the palette was
-     built for it; but a theatre is a light, not a period, and this one is the
-     best light in the piece. It carries the modern fleet like the others. */
-  /* MORNING, GLASS. A sea this calm has almost no colour of its own: it is a
-     mirror, so what it shows is the sky. That is why the change is less in the
-     water than above it — the fresnel base goes up so the surface reflects even
-     looking down, and the sky it reflects goes warm, from a violet zenith
-     through rose to a gold horizon. The mid sky is a dusty rose and not a
-     lilac: with the sun behind the eye, it is most of what the sea reflects,
-     and a lilac there turned the whole foreground violet. The water body keeps
-     a dusky indigo so the warmth has something to sit on, and the shadows are
-     graded a greyed lilac — the complement of the gold, not a second
-     temperature. */
+  /* MORNING. A theatre is a light, not a period: it carries the modern fleet like the others. */
+  /* MORNING, AFTER THE PHOTOGRAPH. The warm-everywhere version was a sky
+     painted orange from top to bottom; a real low sun over a still sea is
+     mostly BLUE — a clear blue overhead paling to a washed cyan, and the gold
+     held in a band along the horizon and a pool round the sun. The sea is a
+     mirror of exactly that: blue where it reflects the sky, a gold road under
+     the sun, and a dark, cool foreground where it looks down into the water.
+     So the zenith and mid sky go blue, the two hazes carry all the warmth, the
+     body of the water is a deep slate, and the fresnel base goes up so even
+     the near water holds a reflection. */
   { name:'Morning',
-    cells:[['Hour','06:12 local'],['Sea','calm 0.4 m'],['Visibility','14 km'],['Wind','light airs']], era:0, blurb:'Modern fleet &middot; sunrise &middot; a sea like glass', cond:'06:12 local &middot; swell 0.4m &middot; vis 14km &middot; light airs',
-    /* SUNRISE, not first light. The sun sits seven degrees up, so its light is
-       orange and it rakes: long shadows, and the swell faces catch it. Five
-       degrees was truer and drew every hull's shadow as a band across the
-       whole grid — the plot has to stay readable, so the sun comes up two more. The sky
-       is read as three bands the way a real one is — indigo overhead, a coral
-       band through the middle, and at the horizon two different warms: salmon
-       away from the sun, gold toward it. Shadows go violet, which is what the
-       blue of the sky does to them when the sun is this low and this orange. */
-    /* SOFTENED. At full strength every warm was pure — orange light, gold
-       haze, salmon sky — and a whole screen of it glared. The same bands stay,
-       each greyed toward pastel: peach light instead of orange, a powder rose
-       sky, a haze with some grey in it, and a lower exposure so the sun path is
-       the only thing allowed to be bright. */
-    sunAz:-1.48, sunEl:0.125, sunCol:[0xffac78,1.90],
-    zenith:[0x242b4e,1], midSky:[0xb08b92,1], haze:[0xd9a592,1.0], hazeWarm:[0xf0bf8c,1.12],
-    deep:[0x2c2d42,1], shoal:[0x8a8290,1], shad:[0x68668a,0.80], foam:[0xf2e6da,1],
-    gradeLo:[0xb0aec8,1], gradeHi:[0xf2cca8,1],
-    fogStart:480, fogDist:1300, exp:1.24, f0:0.135, fexp:2.55, sheen:0.40, gridI:0.205, swell:0.34, night:0 },
+    cells:[['Hour','06:12 local'],['Sea','glassy 0.1 m'],['Visibility','20 km'],['Wind','calm']], era:0, blurb:'Modern fleet &middot; sunrise &middot; a sea like glass', cond:'06:12 local &middot; swell 0.1m &middot; vis 20km &middot; calm',
+    /* the sun just clear of the horizon and gold, not orange; a little higher
+       than truth so hull shadows do not band the whole plot */
+    sunAz:-1.48, sunEl:0.105, sunCol:[0xffbd58,1.70],
+    zenith:[0x2560a0,1], midSky:[0x7eaacb,1], haze:[0xa9bfcc,1.0], hazeWarm:[0xffab3e,1.20],
+    deep:[0x14223a,1], shoal:[0x3e5c7c,1], shad:[0x4b5c7c,0.80], foam:[0xfff1dc,1],
+    /* the grade stays neutral: it multiplies every bright pixel, so even a
+       pale warm grade on the highlights took the blue out of the whole sky —
+       the gold belongs to the sun and the horizon alone */
+    gradeLo:[0xa2b8d2,1], gradeHi:[0xfffbf5,1],
+    /* GLASS. The swell is almost nothing and the fine ripple is cut to a
+       third, so the surface stops breaking the sky into scales and gives it
+       back whole; what ripple is left is what stretches the sun into a road */
+    fogStart:900, fogDist:2600, exp:1.08, f0:0.10, fexp:2.60, sheen:0.60, gridI:0.205, swell:0.10, ripple:0.32, glow:1.0, night:0 },
   { name:'Squall',
     cells:[['Hour','14:40 local'],['Sea','rough 3.4 m'],['Visibility','6 km'],['Wind','250/28']], era:0, blurb:'Modern fleet &middot; afternoon squall &middot; swell 3.4m', cond:'14:40 local &middot; swell 3.4m &middot; vis 6km &middot; wind 250/28',
     sunAz:-0.86, sunEl:0.60, sunCol:[0xc9d6e2,1.32],
@@ -3753,7 +3756,9 @@ for(const e of ENVS) for(const k of ['sunCol','zenith','midSky','haze','hazeWarm
   e['_'+k] = Cs(e[k][0], e[k][1]);
 
 const ENV_V = ['sunCol','zenith','midSky','haze','hazeWarm','deep','shoal','shad','foam','gradeLo','gradeHi'];
-const ENV_S = ['sunAz','sunEl','fogStart','fogDist','exp','f0','fexp','sheen','gridI','swell','night'];
+/* ripple: how much fine texture the water carries on top of the swell — 1 everywhere but the glassy morning */
+for(const e of ENVS){ if(e.ripple === undefined) e.ripple = 1; if(e.glow === undefined) e.glow = 0; }
+const ENV_S = ['sunAz','sunEl','fogStart','fogDist','exp','f0','fexp','sheen','gridI','swell','ripple','glow','night'];
 const CUR = {};
 for(const f of ENV_V) CUR[f] = ENVS[1]['_'+f].clone();
 for(const f of ENV_S) CUR[f] = ENVS[1][f];
@@ -3778,6 +3783,8 @@ function applyEnv(E){
   waterUnis.uF0.value    = E.f0;
   waterUnis.uFExp.value  = E.fexp;
   waterUnis.uSheen.value = E.sheen;
+  waterUnis.uRipple.value = E.ripple;
+  SH.uGlow.value = E.glow;
   waterUnis.uGridI.value = E.gridI;
   const ce = Math.cos(E.sunEl);
   SH.uSunDir.value.set(Math.sin(E.sunAz)*ce, Math.sin(E.sunEl), Math.cos(E.sunAz)*ce);
