@@ -658,19 +658,25 @@
      wait is part of the battery, so it belongs on the battery and not in a
      panel beside it. A charging chip does not take the pointer — the cadence
      is a rule, and a rule you can click through is decoration. */
-  .chip .cd{position:absolute;inset:0;pointer-events:none;transform:rotate(-90deg)}
-  .chip .cd circle{fill:none;stroke-width:1.8;stroke-linecap:round}
-  .chip .cd .bg{stroke:rgba(206,224,236,.12)}
-  .chip .cd .fg{stroke:rgba(157,240,220,.50);stroke-dasharray:0 999;
-      transition:stroke-dasharray 460ms cubic-bezier(.3,.9,.2,1), stroke 300ms ease}
-  /* charging is not the same as unavailable: it dims, but it keeps its ring */
-  .chip.cool{opacity:1;pointer-events:none;color:rgba(224,233,240,.30)}
-  .chip.cool .cd .bg{stroke:rgba(206,224,236,.14)}
-  /* READY says so in the colour the whole system uses for it, and the ring
-     closes: a full circle is the only state that needs no counting. */
-  .chip.rdy{color:rgba(180,246,230,.98);background:rgba(157,240,220,.11)}
-  .chip.rdy .cd .fg{stroke:rgba(180,246,230,.95)}
-  .chip.rdy svg.i0, .chip.rdy > svg{filter:drop-shadow(0 0 5px rgba(157,240,220,.70))}
+  /* width and height explicitly: `inset:0` positions it but does not size it,
+     and the generic `.chip svg` rule pins every svg in here to 16px — which
+     left the ring a sixteenth of the chip, in its top-left corner. */
+  .chip .cd{position:absolute;inset:0;width:100%;height:100%;
+      pointer-events:none;transform:rotate(-90deg)}
+  .chip .cd circle{fill:none;stroke-width:2.6;stroke-linecap:round}
+  .chip .cd .bg{stroke:rgba(206,224,236,.13)}
+  .chip .cd .fg{stroke:rgba(170,242,224,.92);stroke-dasharray:0 999;
+      transition:stroke-dasharray 460ms cubic-bezier(.3,.9,.2,1)}
+  /* THE RING IS THE WAIT. A full circle is a thing to read; an absent one is
+     not. So when the battery is ready the ring goes altogether and the chip
+     simply lights — the only two states are counting and done counting. */
+  .chip .cd{opacity:1;transition:opacity 340ms ease}
+  .chip.rdy .cd{opacity:0}
+  /* charging is not the same as unavailable: it is dim, but it is working */
+  .chip.cool{opacity:1;pointer-events:none;color:rgba(224,233,240,.34)}
+  .chip.on .cd{filter:none}
+  .chip.rdy{color:rgba(180,246,230,.98);background:rgba(157,240,220,.13)}
+  .chip.rdy svg{filter:drop-shadow(0 0 5px rgba(157,240,220,.75))}
   /* name tag, so an icon-only HUD still says what it is */
   .chip::after{content:attr(data-l);position:absolute;right:calc(100% + 14px);top:50%;
       transform:translate(6px,-50%);opacity:0;pointer-events:none;white-space:nowrap;
@@ -5023,10 +5029,15 @@ function cineUpdate(dt){
     lookDir = _flrDir;
     if(u < FLR_UP){ _flrLook.copy(FLR.star.position); LD = 132; LH = 26; }
     else {
-      const a = (u - FLR_UP)/(1 - FLR_UP);
-      _flrLook.copy(FLR.lit.position);
-      /* it opens out as the block fills in, and comes down with the light */
-      LD = 210 - 40*a; LH = 150 - 58*a;
+      /* FRAME THE PAIR, not the block. Aimed at the squares alone the star sat
+         above the top edge for most of the fall — a shot of a star shell has
+         to contain the star shell. So the eye holds a point between them and
+         stands off far enough for the whole drop to fit, closing in as the
+         light comes down and the pair draws together. */
+      const sp = Math.max(34, FLR.pos.y);
+      _flrLook.copy(FLR.lit.position).lerp(FLR.pos, 0.40);
+      LD = 128 + sp*1.05;
+      LH = 22 + sp*0.26;
     }
     look = _flrLook;
   } else if(ANIM.cat >= 0){
