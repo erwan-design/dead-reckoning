@@ -1149,6 +1149,7 @@ const SH = {
   uSwell     : {value:1.0},
   uPost      : {value:posts},
   uSunXZ     : {value:new T.Vector2(-SUN.x/SUN.y, -SUN.z/SUN.y)},
+  uShadDir   : {value:SUN.clone()},
   /* scars: xyz = where she was hit, w = how far the soot spread */
   uDmg       : {value:[new T.Vector4(0,0,0,1), new T.Vector4(0,0,0,1), new T.Vector4(0,0,0,1)]},
   uDmgI      : {value:[0, 0, 0]}
@@ -1174,6 +1175,7 @@ uniform vec2  uWC;
 uniform float uSwell;
 uniform vec4  uPost[NPOST];
 uniform vec2  uSunXZ;
+uniform vec3  uShadDir;
 `;
 
 const G_NOISE = `
@@ -1391,7 +1393,7 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
     vec3 V = normalize(uCam - vW);
     float sh = 1.0;
     if(length(vW.xz - vec2(120.0, -10.0)) < 700.0){
-      sh = shadowAt(vW + vec3(0.0,0.30,0.0), uSunDir)*postShadow(vW.xz);
+      sh = shadowAt(vW + vec3(0.0,0.30,0.0), uShadDir)*postShadow(vW.xz);
     }
 
     vec3 R = reflect(-V, N); R.y = max(R.y, 0.006);
@@ -1743,7 +1745,7 @@ const SOLID_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
       soot = max(soot, clamp(sm, 0.0, 1.0)*uDmgI[i]);
     }
     base = mix(base, base*0.11, soot*0.86);
-    float sh = shadowAt(vW + N*0.9 + vec3(0.0,0.25,0.0), uSunDir)*postShadow(vW.xz + N.xz*0.9);
+    float sh = shadowAt(vW + N*0.9 + vec3(0.0,0.25,0.0), uShadDir)*postShadow(vW.xz + N.xz*0.9);
     float ndl = dot(N, uSunDir);
     float dif = max(ndl, 0.0)*sh;
     vec3 amb = mix(uHaze*0.60, uMidSky*1.35, clamp(N.y*0.5 + 0.5, 0.0, 1.0))*uAmb;
@@ -3708,7 +3710,7 @@ const ENVS = [
        than truth so hull shadows do not band the whole plot */
     sunAz:-1.48, sunEl:0.105, sunCol:[0xffbd58,1.70],
     zenith:[0x2560a0,1], midSky:[0x7eaacb,1], haze:[0xa9bfcc,1.0], hazeWarm:[0xffab3e,1.20],
-    deep:[0x14223a,1], shoal:[0x3e5c7c,1], shad:[0x4b5c7c,0.80], foam:[0xfff1dc,1],
+    deep:[0x14223a,1], shoal:[0x3e5c7c,1], shad:[0x8b9dba,0.95], foam:[0xfff1dc,1],
     /* the grade stays neutral: it multiplies every bright pixel, so even a
        pale warm grade on the highlights took the blue out of the whole sky —
        the gold belongs to the sun and the horizon alone */
@@ -3716,7 +3718,7 @@ const ENVS = [
     /* GLASS. The swell is almost nothing and the fine ripple is cut to a
        third, so the surface stops breaking the sky into scales and gives it
        back whole; what ripple is left is what stretches the sun into a road */
-    fogStart:900, fogDist:2600, exp:1.08, f0:0.10, fexp:2.60, sheen:0.60, gridI:0.205, swell:0.10, ripple:0.32, glow:1.0, night:0 },
+    fogStart:900, fogDist:2600, exp:1.08, f0:0.10, fexp:2.60, sheen:0.60, gridI:0.205, swell:0.10, ripple:0.32, glow:1.0, shEl:0.36, night:0 },
   { name:'Squall',
     cells:[['Hour','14:40 local'],['Sea','rough 3.4 m'],['Visibility','6 km'],['Wind','250/28']], era:0, blurb:'Modern fleet &middot; afternoon squall &middot; swell 3.4m', cond:'14:40 local &middot; swell 3.4m &middot; vis 6km &middot; wind 250/28',
     sunAz:-0.86, sunEl:0.60, sunCol:[0xc9d6e2,1.32],
@@ -3757,8 +3759,8 @@ for(const e of ENVS) for(const k of ['sunCol','zenith','midSky','haze','hazeWarm
 
 const ENV_V = ['sunCol','zenith','midSky','haze','hazeWarm','deep','shoal','shad','foam','gradeLo','gradeHi'];
 /* ripple: how much fine texture the water carries on top of the swell — 1 everywhere but the glassy morning */
-for(const e of ENVS){ if(e.ripple === undefined) e.ripple = 1; if(e.glow === undefined) e.glow = 0; }
-const ENV_S = ['sunAz','sunEl','fogStart','fogDist','exp','f0','fexp','sheen','gridI','swell','ripple','glow','night'];
+for(const e of ENVS){ if(e.ripple === undefined) e.ripple = 1; if(e.glow === undefined) e.glow = 0; if(e.shEl === undefined) e.shEl = 0; }
+const ENV_S = ['sunAz','sunEl','fogStart','fogDist','exp','f0','fexp','sheen','gridI','swell','ripple','glow','shEl','night'];
 const CUR = {};
 for(const f of ENV_V) CUR[f] = ENVS[1]['_'+f].clone();
 for(const f of ENV_S) CUR[f] = ENVS[1][f];
@@ -3788,7 +3790,14 @@ function applyEnv(E){
   waterUnis.uGridI.value = E.gridI;
   const ce = Math.cos(E.sunEl);
   SH.uSunDir.value.set(Math.sin(E.sunAz)*ce, Math.sin(E.sunEl), Math.cos(E.sunAz)*ce);
-  SH.uSunXZ.value.set(-SH.uSunDir.value.x/SH.uSunDir.value.y, -SH.uSunDir.value.z/SH.uSunDir.value.y);
+  /* SHADOWS HAVE THEIR OWN SUN. A shadow is as long as the sun is low, and
+     Morning's sun sits on the horizon for the picture — which laid every hull
+     and post down across the plot as a dark band ten times its height. So
+     shadows are cast from a sun no lower than shEl, while the sky, the light
+     and the glitter keep the real one. shEl is 0 in every other theatre. */
+  const se = Math.max(E.sunEl, E.shEl), sc = Math.cos(se);
+  SH.uShadDir.value.set(Math.sin(E.sunAz)*sc, Math.sin(se), Math.cos(E.sunAz)*sc);
+  SH.uSunXZ.value.set(-SH.uShadDir.value.x/SH.uShadDir.value.y, -SH.uShadDir.value.z/SH.uShadDir.value.y);
 }
 function pushEnv(){ applyEnv(CUR); }
 /* the tactical plot is always read after dark, whatever the weather below */
