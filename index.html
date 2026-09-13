@@ -630,6 +630,37 @@
   .half .ln{display:block}
   .half i{font-style:normal;color:rgba(168,240,224,.5)}
   body.split .hint{display:none}
+  /* THE ENGAGEMENT READOUT. Top right of the stage, whichever board is up:
+     it is the match's clock, not a board's caption, so it answers to the
+     frame. Neutral ink — it belongs to neither side, and the system gives an
+     accent colour only to a side. The one exception is a battery that is
+     ready, because a ready battery is hers. */
+  /* 176 wide: the upper board's right edge projects at 533, and a box that
+     reached 534 would have touched it however far right the ink sits */
+  #match{position:absolute;top:22px;right:26px;z-index:5;width:176px;text-align:right;
+      pointer-events:none;user-select:none;
+      font:400 9px/1.8 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.15em;text-transform:uppercase;color:rgba(233,224,232,.50);
+      text-shadow:0 1px 2px rgba(4,7,13,.95), 0 0 18px rgba(4,7,13,.9);
+      opacity:0;transition:opacity 500ms ease}
+  body.s-play #match{opacity:1}
+  body.bare #match{opacity:0!important}
+  /* tracking is added after the last letter too; pulling it back is what
+     makes a right-aligned column actually meet the margin */
+  #match .mu, #match .mr{margin-right:-.15em}
+  #match .mt{display:block;margin:0 -.30em 9px 0;font-size:12px;line-height:1.25;
+      letter-spacing:.30em;color:rgba(240,234,238,.90);font-variant-numeric:tabular-nums}
+  #match .v{color:rgba(240,232,238,.82);font-variant-numeric:tabular-nums}
+  #match .v.ok{color:rgba(180,246,230,.94)}
+  #match .mb{display:block;margin:5px 0 8px auto;width:96px;height:2px;border-radius:2px;
+      overflow:hidden;background:rgba(236,241,246,.14)}
+  #match .mb i{display:block;width:100%;height:100%;transform-origin:left center;
+      transform:scaleX(0);background:rgba(236,241,246,.58)}
+  body.trad #match .mr{display:none}
+  /* one shot a turn: while the exchange runs the rail takes no second one,
+     and says so by dimming until the hand comes back */
+  body.exch #rail .chip{pointer-events:none}
+  body.exch #rail .chip.rdy{opacity:.45}
   /* traditional: one cell a turn, and no battery to choose from */
   body.trad #rail{opacity:0!important;pointer-events:none}
   /* THE ENEMY READOUT LEAVES ITS GLASS. Two panes stacked in the gutter made a
@@ -779,6 +810,14 @@
     <div class="pan" id="rfleet"></div>
     <div class="pan" id="rhulls"></div>
   </div>
+</div>
+<!-- THE ENGAGEMENT, TOP RIGHT: the match's own clock. It answers to the stage,
+     not to a half, so the swap never moves it. -->
+<div id="match">
+  <b class="mt">T+00:20</b>
+  <div class="mu"></div>
+  <span class="mb"><i></i></span>
+  <div class="mr"></div>
 </div>
 <!-- TWO CHIPS BECOME ONE. Sound and the four framings are both settings,
      not manoeuvres: they belong behind one entry rather than taking two
@@ -3615,17 +3654,72 @@ const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
    the torpedo — the only shot that cannot come back empty-handed — waits
    longest for it. */
 const TURN_S = 4.0;
-const CD = { flare:{ n:3, t:3, acc:0 }, cat:{ n:4, t:4, acc:0 }, tor:{ n:5, t:5, acc:0 } };
+const CD = { flare:{ n:3, t:3 }, cat:{ n:4, t:2 }, tor:{ n:5, t:0 } };
+const CDN = { flare:'Star shell', cat:'Air strike', tor:'Torpedo' };
+/* THE ENGAGEMENT CLOCK. Two different things, kept apart on purpose.
+   Time runs: T+ is a match clock and counts whether or not anyone acts.
+   Turns do not: a turn is a shot and its reply, so a turn only passes when a
+   shot is fired — un tour, une touche. That is also what keeps the rail
+   readable: nothing on it changes while the game is waiting for your move.
+   The readout's turn number and the rings notch on the same frame, because
+   they are the same clock. */
+const MATCH = { t:0, acc:-1, turn:6, sec:-1, dirty:true };   /* acc < 0: no exchange */
+function matchReset(){
+  /* the opening rail is staged to show the three reload states side by side:
+     the torpedo cold, the strike half-way, the star shell ready to use */
+  MATCH.turn = 6; MATCH.t = 5*TURN_S; MATCH.acc = -1; MATCH.sec = -1; MATCH.dirty = true;
+  CD.flare.t = 3; CD.cat.t = 2; CD.tor.t = 0;
+  document.body.classList.remove('exch');
+}
+/* a shot opens the exchange; the turn closes when the exchange does */
+function matchShot(){
+  if(MATCH.acc >= 0) return;
+  MATCH.acc = 0; MATCH.dirty = true;
+  document.body.classList.add('exch');
+}
+function matchSpend(k){ CD[k].t = 0; matchShot(); }
 function cdStep(dt){
-  let moved = false;
-  for(const k in CD){
-    const c = CD[k];
-    if(c.t >= c.n) continue;
-    c.acc += dt;
-    /* a notch a turn, not a smooth sweep: the thing being counted is turns */
-    while(c.acc >= TURN_S && c.t < c.n){ c.acc -= TURN_S; c.t++; moved = true; }
+  /* the game only runs while you are in it */
+  if(!document.body.classList.contains('s-play')) return;
+  MATCH.t += dt;
+  if(MATCH.acc >= 0){
+    MATCH.acc += dt;
+    if(MATCH.acc >= TURN_S){
+      /* the hand comes back: a turn has passed, and every battery that is not
+         full takes its notch — the one just fired included, which is what
+         makes a strike spent on nine come back on thirteen */
+      MATCH.acc = -1; MATCH.turn++;
+      for(const k in CD){ const c = CD[k]; if(c.t < c.n) c.t++; }
+      document.body.classList.remove('exch');
+      MATCH.dirty = true; refreshUI();
+    }
   }
-  if(moved) refreshUI();
+  matchReadout();
+}
+const matchEl = document.getElementById('match');
+function matchReadout(){
+  if(!matchEl) return;
+  /* the exchange in progress, redrawn every frame: it is the one live motion
+     in the readout, and it is what the turn number is counting */
+  const bar = matchEl.querySelector('.mb i');
+  if(bar) bar.style.transform = 'scaleX(' + (MATCH.acc < 0 ? 0 : Math.min(1, MATCH.acc/TURN_S)).toFixed(3) + ')';
+  const sec = Math.floor(MATCH.t);
+  if(sec === MATCH.sec && !MATCH.dirty) return;
+  MATCH.sec = sec; MATCH.dirty = false;
+  const mm = String(Math.floor(sec/60)).padStart(2, '0'), ss = String(sec % 60).padStart(2, '0');
+  const ready = Object.keys(CD).filter(k => CD[k].t >= CD[k].n);
+  let bat;
+  if(ready.length === 3) bat = '<span class="k">Batteries</span> <span class="v ok">all ready</span>';
+  else if(ready.length)  bat = '<span class="k">Ready</span> <span class="v ok">'
+                              + ready.map(k => CDN[k]).join(' &middot; ') + '</span>';
+  else {
+    const k = Object.keys(CD).sort((a, b) => (CD[a].n - CD[a].t) - (CD[b].n - CD[b].t))[0];
+    bat = '<span class="k">Next</span> <span class="v">' + CDN[k] + ' in ' + (CD[k].n - CD[k].t) + '</span>';
+  }
+  matchEl.querySelector('.mt').textContent = 'T+' + mm + ':' + ss;
+  matchEl.querySelector('.mu').innerHTML = '<span class="k">Turn</span> <span class="v">'
+                                         + String(MATCH.turn).padStart(2, '0') + '</span>';
+  matchEl.querySelector('.mr').innerHTML = bat;
 }
 const SINK_DUR = 11.0;
 const SALVO_DUR = 9.0;
@@ -3638,6 +3732,7 @@ function setStrike(on){
 }
 function launch(){
   setSink(false);
+  matchShot();
   const sail = ANIM.era === 1;
   /* a ball goes out flat and heavy; a round goes up and over */
   MIS.H = sail ? 27 : 58;
@@ -3654,7 +3749,7 @@ function launch(){
 }
 function torpedo(){
   setSink(false);
-  CD['tor'].t = 0; CD['tor'].acc = 0;
+  matchSpend('tor');
   ANIM.tor = 0; ANIM.torHit = false;
   for(const t of TOR.trails){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
   marks[14].w = marks[15].w = 0;
@@ -3905,7 +4000,7 @@ function litCount(x0, z0){
 }
 function flare(){
   setSink(false);
-  CD['flare'].t = 0; CD['flare'].acc = 0;
+  matchSpend('flare');
   /* the escort carries the eyes: the smallest hull, the one most easily lost */
   const sh = shipNamed('escort') || shipNamed('destroyer');
   FLR.A.set(sh ? sh.pos.x : 0, 9, sh ? sh.pos.z : 0);
@@ -3939,7 +4034,7 @@ function flare(){
 const CAT_DUR = 21.0;
 const _tl = new T.Vector3(), _bw = new T.Vector3(), _bw2 = new T.Vector3();
 function catapult(){
-  CD['cat'].t = 0; CD['cat'].acc = 0;
+  matchSpend('cat');
   /* same hull the missile is laid on, so both weapons work one target */
   CAT.target = shipNamed('escort');
   carrier.worldToLocal(_tl.copy(CAT.target.pos));
@@ -4709,7 +4804,13 @@ function refreshUI(){
       b.classList.toggle('cool', !full);
       b.classList.toggle('rdy', full);
       const fg = b.querySelector('.cd .fg');
-      if(fg) fg.setAttribute('stroke-dasharray', (107.44*c.t/c.n).toFixed(1) + ' 999');
+      if(fg){
+        /* an inline style, not the attribute: a stylesheet rule beats an SVG
+           presentation attribute, so the attribute was written and never drawn */
+        fg.style.strokeDasharray = (107.44*c.t/c.n).toFixed(1) + ' 999';
+        /* a zero-length dash with round caps still draws a dot: cold is empty */
+        fg.style.opacity = c.t ? 1 : 0;
+      }
     }
   }
 }
@@ -4792,7 +4893,7 @@ function onCtl(e){
   if(a === 'sink') setSink(ANIM.sink < 0);
   if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true);
     ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
-    ANIM.flr = -1; waterUnis.uLitI.value = 0;
+    ANIM.flr = -1; waterUnis.uLitI.value = 0; matchReset();
     if(FLR.lit){ FLR.lit.visible = false; FLR.lit.material.uniforms.uI.value = 0; }
     if(ANIM.cat >= 0){ ANIM.cat = -1; CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0,0,0);
       for(const t of CAT.trails) t.material.uniforms.uFade.value = 0; } }
@@ -4936,7 +5037,9 @@ const SPLIT = { setup: 0, over: 0 };
 let VIEW = 'attract';
 function setScreen(name, quiet){
   if(SCREENS.indexOf(name) < 0) name = 'attract';
+  const prevScreen = SCREEN;
   SCREEN = name;
+  if(name === 'play' && prevScreen !== 'play') matchReset();
   /* the address is the screen; the split is a way of looking at it */
   const v = (name === 'setup' && SPLIT.setup) ? 'setup2'
           : (name === 'over'  && SPLIT.over)  ? 'over2' : name;
