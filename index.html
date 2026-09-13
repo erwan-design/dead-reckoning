@@ -1106,6 +1106,7 @@ const SH = {
   uOccB      : {value:occB},
   uFogStart  : {value:700.0},
   uFogDist   : {value:1150.0},
+  uFogPush   : {value:0.0},
   uFogH      : {value:0.0042},
   uNight     : {value:0.0},
   uHide      : {value:0.0},
@@ -1132,7 +1133,7 @@ uniform vec3  uCam, uSunDir, uSunCol;
 uniform vec3  uZenith, uMidSky, uHaze, uHazeWarm, uDeep;
 uniform vec4  uOccA[NOCC];
 uniform vec4  uOccB[NOCC];
-uniform float uFogStart, uFogDist, uFogH, uNight, uHide;
+uniform float uFogStart, uFogDist, uFogH, uNight, uHide, uFogPush;
 uniform vec2  uWC;
 uniform float uSwell;
 uniform vec4  uPost[NPOST];
@@ -1215,9 +1216,18 @@ vec3 fogColor(vec3 V){
   return skyColor(normalize(vec3(d.x, max(d.y, 0.0)*0.16 + 0.006, d.z)));
 }
 float fogAmt(vec3 wp, float dist){
-  float f = 1.0 - exp(-pow(max(dist - uFogStart, 0.0)/uFogDist, 1.48));
+  /* uFogPush moves the whole fog out by however far the capture camera has
+     backed off, so the theatre's air sits on the board, not on the lens */
+  float f = 1.0 - exp(-pow(max(dist - uFogStart - uFogPush, 0.0)/uFogDist, 1.48));
   f *= exp(-max(wp.y, 0.0)*uFogH);
-  f = max(f, smoothstep(1850.0, 2320.0, dist));
+  /* the wall that hides the water plane's edge is about the PLANE, so it is
+     measured across the sea from the plane's centre, not from the eye. From
+     the eye it was the same thing at sea level, but a camera backed off and
+     up had everything past 2320 units of air — the whole board — inside it. */
+  /* backed off, the fog no longer covers that edge, and a 470-unit ramp drew
+     it as a hard arc across the sky — so the ramp widens as the fog is pushed */
+  float wall0 = mix(1850.0, 950.0, clamp(uFogPush/2400.0, 0.0, 1.0));
+  f = max(f, smoothstep(wall0, 2320.0, min(dist, length(wp.xz - uWC) + 300.0)));
   return clamp(f, 0.0, 1.0);
 }
 vec3 applyFog(vec3 col, vec3 wp, float dist, vec3 V){
@@ -5709,12 +5719,25 @@ function frame(now){
   if(CINE.w > 0.001 && Math.abs(CINE.roll) > 0.0005) camera.rotateZ(CINE.roll*CINE.w);
   skyMesh.position.copy(camera.position);
 
-  /* keep the dense water under the eye */
-  const wx = Math.round((camera.position.x - Math.sin(az)*300)/8)*8;
-  const wz = Math.round((camera.position.z - Math.cos(az)*300)/8)*8;
+  /* keep the dense water under the eye — and, when the eye has backed a
+     long way off, under what it is looking at. The plane is a disc of about
+     two thousand units of usable sea; centred just ahead of a camera three
+     thousand units out, it ended before the board did, and the grid (which
+     is drawn on the water) was left behind in the haze. */
+  const hd = Math.hypot(tmpT.x - camera.position.x, tmpT.z - camera.position.z);
+  const ahead = Math.max(300, hd - 700);
+  const wx = Math.round((camera.position.x - Math.sin(az)*ahead)/8)*8;
+  const wz = Math.round((camera.position.z - Math.cos(az)*ahead)/8)*8;
   water.position.set(wx, 0, wz);
   farSea.position.set(wx, 0, wz);
   SH.uWC.value.set(wx, wz);
+  /* CAPTURE: THE AIR STAYS WITH THE SUBJECT. The theatres are lit for a
+     camera about 640 units off; backing off to frame a wide shot put the
+     board behind all the fog meant for the horizon. On the capture screen
+     the fog is pushed out by the extra distance, so a wide shot keeps the
+     board as clear as the close one and only the horizon beyond it fades. */
+  SH.uFogPush.value = SCREEN === 'shot'
+    ? Math.max(0, camera.position.distanceTo(tmpT) - AD.camDist) : 0;
 
   SH.uTime.value = tt;
   SH.uCam.value.copy(camera.position);
