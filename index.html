@@ -2704,10 +2704,14 @@ function buildCatPath(tgtLocal){
     tgt,
     at(-78, 42), at(-160, 38),
     new V(-112, 34, -92),  new V(-174, 30, -176),     new V(-204, 26, -270),
-    new V(-182, 22, -352), new V(-110, 19, -398),     new V(-44, 17, -388),
-    new V(-12, 16, -344),  new V(-9, 14.6, -276),     new V(-9, 13.4, -190),
-    new V(-8.8, 12.2, -122), new V(-8.6, 11.2, -74),  new V(-8.5, 10.5, -34),
-    new V(-8.2, 10.3, 10)
+    new V(-182, 22, -352), new V(-110, 19, -398),     new V(-40, 17, -392),
+    /* A CLOSED LOOP. She comes home to the spot she left: round astern,
+       lined up on the catapult track, down over the round-down and along
+       the deck to where she stood — no longer onto the angled deck, from
+       which she used to jump back to the bow in a single frame. */
+    new V(-6, 16, -350),   new V(3.2, 14.8, -280),    new V(4.2, 13.6, -210),
+    new V(4.2, 12.4, -140), new V(4.2, 11.3, -90),    new V(4.2, 10.6, -58),
+    new V(4.2, 10.3, -40), new V(4.2, 10.3, z0)
   ];
   CAT.curve = new T.CatmullRomCurve3(wp, false, 'centripetal');
   let best = 0, bd = 1e9, q = new V();
@@ -2718,10 +2722,25 @@ function buildCatPath(tgtLocal){
   }
   CAT.uOver = best;
   CAT.uRel = Math.max(0.05, best - 0.048);
+  /* THE ROLL-OUT. Everything up to the touchdown flies at one speed; from
+     there to her spot she brakes evenly to a stop. tTD is where on the curve
+     she touches (the first point over the round-down), and the time is shared
+     so the speed carries straight across it: braking over a distance r from
+     speed v takes 2r/v, and the rest of the clock is the flight. */
+  let tTD = 1;
+  for(let i=500;i>=0;i--){ CAT.curve.getPointAt(i/500, q); if(q.z < -52){ tTD = (i + 1)/500; break; } }
+  CAT.tTD = Math.min(0.999, tTD);
+  CAT.fTD = 1/(1 + 2*(1 - CAT.tTD)/CAT.tTD);
+}
+/* clock (0..1 of the flight) to position on the curve */
+function catCurveT(f){
+  if(f <= CAT.fTD) return f*CAT.tTD/CAT.fTD;
+  const s = Math.min(1, (f - CAT.fTD)/(1 - CAT.fTD));
+  return CAT.tTD + (1 - CAT.tTD)*(2*s - s*s);
 }
 function catPath(a, out){
-  const t = a < 0.045 ? 0 : Math.min(1, (a - 0.045)/0.94);
-  return CAT.curve.getPointAt(t, out);
+  const f = a < 0.045 ? 0 : Math.min(1, (a - 0.045)/0.94);
+  return CAT.curve.getPointAt(catCurveT(f), out);
 }
 const _cb1 = new T.Vector3(), _cb2 = new T.Vector3(), _cb3 = new T.Vector3();
 function catBank(a){
@@ -2789,7 +2808,9 @@ function catBank(a){
     }
     return g;
   };
-  for(const [x,z,ry] of [[-5.8,31,0.20],[-5.2,18,0.26],[-4.8,-33,-0.20],[1.6,-42,-0.07]]){
+  /* the fourth is parked clear of the catapult track, which is now also
+     the line she lands along */
+  for(const [x,z,ry] of [[-5.8,31,0.20],[-5.2,18,0.26],[-4.8,-33,-0.20],[-3.4,-45,-0.07]]){
     const g = plane(); g.position.set(x, 10.3, z); g.rotation.y = ry; carrier.add(g);
   }
   /* the one spotted on the bow catapult */
@@ -4547,7 +4568,7 @@ function updateFX(dt){
       p.rotateZ(catBank(u));
     }
     /* the bomb goes at the release point, then flies its own arc */
-    const uRelA = 0.045 + CAT.uRel*0.94;
+    const uRelA = 0.045 + (CAT.uRel*CAT.fTD/CAT.tTD)*0.94;
     if(ANIM.bomb < 0 && CAT.target && u >= uRelA){
       ANIM.bomb = 0;
       CAT.relW.copy(p.getWorldPosition(_bw));
