@@ -654,6 +654,23 @@
   .chip.danger{color:rgba(255,124,104,.62)}
   body:not(.ipad) .chip.danger:hover{color:rgba(255,166,146,.98);background:rgba(255,104,84,.13)}
   .chip.na{opacity:.24;pointer-events:none}
+  /* THE RELOAD, ON THE WEAPON ITSELF. A ring that fills a notch a turn: the
+     wait is part of the battery, so it belongs on the battery and not in a
+     panel beside it. A charging chip does not take the pointer — the cadence
+     is a rule, and a rule you can click through is decoration. */
+  .chip .cd{position:absolute;inset:0;pointer-events:none;transform:rotate(-90deg)}
+  .chip .cd circle{fill:none;stroke-width:1.8;stroke-linecap:round}
+  .chip .cd .bg{stroke:rgba(206,224,236,.12)}
+  .chip .cd .fg{stroke:rgba(157,240,220,.50);stroke-dasharray:0 999;
+      transition:stroke-dasharray 460ms cubic-bezier(.3,.9,.2,1), stroke 300ms ease}
+  /* charging is not the same as unavailable: it dims, but it keeps its ring */
+  .chip.cool{opacity:1;pointer-events:none;color:rgba(224,233,240,.30)}
+  .chip.cool .cd .bg{stroke:rgba(206,224,236,.14)}
+  /* READY says so in the colour the whole system uses for it, and the ring
+     closes: a full circle is the only state that needs no counting. */
+  .chip.rdy{color:rgba(180,246,230,.98);background:rgba(157,240,220,.11)}
+  .chip.rdy .cd .fg{stroke:rgba(180,246,230,.95)}
+  .chip.rdy svg.i0, .chip.rdy > svg{filter:drop-shadow(0 0 5px rgba(157,240,220,.70))}
   /* name tag, so an icon-only HUD still says what it is */
   .chip::after{content:attr(data-l);position:absolute;right:calc(100% + 14px);top:50%;
       transform:translate(6px,-50%);opacity:0;pointer-events:none;white-space:nowrap;
@@ -744,13 +761,13 @@
      they stay in the debug tray, where the rest of the scaffolding lives. -->
 <div class="rail in-a" id="rail">
   <div class="cap">
-    <button class="chip" data-a="tor" data-l="Torpedo"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.9 7c0 1-1.6 1.8-3.4 1.8S5.1 8 5.1 7s1.6-1.8 3.4-1.8S11.9 6 11.9 7z"/><path d="M5.1 5.6 3.7 4.4M5.1 8.4 3.7 9.6"/><circle cx="1.9" cy="7" r=".65"/></svg></button>
+    <button class="chip" data-a="tor" data-l="Torpedo"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.9 7c0 1-1.6 1.8-3.4 1.8S5.1 8 5.1 7s1.6-1.8 3.4-1.8S11.9 6 11.9 7z"/><path d="M5.1 5.6 3.7 4.4M5.1 8.4 3.7 9.6"/><circle cx="1.9" cy="7" r=".65"/></svg></button>
   </div>
   <div class="cap">
-    <button class="chip" data-a="cat" data-l="Catapult"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.8v10.4"/><path d="M1.8 7.7 7 5.9l5.2 1.8"/><path d="M4.5 11.5 7 10.7l2.5.8"/></svg></button>
+    <button class="chip" data-a="cat" data-l="Catapult"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.8v10.4"/><path d="M1.8 7.7 7 5.9l5.2 1.8"/><path d="M4.5 11.5 7 10.7l2.5.8"/></svg></button>
   </div>
   <div class="cap">
-    <button class="chip" data-a="flare" data-l="Star shell"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5.8A5.4 5.4 0 0 1 12 5.8"/><path d="M7 6.2V9"/><path d="M7 10.4v2M4.9 10 3.7 12M9.1 10l1.2 2"/></svg></button>
+    <button class="chip" data-a="flare" data-l="Star shell"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5.8A5.4 5.4 0 0 1 12 5.8"/><path d="M7 6.2V9"/><path d="M7 10.4v2M4.9 10 3.7 12M9.1 10l1.2 2"/></svg></button>
   </div>
 </div>
 <div class="scr" id="scr-shot"></div>
@@ -1415,6 +1432,23 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
       col = mix(col, fc, foam*0.94);
     }
 
+    /* ---- WHITECAPS. A crest tears when it is both high and steep — either
+       alone gives a band of foam that follows the swell like a painted stripe.
+       Gated on the swell itself rather than on a theatre's name, so any sea
+       that gets rough enough breaks, and a calm one never does. ---- */
+    if(uSwell > 1.6){
+      float hgt   = smoothstep(0.44, 1.16, vW.y/max(uSwell, 0.001));
+      float steep = smoothstep(0.996, 0.940, N.y);
+      /* torn, not poured: without the break-up it reads as spilled paint */
+      float brk   = fbm(vW.xz*0.085 + vec2(uTime*0.13, -uTime*0.07));
+      float cap   = hgt*steep*smoothstep(0.36, 0.80, brk)
+                  * smoothstep(1.6, 3.4, uSwell);
+      if(cap > 0.002){
+        vec3 cc = uFoam*(0.52 + 0.70*sh) + uSunCol*0.04*sh;
+        col = mix(col, cc, clamp(cap, 0.0, 1.0)*0.88);
+      }
+    }
+
     /* ---- rain on the surface: rings, and only where they can be seen ----
        Past a couple of hundred metres a ring is smaller than a pixel and all
        it can do is alias, so it is faded out well before that. Two scales,
@@ -1660,15 +1694,20 @@ function roundedBox(w,h,d,r,res){
 /* ============================================================
    RIBBON — a camera-facing trail laid along an arbitrary path
    ============================================================ */
-const TRAIL_VS = G_HEAD + G_NOISE + `
+const TRAIL_VS = G_HEAD + G_NOISE + G_WAVE + `
   attribute vec3 aTan; attribute float aSide; attribute float aT;
-  uniform float uProg, uW, uGrow, uLife, uSeed;
+  uniform float uProg, uW, uGrow, uLife, uSeed, uSea;
   uniform vec3 uDrift;
   varying float vA, vS, vT;
   varying vec3 vWp; varying float vDi;
   void main(){
     float age = max(uProg - aT, 0.0);
     vec3 base = (modelMatrix*vec4(position, 1.0)).xyz;
+    /* A WAKE BELONGS TO THE SURFACE. The path is baked once, on a plane; the
+       boat rides the swell every frame. Without this the gap between them is
+       exactly the wave height — invisible on a flat sea, and a trail floating
+       clear of the tail in anything rougher. Trails in the air keep uSea 0. */
+    if(uSea > 0.5) base.y += waterDisp(base.xz, uTime).y;
     vec3 tanW = mat3(modelMatrix)*aTan;
     vec3 P = base + uDrift*age*(0.35 + age*2.4);
     vec3 toCam = normalize(uCam - P);
@@ -1717,7 +1756,8 @@ function ribbon(pts, o){
     uniforms: U({ uProg:{value:0}, uFade:{value:0}, uW:{value:o.w}, uGrow:{value:o.grow},
                   uLife:{value:o.life}, uSeed:{value:o.seed}, uI:{value:o.i},
                   uDrift:{value:new T.Vector3(o.drift[0], o.drift[1], o.drift[2])},
-                  uTint:{value:Cs(o.tint, o.tintI||1)}, uSkip:{value:new T.Vector2(999,999)} }),
+                  uTint:{value:Cs(o.tint, o.tintI||1)}, uSea:{value:o.sea ? 1 : 0},
+                  uSkip:{value:new T.Vector2(999,999)} }),
     vertexShader: TRAIL_VS, fragmentShader: TRAIL_FS,
     transparent:true, depthWrite:false, side:T.DoubleSide,
     blending: o.add ? T.AdditiveBlending : T.NormalBlending
@@ -2777,16 +2817,20 @@ const TOR = { grp:null, A:new T.Vector3(), B:new T.Vector3(), trails:[],
      So she is set to pass astern of her and hook up onto the escort —
      arc-length parametrised, so she holds her speed all the way round. */
   const WP = [[1.50, 9.13], [5.20, 9.05], [8.55, 8.15], [9.85, 6.45], [9.00, 4.50]];
-  const TPATH = new T.CatmullRomCurve3(WP.map(([gx, gz]) => cellW(gx, gz, 0.5)),
+  /* the path sits ON the water, not half a metre over it: the shader adds
+     the swell, and the body runs half a metre under the foam it leaves */
+  const TPATH = new T.CatmullRomCurve3(WP.map(([gx, gz]) => cellW(gx, gz, 0.05)),
                                        false, 'centripetal', 0.5);
   TOR.at = (t, out) => { TPATH.getPointAt(Math.max(0, Math.min(1, t)), out); return out; };
   const run = [];
   for(let i=0;i<=200;i++) run.push(TOR.at(i/200, new T.Vector3()));
   TOR.trails = [
-    ribbon(run, {w:1.9, grow:4.2, life:1.00, seed:2.1, i:0.50,
-                 drift:[0.30, 1.05, -0.25], tint:0xdff2ee, order:7}),
-    ribbon(run, {w:0.72, grow:1.5, life:0.52, seed:7.7, i:0.80,
-                 drift:[0.16, 0.42, -0.12], tint:0xf6fffd, tintI:1.15, order:9, add:true})
+    /* foam spreads and dies where it was laid; it does not climb. The old
+       vertical drift was borrowed from the exhaust trails, which do. */
+    ribbon(run, {w:1.9, grow:4.2, life:1.00, seed:2.1, i:0.50, sea:true,
+                 drift:[0.30, 0.10, -0.25], tint:0xdff2ee, order:7}),
+    ribbon(run, {w:0.72, grow:1.5, life:0.52, seed:7.7, i:0.80, sea:true,
+                 drift:[0.16, 0.05, -0.12], tint:0xf6fffd, tintI:1.15, order:9, add:true})
   ];
 }
 
@@ -3527,6 +3571,23 @@ function shot(i){
    EVENTS — a strike and a sinking, on demand
    ============================================================ */
 const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
+/* ONE EXCHANGE IS FOUR SECONDS, so a turn is four seconds here. The counts
+   are the cadences the rules give: the reload is the price of certainty, and
+   the torpedo — the only shot that cannot come back empty-handed — waits
+   longest for it. */
+const TURN_S = 4.0;
+const CD = { flare:{ n:3, t:3, acc:0 }, cat:{ n:4, t:4, acc:0 }, tor:{ n:5, t:5, acc:0 } };
+function cdStep(dt){
+  let moved = false;
+  for(const k in CD){
+    const c = CD[k];
+    if(c.t >= c.n) continue;
+    c.acc += dt;
+    /* a notch a turn, not a smooth sweep: the thing being counted is turns */
+    while(c.acc >= TURN_S && c.t < c.n){ c.acc -= TURN_S; c.t++; moved = true; }
+  }
+  if(moved) refreshUI();
+}
 const SINK_DUR = 11.0;
 const SALVO_DUR = 9.0;
 const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, swap:0, env:1, envK:0 };
@@ -3554,6 +3615,7 @@ function launch(){
 }
 function torpedo(){
   setSink(false);
+  CD['tor'].t = 0; CD['tor'].acc = 0;
   ANIM.tor = 0; ANIM.torHit = false;
   for(const t of TOR.trails){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
   marks[14].w = marks[15].w = 0;
@@ -3646,6 +3708,87 @@ const BOLT = { t:-1, seq:[], dur:0, next:3.0 };
 }
 
 /* ------------------------------------------------------------
+   SPINDRIFT — foam torn off the crests and blown down the wind.
+   ------------------------------------------------------------
+   Horizontal where the rain is vertical, and low: it lives in the
+   first few metres above the water, because that is where the wind
+   can still pick it up. Gated on the swell rather than on a
+   theatre's name — a sea that is high enough throws spray whatever
+   the light is doing.
+   ------------------------------------------------------------ */
+const SPRAY_N = 1300, SPRAY_SPAN = 760, SPRAY_W = 340, SPRAY_H = 27;
+const SPRAY = { mesh:null, k:0 };
+{
+  const pos = new Float32Array(SPRAY_N*2*3);
+  const sd  = new Float32Array(SPRAY_N*2);
+  const en  = new Float32Array(SPRAY_N*2);
+  for(let i=0;i<SPRAY_N;i++){
+    /* x runs along the wind, z across it, y is height off the water */
+    const x = Math.random()*SPRAY_SPAN;
+    const z = (Math.random()*2 - 1)*SPRAY_W;
+    /* packed low: the square puts most of them in the first few metres */
+    const y = 1.2 + SPRAY_H*Math.random()*Math.random();
+    const seed = Math.random();
+    for(let k=0;k<2;k++){
+      const j = i*2 + k;
+      pos[j*3] = x; pos[j*3+1] = y; pos[j*3+2] = z;
+      sd[j] = seed; en[j] = k;
+    }
+  }
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.BufferAttribute(pos, 3));
+  g.setAttribute('aSeed',    new T.BufferAttribute(sd, 1));
+  g.setAttribute('aEnd',     new T.BufferAttribute(en, 1));
+
+  const SPRAY_VS = `
+    uniform float uTime, uLen, uSpeed, uSpan;
+    uniform vec3 uCen; uniform vec2 uDir;
+    attribute float aSeed, aEnd;
+    varying float vD, vA;
+    void main(){
+      float sp  = uSpeed*(0.68 + 0.64*aSeed);
+      float len = uLen*(0.55 + 0.90*aSeed);
+      /* it travels down the wind and wraps inside its own patch */
+      float a = mod(position.x + uTime*sp, uSpan) - uSpan*0.5;
+      vec2 side = vec2(-uDir.y, uDir.x);
+      vec2 xz = uDir*a + side*position.z - uDir*(aEnd*len);
+      /* the tail lifts a little: spray climbs as it goes */
+      vec3 p = vec3(xz.x, position.y + aEnd*len*0.09, xz.y) + uCen;
+      vec4 mv = viewMatrix*vec4(p, 1.0);
+      vD = -mv.z;
+      /* what the wind can still carry thins out fast with height */
+      vA = (0.22 + 0.78*aSeed*aSeed)*(1.0 - smoothstep(3.0, 24.0, position.y));
+      gl_Position = projectionMatrix*mv;
+    }`;
+  const SPRAY_FS = `
+    precision highp float;
+    uniform float uI, uNear, uFar;
+    uniform vec3 uCol, uHaze;
+    varying float vD, vA;
+    void main(){
+      float f = smoothstep(uNear, uFar, vD);
+      float n = smoothstep(18.0, 110.0, vD);
+      float a = uI*n*vA*(1.0 - f*0.92)*0.30;
+      if(a < 0.004) discard;
+      gl_FragColor = vec4(mix(uCol, uHaze, f*0.80), a);
+    }`;
+
+  SPRAY.mesh = new T.LineSegments(g, new T.ShaderMaterial({
+    uniforms: U({ uCen:{value:new T.Vector3()}, uI:{value:0},
+                  uSpan:{value:SPRAY_SPAN}, uLen:{value:17.0}, uSpeed:{value:118.0},
+                  uDir:{value:new T.Vector2(0.93, 0.37)},
+                  uCol:{value:Cs(0xeef6f8, 1.0)},
+                  uNear:{value:90.0}, uFar:{value:540.0} }),
+    vertexShader: SPRAY_VS, fragmentShader: SPRAY_FS,
+    transparent:true, depthWrite:false, blending:T.NormalBlending
+  }));
+  SPRAY.mesh.frustumCulled = false;
+  SPRAY.mesh.renderOrder = 11;
+  SPRAY.mesh.visible = false;
+  scene.add(SPRAY.mesh);
+}
+
+/* ------------------------------------------------------------
    THE STAR SHELL — the fourth projectile, and the only one that
    does not damage. It climbs, bursts, and then hangs under a
    canopy burning magnesium while it drifts down, laying a pool of
@@ -3723,6 +3866,7 @@ function litCount(x0, z0){
 }
 function flare(){
   setSink(false);
+  CD['flare'].t = 0; CD['flare'].acc = 0;
   /* the escort carries the eyes: the smallest hull, the one most easily lost */
   const sh = shipNamed('escort') || shipNamed('destroyer');
   FLR.A.set(sh ? sh.pos.x : 0, 9, sh ? sh.pos.z : 0);
@@ -3735,6 +3879,12 @@ function flare(){
   FLR.lit.position.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 0.62));
   FLR.lit.material.uniforms.uI.value = 0;
   FLR.lit.visible = true;
+
+  /* stand off on the far side of the block from the plot's middle: that way
+     the eye looks in across open water and nothing of the fleet is in front */
+  _flrDir.copy(FLR.lit.position).sub(cellW(5, 5, 0)); _flrDir.y = 0;
+  if(_flrDir.lengthSq() < 1) _flrDir.set(0.8, 0, 0.6);
+  _flrDir.normalize();
 
   FLR.B.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 150));  /* it bursts over the block */
   FLR.D.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 9));    /* and comes down in its middle */
@@ -3750,6 +3900,7 @@ function flare(){
 const CAT_DUR = 21.0;
 const _tl = new T.Vector3(), _bw = new T.Vector3(), _bw2 = new T.Vector3();
 function catapult(){
+  CD['cat'].t = 0; CD['cat'].acc = 0;
   /* same hull the missile is laid on, so both weapons work one target */
   CAT.target = shipNamed('escort');
   carrier.worldToLocal(_tl.copy(CAT.target.pos));
@@ -4038,6 +4189,9 @@ function updateFX(dt){
       }
       BOLT.dur = at + 0.34;
       BOLT.next = 5.5 + Math.random()*9.5;
+      /* how far off it struck, in seconds of sound: near ones are loud */
+      const far = 1.1 + Math.random()*5.8;
+      thunder(0.13 + 0.26/far, far);
     }
   } else { BOLT.t = -1; BOLT.next = 2.0; }
   let bolt = 0;
@@ -4064,6 +4218,18 @@ function updateFX(dt){
       /* centred on what the eye is working, not on the eye: in the split the
          camera is moved twice a frame and would drag the column with it */
       RAIN.mesh.material.uniforms.uCen.value.set(CAM.tgt.x, 1.0, CAM.tgt.z);
+    }
+  }
+
+  /* spindrift, on the sea rather than on the calendar: it is the swell that
+     throws it, so it arrives with any theatre rough enough to tear */
+  {
+    const want = Math.max(0, Math.min(1, (SH.uSwell.value - 2.7)/1.2));
+    SPRAY.k += (want - SPRAY.k)*(1 - Math.exp(-dt*1.4));
+    SPRAY.mesh.visible = SPRAY.k > 0.004;
+    if(SPRAY.mesh.visible){
+      SPRAY.mesh.material.uniforms.uI.value = SPRAY.k;
+      SPRAY.mesh.material.uniforms.uCen.value.set(CAM.tgt.x, 0.0, CAM.tgt.z);
     }
   }
 
@@ -4128,6 +4294,8 @@ function updateFX(dt){
     waterUnis.uFlareI.value = 0;
     for(const t of FLR.trails) t.material.uniforms.uFade.value = 0;
   }
+
+  cdStep(dt);
 
   /* environment cross-fade */
   stepEnv(dt);
@@ -4243,6 +4411,32 @@ function panner(v, life){
   p.connect(SND.master);
   setTimeout(() => { try { p.disconnect(); } catch(e){} }, ((life || 2.0) + 0.5)*1000);
   return p;
+}
+/* THUNDER. Light first, sound after: the gap is the distance, and it is the
+   only thing that says the storm is somewhere rather than everywhere. Two
+   swells rather than one hit — thunder arrives in pieces. */
+function thunder(level, dly){
+  if(!ANIM.snd || !SND.ready) return;
+  const ctx = SND.ctx, t = ctx.currentTime + dly;
+  const o = ctx.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(54, t); o.frequency.exponentialRampToValueAtTime(23, t + 2.6);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.0001, t);
+  og.gain.linearRampToValueAtTime(level*0.92, t + 0.26);
+  og.gain.exponentialRampToValueAtTime(0.0006, t + 3.1);
+  o.connect(og); og.connect(SND.master); o.start(t); o.stop(t + 3.3);
+  const s = ctx.createBufferSource(); s.buffer = SND.buf; s.loop = true;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.7;
+  lp.frequency.setValueAtTime(920, t);
+  lp.frequency.exponentialRampToValueAtTime(115, t + 3.4);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(level, t + 0.20);
+  g.gain.linearRampToValueAtTime(level*0.40, t + 0.95);
+  g.gain.linearRampToValueAtTime(level*0.74, t + 1.55);
+  g.gain.exponentialRampToValueAtTime(0.0006, t + 3.7);
+  s.connect(lp); lp.connect(g); g.connect(SND.master);
+  s.start(t); s.stop(t + 3.9);
 }
 function boom(v, level){
   if(!ANIM.snd || !SND.ready) return;
@@ -4469,6 +4663,15 @@ function refreshUI(){
 
                           || (a === 'ipad' && ANIM.ipad));
     if(a === 'split') b.setAttribute('aria-pressed', String(SPLIT[SCREEN] === 1));
+    /* the reload governs the rail only. The tray is scaffolding: it has to be
+       able to fire anything at any moment, cadence or no cadence. */
+    if(CD[a] && b.classList.contains('chip')){
+      const c = CD[a], full = c.t >= c.n;
+      b.classList.toggle('cool', !full);
+      b.classList.toggle('rdy', full);
+      const fg = b.querySelector('.cd .fg');
+      if(fg) fg.setAttribute('stroke-dasharray', (107.44*c.t/c.n).toFixed(1) + ' 999');
+    }
   }
 }
 function closePops(){ for(const s of document.querySelectorAll('.slot')) s.classList.remove('open'); }
@@ -4789,10 +4992,10 @@ const CINE = { w:0, want:0, hold:0, done:false, init:false,
 const _c1 = new T.Vector3(), _c2 = new T.Vector3(), _c3 = new T.Vector3(),
       _cq = new T.Quaternion(), _ct = new T.Vector3(), _cl = new T.Vector3(),
       _orbP = new T.Vector3(), _navW = new T.Vector3();
-const _flrLook = new T.Vector3();
+const _flrLook = new T.Vector3(), _flrDir = new T.Vector3();
 function cineUpdate(dt){
   let want = 0, obj = null, D = 30, H = 8, S = 6, L = 45, look = null, age = 0,
-      LD = 118, LH = 58;
+      LD = 118, LH = 58, lookDir = null;
   /* THE GUN KEEPS THE PLOT. It is the shot you fire every turn, and a camera
      that leaves the board for it would make the ordinary thing ceremonial —
      and would take the plot away four seconds out of five. The three specials
@@ -4813,6 +5016,11 @@ function cineUpdate(dt){
     const u = ANIM.flr;
     age = u*FLR_DUR;
     want = (age > 0.5 && u < 0.95) ? 1 : 0;
+    /* the stand-off side is decided by the board, not by where the rig
+       happens to be. On the split the orbit sits low in the middle of her own
+       formation, so the default — pull back along CINE.pos minus look — put
+       the camera over the fleet and filled the frame with a flight deck. */
+    lookDir = _flrDir;
     if(u < FLR_UP){ _flrLook.copy(FLR.star.position); LD = 132; LH = 26; }
     else {
       const a = (u - FLR_UP)/(1 - FLR_UP);
@@ -4860,8 +5068,11 @@ function cineUpdate(dt){
     }
   } else if(look){
     /* the round has landed: pull back off the impact and watch it */
-    _c2.subVectors(CINE.pos, look); _c2.y = 0;
-    if(_c2.lengthSq() < 1.0) _c2.set(0.8, 0, 0.6);
+    if(lookDir){ _c2.copy(lookDir); }
+    else {
+      _c2.subVectors(CINE.pos, look); _c2.y = 0;
+      if(_c2.lengthSq() < 1.0) _c2.set(0.8, 0, 0.6);
+    }
     _c2.normalize();
     _ct.copy(look).addScaledVector(_c2, LD); _ct.y = look.y + LH;
     if(!CINE.init){ CINE.pos.copy(camera.position); CINE.look.copy(look); CINE.init = true; }
@@ -5149,8 +5360,11 @@ function frame(now){
   SH.uTime.value = tt;
   SH.uCam.value.copy(camera.position);
 
-  /* heavier sea, harder ride */
-  const ss = 1 + 0.75*(SH.uSwell.value - 1);
+  /* HEAVIER SEA, HARDER RIDE — but it has to saturate. Roll goes as slope
+     times this factor, and both grew with the swell: at 4.1 the fleet rolled
+     45 degrees, which is a capsize, not a ship working. A curve that flattens
+     holds a full gale near 24, where a destroyer belongs. */
+  const ss = 1 + 0.85*(1 - Math.exp(-(SH.uSwell.value - 1)*0.75));
   for(let i=0;i<BOBBERS.length;i++){
     const b = BOBBERS[i], o = b.obj, e = 7.0;
     const y  = waterY(o.position.x, o.position.z, tt);
