@@ -418,6 +418,8 @@
       rgba(157,240,220,.7);border-radius:50%;background:rgba(202,249,236,.98)}
   .hrow input[type=range]:focus-visible{outline:2px solid rgba(157,240,220,.8);
       outline-offset:3px;border-radius:3px}
+  #greyr::-webkit-slider-runnable-track{background:linear-gradient(90deg, rgba(70,76,86,.9), rgba(214,220,228,.9))}
+  #greyr::-moz-range-track{background:linear-gradient(90deg, rgba(70,76,86,.9), rgba(214,220,228,.9))}
   .hrow .hv{flex:0 0 auto;min-width:42px;text-align:right;
       font:400 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;
       color:rgba(180,246,230,.92);font-variant-numeric:tabular-nums}
@@ -1033,7 +1035,14 @@
     <h5>Théâtre</h5><div class="drow">
       <button data-e="0">Morning</button><button data-e="1">Squall</button><button data-e="2">Night</button><button data-e="3">Storm</button>
     </div>
+
     <div class="cam" id="camro"></div>
+    <!-- one control for how light the fleet is painted: every tone of every
+         hull moves together, so the steps between them survive any setting -->
+    <h5>Gris des navires</h5><div class="hrow">
+      <input type="range" id="greyr" min="50" max="160" step="1" value="100" aria-label="Intensité du gris des navires">
+      <span class="hv" id="greyv">100%</span>
+    </div>
     <h5>Format</h5><div class="drow">
       <button data-ar="744/1133">iPad</button><button data-ar="1290/2796">iPhone</button>
     </div>
@@ -2083,8 +2092,18 @@ function bob(obj, amt, tilt, k){
                  pa:0, pv:0, ra:0, rv:0 });
 }
 
-const TONE = { hull:0x6b727d, sup:0x434b59, deck:0x525a68, accent:0x21262f,
-               mark:0x767e8d, lamp:0x0c1418 };
+/* the whole ship comes up together, not the hull alone: lifting the hull by
+   itself left the upperworks darker than the hull under them. The original
+   steps between the tones are kept — upperworks a shade over the hull, the
+   deck over that, fittings under it, markings the lightest. */
+const TONE = { hull:0x6b727d, sup:0x7b838f, deck:0x8a929e, accent:0x4a515c,
+               mark:0xa9b0bc, lamp:0x0c1418 };
+/* every painted surface of the fleet, with the tone it was made with, so the
+   grey can be turned up or down from that and back again without drift */
+const SHIPMATS = [];
+function shipGrey(k){
+  for(const e of SHIPMATS) e.m.uniforms.uBase.value.copy(e.base).multiplyScalar(k);
+}
 function shipMat(o){
   o = o || {};
   const P = {
@@ -2094,7 +2113,7 @@ function shipMat(o){
     accent: {color:TONE.accent, lift:1.15, spec:0.23, shin:84, rim:0.20},
     mark  : {color:TONE.mark,   lift:1.12, spec:0.07, shin:26, rim:0.10}
   }[o.kind || 'hull'];
-  return solidMat({
+  const m = solidMat({
     color: o.color !== undefined ? o.color : P.color,
     lift : o.lift  !== undefined ? o.lift  : P.lift,
     spec : o.spec  !== undefined ? o.spec  : P.spec,
@@ -2102,6 +2121,12 @@ function shipMat(o){
     rim  : o.rim   !== undefined ? o.rim   : P.rim,
     dif:1.7, amb:0.72, emis:o.emis, emisI:o.emisI, trans:o.trans, skip:o.skip
   });
+  SHIPMATS.push({ m, base:m.uniforms.uBase.value.clone() });
+  return m;
+}
+{
+  const r = document.getElementById('greyr'), v = document.getElementById('greyv');
+  if(r) r.addEventListener('input', () => { shipGrey(r.value/100); v.textContent = r.value + '%'; });
 }
 
 const fleet = new T.Group(); scene.add(fleet);
