@@ -3506,13 +3506,23 @@ const ENVS = [
   /* MORNING. It kept the seventeenth-century fleet because the palette was
      built for it; but a theatre is a light, not a period, and this one is the
      best light in the piece. It carries the modern fleet like the others. */
+  /* MORNING, GLASS. A sea this calm has almost no colour of its own: it is a
+     mirror, so what it shows is the sky. That is why the change is less in the
+     water than above it — the fresnel base goes up so the surface reflects even
+     looking down, and the sky it reflects goes warm, from a violet zenith
+     through rose to a gold horizon. The mid sky is a dusty rose and not a
+     lilac: with the sun behind the eye, it is most of what the sea reflects,
+     and a lilac there turned the whole foreground violet. The water body keeps
+     a dusky indigo so the warmth has something to sit on, and the shadows are
+     graded a greyed lilac — the complement of the gold, not a second
+     temperature. */
   { name:'Morning',
-    cells:[['Hour','05:20 local'],['Sea','slight 1.1 m'],['Visibility','14 km'],['Wind','nne 06']], era:0, blurb:'Modern fleet &middot; first light &middot; swell 1.1m', cond:'05:20 local &middot; swell 1.1m &middot; vis 14km &middot; wind nne/06',
-    sunAz:-1.48, sunEl:0.385, sunCol:[0xffd7b6,2.20],
-    zenith:[0x0e3161,1], midSky:[0x2f6da8,1], haze:[0xdcc6ac,1.06], hazeWarm:[0xf7d6ac,1.14],
-    deep:[0x16386f,1], shoal:[0x4f92da,1], shad:[0x3d669e,0.62], foam:[0xdaf0ea,1],
-    gradeLo:[0x93bfe2,1], gradeHi:[0xffe4c6,1],
-    fogStart:700, fogDist:1150, exp:1.38, f0:0.085, fexp:3.05, sheen:0.26, gridI:0.205, swell:1.0, night:0 },
+    cells:[['Hour','05:20 local'],['Sea','calm 0.4 m'],['Visibility','14 km'],['Wind','light airs']], era:0, blurb:'Modern fleet &middot; first light &middot; a sea like glass', cond:'05:20 local &middot; swell 0.4m &middot; vis 14km &middot; light airs',
+    sunAz:-1.48, sunEl:0.30, sunCol:[0xffc596,2.40],
+    zenith:[0x222a55,1], midSky:[0xa2899a,1], haze:[0xf1c49c,1.10], hazeWarm:[0xffb483,1.22],
+    deep:[0x2a2f4f,1], shoal:[0x8a8398,1], shad:[0x4d5382,0.66], foam:[0xf7e8d8,1],
+    gradeLo:[0xb6b1cc,1], gradeHi:[0xffd1a0,1],
+    fogStart:560, fogDist:1250, exp:1.34, f0:0.135, fexp:2.55, sheen:0.40, gridI:0.205, swell:0.34, night:0 },
   { name:'Squall',
     cells:[['Hour','14:40 local'],['Sea','rough 3.4 m'],['Visibility','6 km'],['Wind','250/28']], era:0, blurb:'Modern fleet &middot; afternoon squall &middot; swell 3.4m', cond:'14:40 local &middot; swell 3.4m &middot; vis 6km &middot; wind 250/28',
     sunAz:-0.86, sunEl:0.60, sunCol:[0xc9d6e2,1.32],
@@ -3928,7 +3938,7 @@ const SPRAY = { mesh:null, k:0 };
    canopy burning magnesium while it drifts down, laying a pool of
    light on the water. What it buys is sight, not a hit.
    ------------------------------------------------------------ */
-const FLR_DUR = 11.5;       /* the whole run, launch to burn-out */
+const FLR_DUR = 9.8;        /* the whole run, launch to burn-out */
 const FLR_UP  = 0.15;       /* the share of it spent climbing */
 const FLR = { grp:null, star:null, canopy:null, trails:[],
               A:new T.Vector3(), B:new T.Vector3(), D:new T.Vector3(),
