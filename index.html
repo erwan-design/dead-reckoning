@@ -4394,8 +4394,10 @@ function updateFX(dt){
       /* she runs under, riding the swell: only the top of her casing cuts
          the surface, and the sea closes over her in the troughs */
       TOR.grp.position.y = waterY(TOR.grp.position.x, TOR.grp.position.z, tt) - 0.45;
-      /* the boil she drags on the surface, right above her */
-      marks[14].set(TOR.grp.position.x, TOR.grp.position.z, 9.2, Math.min(1, u*8));
+      /* no ring round her: the boil drawn on the surface above her read as an
+         impact travelling with the torpedo. The bow wave and the spray say
+         she is cutting the water; the wake says where she has been. */
+      marks[14].w = 0;
       /* the water parting at her nose: it breathes a little with the swell */
       TOR.bow.material.uniforms.uI.value = Math.min(1, u*10)*(0.82 + 0.10*Math.sin(tt*11.0));
     } else {
