@@ -4929,7 +4929,7 @@ EFLR.onTouch = () => {
    gap
    fall  in off her horizon, a burst over nine of her squares, the chute
          coming down among her ships and lighting them — the same fall as hers */
-const EF_OUT_DUR = 2.6, EF_GAP = 0.6;
+const EF_OUT_DUR = 2.6, EF_GAP = 0.35;
 function pickOwnBlock(){
   ownInit();
   const all = [], live = [];
@@ -6797,6 +6797,7 @@ const _flrLook = new T.Vector3(), _flrDir = new T.Vector3(), _flrPair = new T.Ve
 function cineUpdate(dt){
   let want = 0, obj = null, D = 30, H = 8, S = 6, L = 45, look = null, age = 0,
       LD = 118, LH = 58, lookDir = null, lookSway = null, lookLag = 2.6, blendIn = 0.95, camAt = null, posRate = 1.9,
+      snapInit = false, rollRate = 6.0,
       zoomAmt = 2.8, zoomT0 = 1.1, zoomRate = 1.05, followRate = 3.4;
   /* THE GUN KEEPS THE PLOT. It is the shot you fire every turn, and a camera
      that leaves the board for it would make the ordinary thing ceremonial —
@@ -6853,15 +6854,18 @@ function cineUpdate(dt){
     want = (age > 0.05 && age < FLR_OUT_DUR - 0.35) ? 1 : 0;
     blendIn = 2.4;
     camAt = FLR.vant; look = FLR.os.position;
-  } else if(EFLR.out >= 0.5 || EFLR.gap > 0 || EFLR.u >= 0){
+  } else if(EFLR.u >= 0){
     /* THEIR STAR SHELL, WATCHED FROM THE WATER. The eye is in place before
        the shell arrives, aimed at the point where it will burst, so the burst
        and the canopy opening happen in the middle of the frame instead of
        while the camera is still on its way. Then it keeps the rig itself —
        canopy and canister — centred all the way down; low over the water that
        is also the middle of the lit block. */
+    /* it comes in with the shell, not ahead of it: started while the shell
+       was still leaving their plot, the eye sat framing empty sky for two
+       seconds waiting for something to arrive */
     const u = EFLR.u;
-    want = 1; blendIn = 2.6; posRate = 3.0;
+    want = 1; blendIn = 2.0; posRate = 3.0; snapInit = true; rollRate = 2.4;
     lookDir = EFLR.dir;
     if(u < EFLR.up){
       /* LOOKING DOWN ON IT. Level with the chute the shot was all sky and
@@ -6886,14 +6890,19 @@ function cineUpdate(dt){
       const dl = Math.hypot(EFLR.dir.x, EFLR.dir.z) || 1;
       const heel = (EFLR.hx*EFLR.dir.z - EFLR.hz*EFLR.dir.x)/dl;
       lookSway = null;
-      CINE.rollWant = heel*e;
+      /* the roll comes in slowly after the canopy has opened. Taken at once, the
+         chute's first quick swing rocked the frame right and back left in the
+         second after the view had settled; eased in over a second and a half,
+         and followed at a gentler rate, only the slow lean reaches the frame */
+      const rk = Math.max(0, Math.min(1, (ah - 0.05)/0.30)), rin = rk*rk*(3 - 2*rk);
+      CINE.rollWant = heel*rin;
       lookLag = 3.6;
     }
     look = _flrLook;
   } else if(EFLR.wet >= 0 && EFLR.wet < 0.55){
     /* it stays for the splash: the light going out in the water is the end
        of the shot, and handing back before it would cut the ending off */
-    want = 1; lookDir = EFLR.dir; posRate = 3.0;
+    want = 1; lookDir = EFLR.dir; posRate = 3.0; rollRate = 2.4;
     _flrLook.copy(EFLR.wetP); _flrLook.y = waterY(EFLR.wetP.x, EFLR.wetP.z, tt);
     LD = 110; LH = 74; lookLag = 2.4;
     look = _flrLook;
@@ -6915,7 +6924,7 @@ function cineUpdate(dt){
   if(CINE.hold > 0) CINE.hold -= dt;
   CINE.kick *= Math.exp(-dt*2.2);
   if(!(EFLR.u >= EFLR.up)) CINE.rollWant = 0;
-  CINE.roll += (CINE.rollWant - CINE.roll)*(1 - Math.exp(-dt*6.0));
+  CINE.roll += (CINE.rollWant - CINE.roll)*(1 - Math.exp(-dt*rollRate));
   CINE.want = want;
   CINE.w += (want - CINE.w)*(1 - Math.exp(-dt*(want ? blendIn : 0.75)));
   if(CINE.w < 0.004){ CINE.w = 0; CINE.init = false; return; }
@@ -6954,7 +6963,9 @@ function cineUpdate(dt){
     if(CINE.kick > 0.002){ LD *= 1 + 0.10*CINE.kick; LH *= 1 + 0.08*CINE.kick; }
     _ct.copy(look).addScaledVector(_c2, LD); _ct.y = look.y + LH;
     if(lookSway) _ct.add(lookSway);
-    if(!CINE.init){ CINE.pos.copy(camera.position); CINE.look.copy(look); CINE.init = true; }
+    /* a view that blends in from nothing starts where it means to be: the last
+       camera drawn may be the plot's, seven hundred units up */
+    if(!CINE.init){ CINE.pos.copy(snapInit ? _ct : camera.position); CINE.look.copy(look); CINE.init = true; }
     CINE.pos.lerp(_ct, 1 - Math.exp(-dt*(posRate + 4.2*CINE.kick)));
     CINE.look.lerp(look, 1 - Math.exp(-dt*lookLag));
   }
