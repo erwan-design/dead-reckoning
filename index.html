@@ -4263,7 +4263,7 @@ const CDN = { flare:'Star shell', cat:'Air strike', tor:'Torpedo' };
 const MATCH = { t:0, acc:-1, turn:6, sec:-1, dirty:true, act:null };
 /* the debug drawer's side switch, and which weapons the enemy has so far */
 var DBG_SIDE = 'own';
-const ENEMY_ARMS = ['fire', 'tor', 'cat'];
+const ENEMY_ARMS = ['fire', 'tor', 'cat', 'flare'];
 /* the two fleets' squares, kept by the readouts and read by the balance bar */
 const ENEMY_TALLY = { total:0, hit:0 }, OWN_TALLY = { total:0, lost:0 };   /* acc < 0: no exchange */
 function matchReset(){
@@ -4752,16 +4752,30 @@ const FLR_FOOT = 1.25;      /* half the canister: the height its centre rides ab
    that plot is read from seven hundred units straight up */
 const FLR_RS = 1.5;
 const FLR_UP  = 0.15;
-/* the immersive view of the fall belonged to a flare over her own board. The
-   fall now happens on the enemy plot, which is read from a fixed plan view;
-   the view is kept here, switched off, for a board that may want it again. */
-const FLR_CINE = false;       /* the share of it spent climbing */
+/* the immersive view of the fall belonged to a flare over her own board. Hers
+   now falls on the enemy plot, read from a fixed plan view; the view went to
+   theirs, which comes down over her board. */
 const _wetCol = TC(0x5a6878);
 const FLR = { grp:null, star:null, canopy:null, trails:[], fI:0, lI:0, gap:0, n:-1, label:'',
               oA:new T.Vector3(), oB:new T.Vector3(), oC:new T.Vector3(), os:null, osTrails:[],
               A:new T.Vector3(), B:new T.Vector3(), D:new T.Vector3(),
               pos:new T.Vector3(), tmp:new T.Vector3(), H:34,
-              cx:2, cz:8, lit:null };
+              cx:2, cz:8, lit:null, rs:FLR_RS, u:-1, wet:-1, litOn:false,
+              litR:new T.Vector4(0, 0, 1, 1), dir:new T.Vector3(0.8, 0, 0.6), marks:MARKS_E, mk:22 };
+/* THEIR STAR SHELL, the same rig at life size over her own board: the fall
+   is watched from the water there, so it keeps the size the immersive view
+   was tuned on */
+const EFLR = { trails:[], fI:0, lI:0, gap:0, out:-1, n:-1, label:'',
+               oA:new T.Vector3(), oB:new T.Vector3(), oC:new T.Vector3(), os:null, osTrails:[],
+               A:new T.Vector3(), B:new T.Vector3(), D:new T.Vector3(),
+               pos:new T.Vector3(), tmp:new T.Vector3(), H:60,
+               cx:5, cz:5, lit:null, rs:1.0, u:-1, wet:-1, litOn:false,
+               litR:new T.Vector4(0, 0, 1, 1), dir:new T.Vector3(0.8, 0, 0.6), marks:null, mk:31 };
+/* the rest of the scene still speaks of ANIM.flr and its kin: they are
+   her star shell's own clock, now kept on the rig */
+Object.defineProperty(ANIM, 'flr',    { get(){ return FLR.u; },     set(v){ FLR.u = v; } });
+Object.defineProperty(ANIM, 'flrWet', { get(){ return FLR.wet; },   set(v){ FLR.wet = v; } });
+Object.defineProperty(ANIM, 'flrLit', { get(){ return FLR.litOn; }, set(v){ FLR.litOn = v; } });
 {
   /* the burning star itself: an additive point, left to the bloom to flare */
   const can = document.createElement('canvas'); can.width = can.height = 128;
@@ -4775,11 +4789,6 @@ const FLR = { grp:null, star:null, canopy:null, trails:[], fI:0, lI:0, gap:0, n:
   g.fillStyle = rg; g.fillRect(0, 0, 128, 128);
   const tex = new T.CanvasTexture(can);
 
-  FLR.star = new T.Sprite(new T.SpriteMaterial({ map:tex, blending:T.AdditiveBlending,
-    depthWrite:false, transparent:true, opacity:1 }));
-  FLR.star.scale.setScalar(26); FLR.star.visible = false; scene.add(FLR.star);
-
-  /* the canopy, lit from beneath by the thing it is carrying */
   /* A PARACHUTE SEEN FROM ABOVE. A plain white dome over a bright star read,
      from the plot's plan view, as a glowing ball coming down. So the canopy
      is made of what a canopy is made of: twelve gores in two colours, a dark
@@ -4804,82 +4813,91 @@ const FLR = { grp:null, star:null, canopy:null, trails:[], fI:0, lI:0, gap:0, n:
   cx.fillStyle = 'rgba(40,34,30,0.7)';  cx.fillRect(0, cv.height - 8, cv.width, 8);
   const ctex = new T.CanvasTexture(cv);
   ctex.colorSpace = T.SRGBColorSpace; ctex.anisotropy = 8;
-  FLR.canopy = new T.Mesh(
-    new T.SphereGeometry(1, 36, 12, 0, Math.PI*2, 0, Math.PI*0.54),
-    new T.MeshBasicMaterial({ map:ctex, color:TC(0xffffff), transparent:true,
-                              opacity:1.0, side:T.DoubleSide, depthWrite:true }));
-  FLR.spin = 0;
-  FLR.canopy.visible = false;
-  /* ONE RIG. Canopy, shroud lines and canister hang from a single pivot at
-     the canopy, so the whole thing can heel in the wind as one body — lines
-     still meeting the rim, canister still under them. The star stays in the
-     scene: a sprite does not tilt, only its place on the rig does. */
-  FLR.rig = new T.Group(); scene.add(FLR.rig);
-  FLR.rig.add(FLR.canopy);
-  FLR.hx = 0; FLR.hz = 0;
+  const canopyGeo = new T.SphereGeometry(1, 36, 12, 0, Math.PI*2, 0, Math.PI*0.54);
 
-  /* THE CANISTER. A flash that hangs from nothing reads as a light with no
-     source. So the canopy carries something: a short cylinder, dark, with the
-     burning end at its foot. It is opaque and drawn with depth, and the star
-     sprite tests against it — so against its own glow it stands out as a
-     silhouette instead of dissolving into white. */
-  /* pale metal, lit by the star at its foot: the first version read pale
-     only by accident (its colour was being ignored), and made properly dark it
-     vanished into the dusk — pale is what it should have been */
-  FLR.can = new T.Mesh(new T.CylinderGeometry(0.52, 0.52, 2.5, 14, 1),
+  /* ONE RIG, built twice: hers over their plot, theirs over her board */
+  const buildRig = (R, board) => {
+    R.star = new T.Sprite(new T.SpriteMaterial({ map:tex, blending:T.AdditiveBlending,
+      depthWrite:false, transparent:true, opacity:1 }));
+    R.star.scale.setScalar(26); R.star.visible = false; scene.add(R.star);
+    R.canopy = new T.Mesh(canopyGeo,
+      new T.MeshBasicMaterial({ map:ctex, color:TC(0xffffff), transparent:true,
+                                opacity:1.0, side:T.DoubleSide, depthWrite:true }));
+    R.spin = 0;
+    R.canopy.visible = false;
+    /* ONE RIG. Canopy, shroud lines and canister hang from a single pivot at
+       the canopy, so the whole thing can heel in the wind as one body — lines
+       still meeting the rim, canister still under them. The star stays in the
+       scene: a sprite does not tilt, only its place on the rig does. */
+    R.rig = new T.Group(); scene.add(R.rig);
+    R.rig.add(R.canopy);
+    R.hx = 0; R.hz = 0;
+    /* THE CANISTER. A flash that hangs from nothing reads as a light with no
+       source. So the canopy carries something: a short cylinder with the
+       burning end at its foot. It is opaque and drawn with depth, and the star
+       sprite tests against it — so against its own glow it stands out as a
+       silhouette instead of dissolving into white. */
+    /* pale metal, lit by the star at its foot: the first version read pale
+       only by accident (its colour was being ignored), and made properly dark it
+       vanished into the dusk — pale is what it should have been */
+    R.can = new T.Mesh(new T.CylinderGeometry(0.52, 0.52, 2.5, 14, 1),
                        new T.MeshBasicMaterial({ color:TC(0xdcdfe4) }));
-  FLR.can.visible = false; FLR.can.scale.setScalar(FLR_RS); FLR.rig.add(FLR.can);
-  /* four shroud lines from the canister's head to the canopy rim. They are
-     built at full size and scaled with the canopy as it opens, so the chute
-     comes out of the canister instead of appearing above it. */
-  {
-    const RIM_R = 7.44, RIM_Y = 12.06, HEAD = 1.3, pts = [];
-    for(let i=0;i<4;i++){
-      const ang = i*Math.PI/2 + Math.PI/4;
-      pts.push(0, HEAD, 0, Math.cos(ang)*RIM_R, RIM_Y, Math.sin(ang)*RIM_R);
+    R.can.visible = false; R.can.scale.setScalar(R.rs); R.rig.add(R.can);
+    /* four shroud lines from the canister's head to the canopy rim. They are
+       built at full size and scaled with the canopy as it opens, so the chute
+       comes out of the canister instead of appearing above it. */
+    {
+      const RIM_R = 7.44, RIM_Y = 12.06, HEAD = 1.3, pts = [];
+      for(let i=0;i<4;i++){
+        const ang = i*Math.PI/2 + Math.PI/4;
+        pts.push(0, HEAD, 0, Math.cos(ang)*RIM_R, RIM_Y, Math.sin(ang)*RIM_R);
+      }
+      const lg = new T.BufferGeometry();
+      lg.setAttribute('position', new T.Float32BufferAttribute(pts, 3));
+      R.lines = new T.LineSegments(lg, new T.LineBasicMaterial({
+        color:TC(0xd2dce6), transparent:true, opacity:0.0, depthWrite:false }));
+      R.lines.visible = false; R.rig.add(R.lines);
     }
-    const g = new T.BufferGeometry();
-    g.setAttribute('position', new T.Float32BufferAttribute(pts, 3));
-    FLR.lines = new T.LineSegments(g, new T.LineBasicMaterial({
-      color:TC(0xd2dce6), transparent:true, opacity:0.0, depthWrite:false }));
-    FLR.lines.visible = false; FLR.rig.add(FLR.lines);
-  }
-  FLR.canCol = FLR.canopy.material.color.clone();
-  FLR.wetP = new T.Vector3();
-
-  /* the reading itself: how many of the nine squares hold something, laid
-     flat in the middle of the block like every other mark on this plot */
-  FLR.lit = new T.Mesh(labelGeo, new T.ShaderMaterial({
-    uniforms: U({ map:{value:glyph('0')}, uTint:{value:Cs(0xe4eeff, 1.0)},
-                  uI:{value:0}, uSkip:{value:new T.Vector2(999,999)} }),
-    vertexShader: LABEL_VS, fragmentShader: LABEL_FS,
-    transparent:true, blending:T.AdditiveBlending, depthWrite:false
-  }));
-  FLR.lit.rotation.y = AD.gridRot;
-  FLR.lit.scale.setScalar(2.95);
-  FLR.lit.visible = false;
-  labels.add(FLR.lit);
-
-  FLR.arcP = function(t, out){
-    out.lerpVectors(FLR.A, FLR.B, t);
-    out.y += FLR.H*4.0*t*(1.0 - t);
-    return out;
+    R.canCol = R.canopy.material.color.clone();
+    R.wetP = new T.Vector3();
+    /* the reading itself: how many of the nine squares hold something, laid
+       flat in the middle of the block like every other mark on the grid */
+    R.lit = new T.Mesh(labelGeo, new T.ShaderMaterial({
+      uniforms: U({ map:{value:glyph('0')}, uTint:{value:Cs(0xe4eeff, 1.0)},
+                    uI:{value:0}, uSkip:{value:new T.Vector2(999,999)} }),
+      vertexShader: LABEL_VS, fragmentShader: LABEL_FS,
+      transparent:true, blending:T.AdditiveBlending, depthWrite:false
+    }));
+    R.lit.rotation.y = AD.gridRot;
+    R.lit.scale.setScalar(2.95);
+    R.lit.visible = false;
+    labels.add(R.lit);
+    R.arcP = function(t, out){
+      out.lerpVectors(R.A, R.B, t);
+      out.y += R.H*4.0*t*(1.0 - t);
+      return out;
+    };
+    const arc = [];
+    for(let i=0;i<=180;i++) arc.push(new T.Vector3());
+    R.trails = [
+      ribbon(arc, {w:0.80, grow:7.0, life:0.62, seed:2.4 + R.rs, i:0.50, drift:[2.6, 1.4, -1.2],
+                   tint:0xe6e8ee, order:7}),
+      ribbon(arc, {w:0.30, grow:1.0, life:0.10, seed:8.1 + R.rs, i:0.92, drift:[0.4, 0.2, -0.2],
+                   tint:0xdfeaff, tintI:1.45, order:9, add:true})
+    ];
+    /* WHICH BOARD. Everything that bursts, hangs, lights and reads belongs to
+       the board it comes down on: one group, so the pass decides for all of it
+       and the fall can go on managing its own pieces. */
+    R.g = new T.Group(); scene.add(R.g);
+    for(const o of [R.star, R.rig, R.lit].concat(R.trails)) R.g.add(o);
+    onBoard(board, R.g, true);
+    R.arc = arc;
   };
-  const arc = [];
-  for(let i=0;i<=180;i++) arc.push(new T.Vector3());
-  FLR.trails = [
-    ribbon(arc, {w:0.80, grow:7.0, life:0.62, seed:2.4, i:0.50, drift:[2.6, 1.4, -1.2],
-                 tint:0xe6e8ee, order:7}),
-    ribbon(arc, {w:0.30, grow:1.0, life:0.10, seed:8.1, i:0.92, drift:[0.4, 0.2, -0.2],
-                 tint:0xdfeaff, tintI:1.45, order:9, add:true})
-  ];
-  /* WHICH BOARD. Everything that bursts, hangs, lights and reads is the
-     enemy plot's: one group, so the pass decides for all of it and the fall
-     can go on managing its own pieces. What leaves her own board is a second
-     star and trail, the shell going up and away. */
-  FLR.g = new T.Group(); scene.add(FLR.g);
-  for(const o of [FLR.star, FLR.rig, FLR.lit].concat(FLR.trails)) FLR.g.add(o);
-  onBoard(BOARD_ENEMY, FLR.g, true);
+  buildRig(FLR, BOARD_ENEMY);
+  buildRig(EFLR, BOARD_OWN);
+  const arc = FLR.arc;
+  /* What leaves the firing board is a second star and trail, the shell going
+     up and away: hers off her deck, theirs off a square of their plot */
   FLR.os = new T.Sprite(FLR.star.material.clone()); FLR.os.scale.setScalar(20); scene.add(FLR.os);
   onBoard(BOARD_OWN, FLR.os, false);
   FLR.osTrails = [
@@ -4889,6 +4907,248 @@ const FLR = { grp:null, star:null, canopy:null, trails:[], fI:0, lI:0, gap:0, n:
                  tint:0xdfeaff, tintI:1.45, order:9, add:true})
   ];
   for(const t of FLR.osTrails) onBoard(BOARD_OWN, t, true);
+  EFLR.os = new T.Sprite(FLR.star.material.clone()); EFLR.os.scale.setScalar(34); scene.add(EFLR.os);
+  onBoard(BOARD_ENEMY, EFLR.os, false);
+  EFLR.osTrails = [
+    ribbon(arc, {w:2.2, grow:14.0, life:0.62, seed:9.9, i:0.50, drift:[3.6, 2.0, -1.8],
+                 tint:0xe6e8ee, order:7}),
+    ribbon(arc, {w:0.8, grow:1.0, life:0.10, seed:6.6, i:0.92, drift:[0.4, 0.2, -0.2],
+                 tint:0xdfeaff, tintI:1.45, order:9, add:true})
+  ];
+  for(const t of EFLR.osTrails) onBoard(BOARD_ENEMY, t, true);
+}
+FLR.onTouch = () => noteShot('Flare ' + FLR.label + ' \u00b7 ' + FLR.n + ' found', 'lit');
+EFLR.onTouch = () => {
+  EFLR.label2 = 'Star shell ' + EFLR.label + ' \u00b7 ' + EFLR.n + ' found';
+  LASTIN = { label: EFLR.label2, kind:'lit' };
+};
+/* THEIR STAR SHELL.
+   out  0 → 1 (EF_OUT_DUR)   up off any square of their plot, away over its near edge
+   gap
+   fall  in off her horizon, a burst over nine of her squares, the chute
+         coming down among her ships and lighting them — the same fall as hers */
+const EF_OUT_DUR = 2.6, EF_GAP = 0.6;
+function pickOwnBlock(){
+  ownInit();
+  const all = [], live = [];
+  for(let cx=1; cx<=8; cx++) for(let cz=1; cz<=8; cz++){
+    all.push([cx, cz]);
+    let fresh = false;
+    for(let dx=-1; dx<=1; dx++) for(let dz=-1; dz<=1; dz++)
+      if(!OWN_SHOT.has((cx + dx) + ',' + (cz + dz)) && ownShipAt(cx + dx, cz + dz)) fresh = true;
+    if(fresh) live.push([cx, cz]);
+  }
+  const pool = (live.length && Math.random() < 0.5) ? live : all;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function enemyFlare(){
+  EFLR.marks = marks;
+  /* on their plot: off one of the hundred squares, so it says nothing */
+  const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
+  const lx = Math.floor(Math.random()*10), lz = Math.floor(Math.random()*10);
+  EFLR.oA.copy(cellW(lx + 0.5, lz + 0.5, 4));
+  EFLR.oC.copy(EFLR.oA).addScaledVector(back, 60).setY(300);
+  EFLR.oB.copy(EFLR.oA).addScaledVector(back, 620).setY(560);
+  const po = [];
+  for(let i=0;i<=180;i++) po.push(bez(EFLR.oA, EFLR.oC, EFLR.oB, i/180, new T.Vector3()));
+  for(const t of EFLR.osTrails){ retrace(t, po); t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
+  FX.eLaunch.material.uniforms.uOrigin.value.set(EFLR.oA.x, 0, EFLR.oA.z);
+  FX.eLaunch.material.uniforms.uT0.value = tt;
+  /* on her board: the block it will burst over */
+  const blk = pickOwnBlock();
+  EFLR.cx = blk[0]; EFLR.cz = blk[1];
+  const x0 = EFLR.cx - 1, z0 = EFLR.cz - 1;
+  EFLR.litR.set(x0, z0, x0 + 3, z0 + 3);
+  EFLR.lI = 0;
+  let n = 0;
+  for(let gx=x0; gx<x0 + 3; gx++) for(let gz=z0; gz<z0 + 3; gz++) if(ownShipAt(gx, gz)) n++;
+  if(n !== EFLR.n){ EFLR.n = n; EFLR.lit.material.uniforms.map.value = glyph(String(n)); }
+  EFLR.lit.position.copy(cellW(EFLR.cx + 0.5, EFLR.cz + 0.5, 0.62));
+  EFLR.lit.material.uniforms.uI.value = 0;
+  EFLR.lit.visible = true;
+  const lab = (gx, gz) => colLetter(gx) + (gz + 1);
+  EFLR.label = lab(x0 + 2, z0) + '\u2013' + lab(x0, z0 + 2);
+  /* the eye stands off the block on the side away from the middle of the
+     grid, looking back across it — the ships in the light, not open sea */
+  EFLR.dir.copy(EFLR.lit.position).sub(cellW(5, 5, 0)); EFLR.dir.y = 0;
+  if(EFLR.dir.lengthSq() < 1) EFLR.dir.set(0.8, 0, 0.6);
+  EFLR.dir.normalize();
+  /* in off the horizon the eye is facing, arcing over to burst above the block */
+  const fwd = new T.Vector3(-Math.sin(CAM.az), 0, -Math.cos(CAM.az)).normalize();
+  EFLR.A.copy(cellW(EFLR.cx + 0.5, EFLR.cz + 0.5, 90)).addScaledVector(fwd, 900);
+  EFLR.B.copy(cellW(EFLR.cx + 0.5, EFLR.cz + 0.5, 150));
+  EFLR.D.copy(cellW(EFLR.cx + 0.5, EFLR.cz + 0.5, 9));
+  const pts = [];
+  for(let i=0;i<=180;i++) pts.push(EFLR.arcP(i/180, new T.Vector3()));
+  for(const t of EFLR.trails){ retrace(t, pts); t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
+  EFLR.out = 0; EFLR.gap = 0; EFLR.u = -1; EFLR.wet = -1; EFLR.litOn = false;
+  marks[31].w = 0;
+  hiss(EFLR.oA, 0.10, 280, 2400, 1.0, 0.85);
+  refreshUI();
+}
+/* A STAR SHELL'S FALL, for either rig: a climb, a burst, a long fall under
+   its own light, then the chute in the water */
+function flrStep(R, dt){
+  /* the star shell over their plot: a climb, a burst, then a long fall under its own light */
+  if(R.u >= 0){
+    R.u = Math.min(1, R.u + dt/FLR_DUR);
+    const u = R.u;
+    if(u < FLR_UP){
+      const fp = u/FLR_UP;
+      R.star.visible = true; R.canopy.visible = false;
+      R.star.position.copy(R.arcP(fp, R.tmp));
+      R.star.scale.setScalar(9 + 6*fp);
+      R.star.material.opacity = 0.85;
+      const fade = Math.min(1, fp*7);
+      for(const t of R.trails){
+        t.material.uniforms.uProg.value = fp; t.material.uniforms.uFade.value = fade;
+      }
+      R.fI = 0;
+    } else {
+      const a = (u - FLR_UP)/(1 - FLR_UP);
+      if(!R.litOn){ R.litOn = true; boom(R.B, 0.12); }
+      /* IT COMES DOWN TO THE SEA, not to a height. The end of the fall is the
+         surface under it, read every frame, so the foot of the canister meets
+         the water on the swell it is actually falling onto. */
+      R.D.y = waterY(R.D.x, R.D.z, tt) + FLR_FOOT*R.rs;
+      /* slow while the canopy holds, faster as it spills near the end */
+      R.pos.lerpVectors(R.B, R.D, a*0.42 + a*a*0.58);
+      /* the pendulum under the canopy, dying away as it descends */
+      const sw = Math.sin(a*11.0)*(1 - a)*(1 - a);
+      /* WIND, NOT A PENDULUM ALONE. A canopy this light is pushed around: two
+         gusts on different periods on top of its own swing, so the fall never
+         repeats itself. Everything dies out as (1-a)², which is still what
+         puts it down in the middle of its block. */
+      const damp = (1 - a)*(1 - a);
+      const gx = Math.sin(a*5.3 + 0.7)*6.0 + Math.sin(a*13.0 + 2.1)*2.2;
+      const gz = Math.sin(a*4.1 + 1.9)*4.6 + Math.sin(a*10.7 + 0.4)*1.6;
+      R.pos.x += sw*5.2 + gx*damp;
+      R.pos.z += (Math.cos(a*9.0)*3.0 + gz)*damp;
+      /* and it bobs: a gust that lifts the canopy slows the fall for a moment */
+      R.pos.y += Math.sin(a*6.2 + 0.3)*3.2*damp;
+      /* the burst is brief and far brighter than the burn that follows it */
+      const flash = Math.exp(-a*26.0);
+      /* it burns to the end: a star shell is still alight when it hits the
+         water, it just gutters as the magnesium runs low. The water puts it out. */
+      const low   = a < 0.78 ? 1 : 1 - 0.34*(a - 0.78)/0.22;
+      const gutter = a < 0.78 ? 1 : 0.86 + 0.14*Math.sin(tt*31.0)*Math.sin(tt*7.3);
+      const burn  = Math.min(1, a/0.04)*low*gutter;
+      /* the chute opens out of the canister over the first moments of the fall */
+      const open = Math.min(1, a/0.05);
+      R.star.visible = true;
+      /* IT HEELS. The same swing and gusts that carry the canister sideways
+         tip the rig: when the load swings out along x the rig leans that way
+         about its canopy. A few degrees, never more than about four — the
+         camera takes the same lean, so this is also the whole roll of the
+         shot, and seven read as a boat in a swell — and gone
+         by the last tenth of the fall so it meets the water upright and the
+         wet phase starts from a still rig. */
+      const hf = Math.min(1, (1 - a)/0.12)*open;
+      R.hx = (Math.sin(a*11.0)*0.066*(1 - a) + Math.sin(a*5.3 + 2.0)*0.030)*hf;
+      R.hz = (Math.cos(a*9.0)*0.042*(1 - a) + Math.sin(a*4.1 + 3.0)*0.021)*hf;
+      const L = 13*open*R.rs;
+      R.rig.rotation.set(-R.hz, 0, R.hx);
+      /* the pivot is placed from the canister, not the other way round: the
+         canister keeps the path the camera and the squares are built on */
+      R.rig.position.set(0, L, 0).applyEuler(R.rig.rotation).add(R.pos);
+      /* the burning end is the canister's foot, a little under its centre */
+      R.star.position.set(0, -L - FLR_FOOT*R.rs, 0).applyEuler(R.rig.rotation).add(R.rig.position);
+      /* smaller in the burn than before: a glow the size of the whole rig
+         swallowed the canister and left the light looking sourceless again */
+      R.star.scale.setScalar(20 + 120*flash + 8*burn);
+      R.star.material.opacity = Math.min(1, burn + flash);
+      R.canopy.visible = burn > 0.02;
+      R.canopy.position.set(0, 0, 0);
+      R.canopy.scale.setScalar(7.5*open*R.rs);
+      /* fading in only while it opens; once open it is solid, and writes
+         depth, so the star below it is hidden from above */
+      R.canopy.material.opacity = Math.min(1, a/0.04);
+      R.canopy.material.transparent = a < 0.04;
+      R.canopy.material.color.copy(R.canCol);
+      /* the dome itself never tilts on its own: it tilts with the rig, so the
+         shroud lines keep meeting its rim */
+      R.canopy.rotation.z = 0;
+      /* and it turns slowly as it comes down, the way a canopy does */
+      R.spin += dt*0.45; R.canopy.rotation.y = R.spin;
+      R.can.visible = true; R.can.rotation.set(0, 0, 0);
+      R.can.position.set(0, -L, 0);
+      R.lines.visible = R.can.visible;
+      R.lines.position.set(0, -L, 0);
+      R.lines.scale.set(open*R.rs, open*R.rs, open*R.rs);
+      R.lines.material.opacity = 0.62*Math.min(1, a/0.04)*(flash > 0.3 ? 0 : 1);
+      const tf = Math.max(0, 1 - a/0.22);
+      R.trails[0].material.uniforms.uFade.value = tf;
+      R.trails[1].material.uniforms.uFade.value = tf*0.5;
+      /* the pool on the water: the lower it gets the less of the sea it reaches */
+      R.fI = burn*(0.55 + 0.45*Math.min(1, R.pos.y/120)) + flash*0.85;
+      /* the squares come up as the light comes down — it is the light that
+         reveals them, so they must not be finished before it is spent. The
+         count lands last, exactly as the star goes out. */
+      R.lI = a*a*(3 - 2*a);
+      R.lit.material.uniforms.uI.value =
+        0.78*Math.max(0, Math.min(1, (a - 0.58)/0.42));
+    }
+    if(u >= 1){
+      /* TOUCHDOWN. The reading outlives the light — that is the point of the
+         weapon — but the light does not fade out, it is put out: a hiss, a
+         ring on the water, and the star is gone in the same instant. */
+      R.u = -1;
+      R.lI = 1;
+      R.lit.material.uniforms.uI.value = 0.78;
+      R.wet = 0;
+      R.wetP.copy(R.pos);
+      R.wetI = R.fI;
+      R.wetH = R.rig.position.y;
+      R.onTouch();
+      /* the wet phase works in the sea's own coordinates */
+      R.rig.position.set(0, 0, 0); R.rig.rotation.set(0, 0, 0);
+      R.hx = 0; R.hz = 0;
+      R.star.visible = false; R.lines.visible = false;
+      hiss(R.pos, 0.22, 3600, 700, 1.1, 1.2);
+      refreshUI();
+    }
+  } else if(R.wet >= 0){
+    /* IN THE WATER. The canister tips over and sinks; the chute comes down
+       beside it, spreads flat on the surface as it soaks, darkens, and is
+       drawn under. Nothing fades — the sea covers it, because it is opaque
+       and the chute is simply below it at the end. */
+    R.wet = Math.min(1, R.wet + dt/FLR_WET);
+    const w = R.wet, P = R.wetP;
+    const sea = waterY(P.x, P.z, tt);
+    /* the last of the light, snuffed in a fraction of a second */
+    R.fI = (R.wetI || 0)*Math.max(0, 1 - w/0.05);
+    const tip = Math.min(1, w/0.30), ts = tip*tip*(3 - 2*tip);
+    const sink = Math.max(0, (w - 0.12)/0.88);
+    R.can.visible = true;
+    R.can.position.set(P.x, sea + FLR_FOOT*R.rs*(1 - ts) - 9.0*sink*sink, P.z);
+    R.can.rotation.set(0.35*ts, 0, 1.42*ts);
+    /* the chute settles downwind of the canister, not on top of the count */
+    const col = Math.min(1, w/0.28), cs = col*col;
+    const spread = Math.min(1, w/0.45);
+    const under = Math.max(0, (w - 0.45)/0.55);
+    R.canopy.visible = true;
+    R.canopy.position.set(P.x + 8.5*R.rs*col, 
+                            R.wetH + (sea + 0.35 - R.wetH)*cs - 4.5*under*under,
+                            P.z + 3.4*R.rs*col);
+    R.canopy.scale.set((7.5 + 1.4*spread)*R.rs, (7.5 - 6.3*spread)*R.rs, (7.5 + 1.4*spread)*R.rs);
+    R.canopy.material.opacity = 1.0; R.canopy.material.transparent = false;
+    R.canopy.material.color.copy(R.canCol).lerp(_wetCol, Math.min(1, w*1.6));
+    /* the ring where it went in */
+    R.marks[R.mk].set(P.x, P.z, 3 + 26*Math.min(1, w/0.6), Math.pow(Math.max(0, 1 - w/0.6), 2));
+    if(w >= 1){
+      R.wet = -1; R.marks[R.mk].w = 0; refreshUI();
+      R.can.visible = false; R.canopy.visible = false;
+      R.canopy.material.color.copy(R.canCol);
+      R.fI = 0;
+      for(const t of R.trails) t.material.uniforms.uFade.value = 0;
+    }
+  } else if(R.star.visible || R.can.visible || R.fI > 0){
+    R.rig.position.set(0, 0, 0); R.rig.rotation.set(0, 0, 0); R.hx = 0; R.hz = 0;
+    R.star.visible = false; R.canopy.visible = false;
+    R.can.visible = false; R.lines.visible = false;
+    R.fI = 0;
+    for(const t of R.trails) t.material.uniforms.uFade.value = 0;
+  }
 }
 /* how many of the nine squares hold a hull — the whole answer the weapon
    gives, and the reason it is worth a turn that does no damage */
@@ -4932,7 +5192,7 @@ function flare(){
   const blk = pickFlareBlock();
   FLR.cx = blk[0]; FLR.cz = blk[1];
   const x0 = FLR.cx - 1, z0 = FLR.cz - 1;
-  waterUnis.uLitR.value.set(x0, z0, x0 + 3, z0 + 3);
+  FLR.litR.set(x0, z0, x0 + 3, z0 + 3);
   FLR.lI = 0;
   const n = litCount(x0, z0);
   if(n !== FLR.n){ FLR.n = n; FLR.lit.material.uniforms.map.value = glyph(String(n)); }
@@ -4944,7 +5204,7 @@ function flare(){
   FLR.label = lab(x0 + 2, z0) + '\u2013' + lab(x0, z0 + 2);
   _flrDir.copy(FLR.lit.position).sub(cellW(5, 5, 0)); _flrDir.y = 0;
   if(_flrDir.lengthSq() < 1) _flrDir.set(0.8, 0, 0.6);
-  _flrDir.normalize();
+  _flrDir.normalize(); FLR.dir.copy(_flrDir);
   /* on the plot it climbs in over the edge nearest her board, bursts over
      the block and comes down in its middle */
   const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
@@ -5665,167 +5925,23 @@ function updateFX(dt){
     FLR.gap -= dt;
     if(FLR.gap <= 0){ FLR.gap = 0; ANIM.flr = 0; ANIM.flrLit = false; boom(FLR.B, 0.06); refreshUI(); }
   }
-  /* the star shell over their plot: a climb, a burst, then a long fall under its own light */
-  if(ANIM.flr >= 0){
-    ANIM.flr = Math.min(1, ANIM.flr + dt/FLR_DUR);
-    const u = ANIM.flr;
-    if(u < FLR_UP){
-      const fp = u/FLR_UP;
-      FLR.star.visible = true; FLR.canopy.visible = false;
-      FLR.star.position.copy(FLR.arcP(fp, FLR.tmp));
-      FLR.star.scale.setScalar(9 + 6*fp);
-      FLR.star.material.opacity = 0.85;
-      const fade = Math.min(1, fp*7);
-      for(const t of FLR.trails){
-        t.material.uniforms.uProg.value = fp; t.material.uniforms.uFade.value = fade;
-      }
-      FLR.fI = 0;
-    } else {
-      const a = (u - FLR_UP)/(1 - FLR_UP);
-      if(!ANIM.flrLit){ ANIM.flrLit = true; boom(FLR.B, 0.12); }
-      /* IT COMES DOWN TO THE SEA, not to a height. The end of the fall is the
-         surface under it, read every frame, so the foot of the canister meets
-         the water on the swell it is actually falling onto. */
-      FLR.D.y = waterY(FLR.D.x, FLR.D.z, tt) + FLR_FOOT*FLR_RS;
-      /* slow while the canopy holds, faster as it spills near the end */
-      FLR.pos.lerpVectors(FLR.B, FLR.D, a*0.42 + a*a*0.58);
-      /* the pendulum under the canopy, dying away as it descends */
-      const sw = Math.sin(a*11.0)*(1 - a)*(1 - a);
-      /* WIND, NOT A PENDULUM ALONE. A canopy this light is pushed around: two
-         gusts on different periods on top of its own swing, so the fall never
-         repeats itself. Everything dies out as (1-a)², which is still what
-         puts it down in the middle of its block. */
-      const damp = (1 - a)*(1 - a);
-      const gx = Math.sin(a*5.3 + 0.7)*6.0 + Math.sin(a*13.0 + 2.1)*2.2;
-      const gz = Math.sin(a*4.1 + 1.9)*4.6 + Math.sin(a*10.7 + 0.4)*1.6;
-      FLR.pos.x += sw*5.2 + gx*damp;
-      FLR.pos.z += (Math.cos(a*9.0)*3.0 + gz)*damp;
-      /* and it bobs: a gust that lifts the canopy slows the fall for a moment */
-      FLR.pos.y += Math.sin(a*6.2 + 0.3)*3.2*damp;
-      /* the burst is brief and far brighter than the burn that follows it */
-      const flash = Math.exp(-a*26.0);
-      /* it burns to the end: a star shell is still alight when it hits the
-         water, it just gutters as the magnesium runs low. The water puts it out. */
-      const low   = a < 0.78 ? 1 : 1 - 0.34*(a - 0.78)/0.22;
-      const gutter = a < 0.78 ? 1 : 0.86 + 0.14*Math.sin(tt*31.0)*Math.sin(tt*7.3);
-      const burn  = Math.min(1, a/0.04)*low*gutter;
-      /* the chute opens out of the canister over the first moments of the fall */
-      const open = Math.min(1, a/0.05);
-      FLR.star.visible = true;
-      /* IT HEELS. The same swing and gusts that carry the canister sideways
-         tip the rig: when the load swings out along x the rig leans that way
-         about its canopy. A few degrees, never more than about four — the
-         camera takes the same lean, so this is also the whole roll of the
-         shot, and seven read as a boat in a swell — and gone
-         by the last tenth of the fall so it meets the water upright and the
-         wet phase starts from a still rig. */
-      const hf = Math.min(1, (1 - a)/0.12)*open;
-      FLR.hx = (Math.sin(a*11.0)*0.066*(1 - a) + Math.sin(a*5.3 + 2.0)*0.030)*hf;
-      FLR.hz = (Math.cos(a*9.0)*0.042*(1 - a) + Math.sin(a*4.1 + 3.0)*0.021)*hf;
-      const L = 13*open*FLR_RS;
-      FLR.rig.rotation.set(-FLR.hz, 0, FLR.hx);
-      /* the pivot is placed from the canister, not the other way round: the
-         canister keeps the path the camera and the squares are built on */
-      FLR.rig.position.set(0, L, 0).applyEuler(FLR.rig.rotation).add(FLR.pos);
-      /* the burning end is the canister's foot, a little under its centre */
-      FLR.star.position.set(0, -L - FLR_FOOT*FLR_RS, 0).applyEuler(FLR.rig.rotation).add(FLR.rig.position);
-      /* smaller in the burn than before: a glow the size of the whole rig
-         swallowed the canister and left the light looking sourceless again */
-      FLR.star.scale.setScalar(20 + 120*flash + 8*burn);
-      FLR.star.material.opacity = Math.min(1, burn + flash);
-      FLR.canopy.visible = burn > 0.02;
-      FLR.canopy.position.set(0, 0, 0);
-      FLR.canopy.scale.setScalar(7.5*open*FLR_RS);
-      /* fading in only while it opens; once open it is solid, and writes
-         depth, so the star below it is hidden from above */
-      FLR.canopy.material.opacity = Math.min(1, a/0.04);
-      FLR.canopy.material.transparent = a < 0.04;
-      FLR.canopy.material.color.copy(FLR.canCol);
-      /* the dome itself never tilts on its own: it tilts with the rig, so the
-         shroud lines keep meeting its rim */
-      FLR.canopy.rotation.z = 0;
-      /* and it turns slowly as it comes down, the way a canopy does */
-      FLR.spin += dt*0.45; FLR.canopy.rotation.y = FLR.spin;
-      FLR.can.visible = true; FLR.can.rotation.set(0, 0, 0);
-      FLR.can.position.set(0, -L, 0);
-      FLR.lines.visible = FLR.can.visible;
-      FLR.lines.position.set(0, -L, 0);
-      FLR.lines.scale.set(open*FLR_RS, open*FLR_RS, open*FLR_RS);
-      FLR.lines.material.opacity = 0.62*Math.min(1, a/0.04)*(flash > 0.3 ? 0 : 1);
-      const tf = Math.max(0, 1 - a/0.22);
-      FLR.trails[0].material.uniforms.uFade.value = tf;
-      FLR.trails[1].material.uniforms.uFade.value = tf*0.5;
-      /* the pool on the water: the lower it gets the less of the sea it reaches */
-      waterUnis.uFlareP.value.copy(FLR.pos);
-      FLR.fI = burn*(0.55 + 0.45*Math.min(1, FLR.pos.y/120)) + flash*0.85;
-      /* the squares come up as the light comes down — it is the light that
-         reveals them, so they must not be finished before it is spent. The
-         count lands last, exactly as the star goes out. */
-      FLR.lI = a*a*(3 - 2*a);
-      FLR.lit.material.uniforms.uI.value =
-        0.78*Math.max(0, Math.min(1, (a - 0.58)/0.42));
-    }
-    if(u >= 1){
-      /* TOUCHDOWN. The reading outlives the light — that is the point of the
-         weapon — but the light does not fade out, it is put out: a hiss, a
-         ring on the water, and the star is gone in the same instant. */
-      ANIM.flr = -1;
-      FLR.lI = 1;
-      FLR.lit.material.uniforms.uI.value = 0.78;
-      ANIM.flrWet = 0;
-      FLR.wetP.copy(FLR.pos);
-      FLR.wetI = FLR.fI;
-      FLR.wetH = FLR.rig.position.y;
-      noteShot('Flare ' + FLR.label + ' \u00b7 ' + FLR.n + ' found', 'lit');
-      /* the wet phase works in the sea's own coordinates */
-      FLR.rig.position.set(0, 0, 0); FLR.rig.rotation.set(0, 0, 0);
-      FLR.hx = 0; FLR.hz = 0;
-      FLR.star.visible = false; FLR.lines.visible = false;
-      hiss(FLR.pos, 0.22, 3600, 700, 1.1, 1.2);
-      refreshUI();
-    }
-  } else if(ANIM.flrWet >= 0){
-    /* IN THE WATER. The canister tips over and sinks; the chute comes down
-       beside it, spreads flat on the surface as it soaks, darkens, and is
-       drawn under. Nothing fades — the sea covers it, because it is opaque
-       and the chute is simply below it at the end. */
-    ANIM.flrWet = Math.min(1, ANIM.flrWet + dt/FLR_WET);
-    const w = ANIM.flrWet, P = FLR.wetP;
-    const sea = waterY(P.x, P.z, tt);
-    /* the last of the light, snuffed in a fraction of a second */
-    FLR.fI = (FLR.wetI || 0)*Math.max(0, 1 - w/0.05);
-    const tip = Math.min(1, w/0.30), ts = tip*tip*(3 - 2*tip);
-    const sink = Math.max(0, (w - 0.12)/0.88);
-    FLR.can.visible = true;
-    FLR.can.position.set(P.x, sea + FLR_FOOT*FLR_RS*(1 - ts) - 9.0*sink*sink, P.z);
-    FLR.can.rotation.set(0.35*ts, 0, 1.42*ts);
-    /* the chute settles downwind of the canister, not on top of the count */
-    const col = Math.min(1, w/0.28), cs = col*col;
-    const spread = Math.min(1, w/0.45);
-    const under = Math.max(0, (w - 0.45)/0.55);
-    FLR.canopy.visible = true;
-    FLR.canopy.position.set(P.x + 8.5*FLR_RS*col, 
-                            FLR.wetH + (sea + 0.35 - FLR.wetH)*cs - 4.5*under*under,
-                            P.z + 3.4*FLR_RS*col);
-    FLR.canopy.scale.set((7.5 + 1.4*spread)*FLR_RS, (7.5 - 6.3*spread)*FLR_RS, (7.5 + 1.4*spread)*FLR_RS);
-    FLR.canopy.material.opacity = 1.0; FLR.canopy.material.transparent = false;
-    FLR.canopy.material.color.copy(FLR.canCol).lerp(_wetCol, Math.min(1, w*1.6));
-    /* the ring where it went in */
-    MARKS_E[22].set(P.x, P.z, 3 + 26*Math.min(1, w/0.6), Math.pow(Math.max(0, 1 - w/0.6), 2));
-    if(w >= 1){
-      ANIM.flrWet = -1; MARKS_E[22].w = 0; refreshUI();
-      FLR.can.visible = false; FLR.canopy.visible = false;
-      FLR.canopy.material.color.copy(FLR.canCol);
-      FLR.fI = 0;
-      for(const t of FLR.trails) t.material.uniforms.uFade.value = 0;
-    }
-  } else if(FLR.star.visible || FLR.can.visible || FLR.fI > 0){
-    FLR.rig.position.set(0, 0, 0); FLR.rig.rotation.set(0, 0, 0); FLR.hx = 0; FLR.hz = 0;
-    FLR.star.visible = false; FLR.canopy.visible = false;
-    FLR.can.visible = false; FLR.lines.visible = false;
-    FLR.fI = 0;
-    for(const t of FLR.trails) t.material.uniforms.uFade.value = 0;
+  /* theirs leaving their plot, then the gap, then its fall over her board */
+  if(EFLR.out >= 0){
+    EFLR.out = Math.min(1, EFLR.out + dt/EF_OUT_DUR);
+    const f = EFLR.out, e = f*(0.45 + 0.55*f);
+    EFLR.os.userData.want = f < 0.95;
+    bez(EFLR.oA, EFLR.oC, EFLR.oB, e, EFLR.os.position);
+    EFLR.os.material.opacity = 0.9;
+    const fd = f < 0.85 ? Math.min(1, f*9) : Math.max(0, 1 - (f - 0.85)/0.15);
+    for(const t of EFLR.osTrails){ t.material.uniforms.uProg.value = e; t.material.uniforms.uFade.value = fd; }
+    if(f >= 1){ EFLR.out = -1; EFLR.gap = EF_GAP; EFLR.os.userData.want = false; }
   }
+  if(EFLR.gap > 0){
+    EFLR.gap -= dt;
+    if(EFLR.gap <= 0){ EFLR.gap = 0; EFLR.u = 0; EFLR.litOn = false; boom(EFLR.B, 0.06); refreshUI(); }
+  }
+  /* the star shells, over whichever board each comes down on */
+  flrStep(FLR, dt); flrStep(EFLR, dt);
 
   cdStep(dt);
 
@@ -6233,7 +6349,9 @@ function refreshUI(){
             : (ANIM.flrOut >= 0 || FLR.gap > 0 || ANIM.flr >= 0 || ANIM.flrWet >= 0) ? ('Star shell ' + FLR.label + (ANIM.flrWet >= 0 ? ' \u00b7 ' + FLR.n + ' found' : ''))
             : null;
   /* their fire takes the line while it is in the air: it is what matters most */
-  const them = EAIR.t >= 0 ? (EAIR.done[2] ? EAIR.label : 'Incoming aircraft')
+  const them = (EFLR.out >= 0 || EFLR.gap > 0 || EFLR.u >= 0) ? 'Incoming star shell'
+             : EFLR.wet >= 0 ? EFLR.label2
+             : EAIR.t >= 0 ? (EAIR.done[2] ? EAIR.label : 'Incoming aircraft')
              : ETORP.u >= 0 ? (ETORP.hitDone ? ETORP.label : 'Incoming torpedo')
              : ESALVO.u >= 0 ? (ESALVO.hitDone ? ESALVO.label : 'Incoming missile') : null;
   MATCH.act = them || act; MATCH.them = !!them; MATCH.dirty = true;
@@ -6414,13 +6532,15 @@ function onCtl(e){
   }
   if(a === 'tor' && ANIM.era === 0){ if(enemySide) enemyTorpedo(); else torpedo(); }
   /* the star shell exists in both eras: a signal rocket is not a modern idea */
-  if(a === 'flare') flare();
+  if(a === 'flare'){ if(enemySide) enemyFlare(); else flare(); }
   if(a === 'sink') setSink(ANIM.sink < 0);
   if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true);
     ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
     EAIR.t = -1; EAIR.aim = -1; for(let i=28;i<31;i++) marks[i].w = 0;
     ANIM.flr = -1; ANIM.flrWet = -1; ANIM.flrOut = -1; FLR.gap = 0; MARKS_E[22].w = 0; FLR.lI = 0; matchReset();
     if(FLR.lit){ FLR.lit.visible = false; FLR.lit.material.uniforms.uI.value = 0; }
+    EFLR.u = -1; EFLR.wet = -1; EFLR.out = -1; EFLR.gap = 0; EFLR.lI = 0; marks[31].w = 0;
+    EFLR.os.userData.want = false; EFLR.lit.visible = false; EFLR.lit.material.uniforms.uI.value = 0;
     if(ANIM.cat >= 0){ ANIM.cat = -1; CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0,0,0);
       for(const t of CAT.trails) t.material.uniforms.uFade.value = 0; } }
   refreshUI(); hideHint();
@@ -6730,35 +6850,37 @@ function cineUpdate(dt){
     want = (age > 0.05 && age < FLR_OUT_DUR - 0.35) ? 1 : 0;
     blendIn = 2.4;
     camAt = FLR.vant; look = FLR.os.position;
-  } else if(FLR_CINE && ANIM.flr >= 0){
+  } else if(EFLR.u >= 0){
+    /* the view that was made for her star shell over her own board is theirs
+       now: it is their shell that comes down among her ships */
     /* THE STAR SHELL IS WATCHED TWICE OVER. On the way up the subject is the
        shell, from low down so it climbs out of the frame; once it is lit the
        subject is no longer the light but the nine squares under it, so the
        eye leaves the star and frames the block instead. Following the light
        all the way would show the one thing that does not matter. */
-    const u = ANIM.flr;
+    const u = EFLR.u;
     age = u*FLR_DUR;
     want = (age > 0.5) ? 1 : 0;
     /* the stand-off side is decided by the board, not by where the rig
        happens to be. On the split the orbit sits low in the middle of her own
        formation, so the default — pull back along CINE.pos minus look — put
        the camera over the fleet and filled the frame with a flight deck. */
-    lookDir = _flrDir;
-    if(u < FLR_UP){ _flrLook.copy(FLR.star.position); LD = 132; LH = 26; }
+    lookDir = EFLR.dir;
+    if(u < FLR_UP){ _flrLook.copy(EFLR.star.position); LD = 132; LH = 26; }
     else {
       /* FRAME THE PAIR, not the block. Aimed at the squares alone the star sat
          above the top edge for most of the fall — a shot of a star shell has
          to contain the star shell. So the eye holds a point between them and
          stands off far enough for the whole drop to fit, closing in as the
          light comes down and the pair draws together. */
-      const sp = Math.max(34, FLR.pos.y);
+      const sp = Math.max(34, EFLR.pos.y);
       const ah = Math.min(1, (u - FLR_UP)/(1 - FLR_UP));
       /* the hand-off is eased, not cut: at the burst the aim is still on the
          star, and over the first part of the fall it slides to the pair —
          a jump there swept the star off the top of the frame for a second */
       const hb = Math.min(1, ah/0.16), e = hb*hb*(3 - 2*hb);
-      _flrPair.copy(FLR.lit.position).lerp(FLR.pos, 0.40);
-      _flrLook.copy(FLR.star.position).lerp(_flrPair, e);
+      _flrPair.copy(EFLR.lit.position).lerp(EFLR.pos, 0.40);
+      _flrLook.copy(EFLR.star.position).lerp(_flrPair, e);
       LD = 132 + (128 + sp*1.05 - 132)*e;
       LH = 26 + (22 + sp*0.26 - 26)*e;
       /* THE EYE HEELS WITH THE CHUTE. It used to rock on periods of its own,
@@ -6767,10 +6889,10 @@ function cineUpdate(dt){
          the rig's heel as seen from where it stands — the part of the tilt
          that lies across the frame — so the horizon leans exactly as the
          canopy does, and the aim follows the drift with its usual lag. The
-         camera sits on the +_flrDir side looking back along it, so the
+         camera sits on the +EFLR.dir side looking back along it, so the
          frame's right is (dir.z, 0, -dir.x). */
-      const dl = Math.hypot(_flrDir.x, _flrDir.z) || 1;
-      const heel = (FLR.hx*_flrDir.z - FLR.hz*_flrDir.x)/dl;
+      const dl = Math.hypot(EFLR.dir.x, EFLR.dir.z) || 1;
+      const heel = (EFLR.hx*EFLR.dir.z - EFLR.hz*EFLR.dir.x)/dl;
       lookSway = null;
       CINE.rollWant = heel*e;
       /* the lag is only for the fall. Through the hand-off from the climb the
@@ -6779,11 +6901,11 @@ function cineUpdate(dt){
       lookLag = ah < 0.12 ? 2.8 : 3.4;
     }
     look = _flrLook;
-  } else if(FLR_CINE && ANIM.flrWet >= 0 && ANIM.flrWet < 0.55){
+  } else if(EFLR.wet >= 0 && EFLR.wet < 0.55){
     /* it stays for the splash: the light going out in the water is the end
        of the shot, and handing back before it would cut the ending off */
-    want = 1; lookDir = _flrDir;
-    _flrLook.copy(FLR.wetP); _flrLook.y = waterY(FLR.wetP.x, FLR.wetP.z, tt);
+    want = 1; lookDir = EFLR.dir;
+    _flrLook.copy(EFLR.wetP); _flrLook.y = waterY(EFLR.wetP.x, EFLR.wetP.z, tt);
     LD = 160; LH = 36; lookLag = 1.8;
     look = _flrLook;
   } else if(ANIM.cat >= 0){
@@ -6803,7 +6925,7 @@ function cineUpdate(dt){
   }
   if(CINE.hold > 0) CINE.hold -= dt;
   CINE.kick *= Math.exp(-dt*2.2);
-  if(!(ANIM.flr >= FLR_UP)) CINE.rollWant = 0;
+  if(!(EFLR.u >= FLR_UP)) CINE.rollWant = 0;
   CINE.roll += (CINE.rollWant - CINE.roll)*(1 - Math.exp(-dt*6.0));
   CINE.want = want;
   CINE.w += (want - CINE.w)*(1 - Math.exp(-dt*(want ? blendIn : 0.75)));
@@ -7035,8 +7157,12 @@ function boardVis(enemy){
   else waterUnis.uHitCell.value.set(OWN_HIT[0], OWN_HIT[1], enemy ? 0 : ANIM.fire);
   /* the star shell hangs over their plot: its pool of light and the nine
      squares it reads are drawn there and nowhere else */
-  waterUnis.uFlareI.value = enemy ? FLR.fI : 0;
-  waterUnis.uLitI.value   = enemy ? FLR.lI : 0;
+  /* theirs over her board, hers over their plot: each board has its own */
+  const FR = enemy ? FLR : EFLR;
+  waterUnis.uFlareP.value.copy(FR.pos);
+  waterUnis.uFlareI.value = FR.fI;
+  waterUnis.uLitR.value.copy(FR.litR);
+  waterUnis.uLitI.value   = FR.lI;
 }
 /* dress the scene for one board or the other, then draw it */
 function board(enemy){
