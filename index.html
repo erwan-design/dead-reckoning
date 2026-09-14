@@ -1160,7 +1160,7 @@ const SUN = new T.Vector3(
   Math.sin(AD.sunAz)*Math.cos(AD.sunEl), Math.sin(AD.sunEl), Math.cos(AD.sunAz)*Math.cos(AD.sunEl)
 );
 
-const NOCC = 12, NMARK = 28, NPOST = 16, NDMG = 3, NCON = 8;
+const NOCC = 12, NMARK = 32, NPOST = 16, NDMG = 3, NCON = 8;
 
 /* ---------- renderer ---------- */
 const canvas = document.getElementById('c');
@@ -3305,6 +3305,11 @@ const BOW_FS = G_HEAD + G_SKY + G_FOG + `
   onBoard(BOARD_OWN, TOR.grp, false);
   for(const t of TOR.trails) onBoard(BOARD_OWN, t, true);
   TOR.inb = TOR.grp.clone(); TOR.inb.scale.setScalar(2.6); scene.add(TOR.inb);
+  /* THEIR TORPEDO: a body on their plot and one on her board. Each gets its
+     own bow-wave material, so it is not switched off by ours going idle. */
+  const ownBow = (g) => g.traverse(o => { if(o.material === TOR.bow.material){ o.material = TOR.bow.material.clone(); g.userData.bow = o.material; } });
+  TOR.eOut = TOR.grp.clone(); TOR.eOut.scale.setScalar(2.6); scene.add(TOR.eOut); ownBow(TOR.eOut);
+  TOR.eIn  = TOR.grp.clone(); scene.add(TOR.eIn); ownBow(TOR.eIn);
   onBoard(BOARD_ENEMY, TOR.inb, false);
   const run0 = [];
   for(let i=0;i<=200;i++) run0.push(new T.Vector3(i, 0.05, 0));
@@ -3315,6 +3320,17 @@ const BOW_FS = G_HEAD + G_SKY + G_FOG + `
                   drift:[0.16, 0.05, -0.12], tint:0xf6fffd, tintI:1.15, order:9, add:true})
   ];
   for(const t of TOR.trailsIn) onBoard(BOARD_ENEMY, t, true);
+  onBoard(BOARD_ENEMY, TOR.eOut, false); onBoard(BOARD_OWN, TOR.eIn, false);
+  TOR.trailsEOut = [
+    ribbon(run0, {w:4.6, grow:9.0, life:1.00, seed:15.1, i:0.55, sea:true, drift:[0.30, 0.10, -0.25], tint:0xdff2ee, order:7}),
+    ribbon(run0, {w:1.8, grow:3.0, life:0.52, seed:19.7, i:0.85, sea:true, drift:[0.16, 0.05, -0.12], tint:0xf6fffd, tintI:1.15, order:9, add:true})
+  ];
+  for(const t of TOR.trailsEOut) onBoard(BOARD_ENEMY, t, true);
+  TOR.trailsEIn = [
+    ribbon(run0, {w:1.9, grow:4.2, life:1.00, seed:25.1, i:0.50, sea:true, drift:[0.30, 0.10, -0.25], tint:0xdff2ee, order:7}),
+    ribbon(run0, {w:0.72, grow:1.5, life:0.52, seed:27.7, i:0.80, sea:true, drift:[0.16, 0.05, -0.12], tint:0xf6fffd, tintI:1.15, order:9, add:true})
+  ];
+  for(const t of TOR.trailsEIn) onBoard(BOARD_OWN, t, true);
 
   TOR.spray = makeSpray(); onBoard(BOARD_OWN, TOR.spray.pts, true);
   TOR.sprayE = makeSpray(); onBoard(BOARD_ENEMY, TOR.sprayE.pts, true);
@@ -4208,7 +4224,7 @@ const CDN = { flare:'Star shell', cat:'Air strike', tor:'Torpedo' };
 const MATCH = { t:0, acc:-1, turn:6, sec:-1, dirty:true, act:null };
 /* the debug drawer's side switch, and which weapons the enemy has so far */
 var DBG_SIDE = 'own';
-const ENEMY_ARMS = ['fire'];
+const ENEMY_ARMS = ['fire', 'tor'];
 /* the two fleets' squares, kept by the readouts and read by the balance bar */
 const ENEMY_TALLY = { total:0, hit:0 }, OWN_TALLY = { total:0, lost:0 };   /* acc < 0: no exchange */
 function matchReset(){
@@ -4327,6 +4343,61 @@ const TOR_HOLD = 0, TOR_OUT = 0.405, TOR_IN = 0.464, TOR_HIT = 0.786, TOR_FOLLOW
    fast, under the surface, loses a little way as she rises to her running
    depth, and only then does her motor take her up to full speed. */
 const TOR_V0 = 95, TOR_EJECT = 0.55, TOR_ACC = 950, TOR_VMAX = 560, TOR_RUN = 1500;
+/* THEIR TORPEDO.
+   out  0 → ET_OUT   off a square of their grid, running for the plot's near edge
+   in   ET_IN → ET_HIT   in off her horizon down a lane of her grid, to the first hull in it */
+const ETORP = { u:-1, hitDone:false, at:null, cell:[0,0], label:'', aim:0, travel:new T.Vector3(),
+                A:new T.Vector3(), B:new T.Vector3(), C:new T.Vector3(), D:new T.Vector3(), vant:new T.Vector3() };
+const ETORP_DUR = 8.0, ET_OUT = 0.28, ET_IN = 0.33, ET_HIT = 0.80;
+function pickOwnLane(){
+  ownInit();
+  const fwd = new T.Vector3(-Math.sin(CAM.az), 0, -Math.cos(CAM.az));
+  const o = cellW(5, 5), ex = cellW(6, 5).sub(o), ez = cellW(5, 6).sub(o);
+  const dx = fwd.dot(ex), dz = fwd.dot(ez);
+  const alongX = Math.abs(dx) > Math.abs(dz);
+  /* she travels from the far horizon towards the eye: against the camera's forward */
+  const tsg = -Math.sign(alongX ? dx : dz);
+  const lanes = [];
+  for(let lane=0; lane<10; lane++){
+    for(let step=0; step<10; step++){
+      const k = tsg > 0 ? step : 9 - step;
+      const gx = alongX ? k : lane, gz = alongX ? lane : k;
+      const at = ownShipAt(gx, gz);
+      if(at){ const hs = OWN_HITS[at.key]; lanes.push({ gx, gz, at, lane, fresh: !(hs && hs.has(at.idx)) }); break; }
+    }
+  }
+  if(!lanes.length) return null;
+  const fresh = lanes.filter(l => l.fresh), pool = fresh.length ? fresh : lanes;
+  const L = pool[Math.floor(Math.random()*pool.length)];
+  const far = tsg > 0 ? -44 : 53;
+  L.entry = alongX ? cellW(far, L.gz + 0.5, 0.05) : cellW(L.gx + 0.5, far, 0.05);
+  return L;
+}
+function enemyTorpedo(){
+  const L = pickOwnLane(); if(!L) return;
+  ETORP.cell[0] = L.gx; ETORP.cell[1] = L.gz; ETORP.at = L.at;
+  /* on their plot: off any one of the hundred squares, for their near edge */
+  const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
+  const lx = Math.floor(Math.random()*10), lz = Math.floor(Math.random()*10);
+  ETORP.A.copy(cellW(lx + 0.5, lz + 0.5, 0.05));
+  ETORP.B.copy(ETORP.A).addScaledVector(back, 520).setY(0.05);
+  /* on her board: down the lane, from the horizon to the square */
+  ETORP.C.copy(L.entry);
+  ETORP.D.copy(cellW(L.gx + 0.5, L.gz + 0.5, 0.05));
+  ETORP.travel.subVectors(ETORP.D, ETORP.C).setY(0).normalize();
+  /* the eye waits past the hull she is running at, low, looking back at her */
+  const sd = new T.Vector3(ETORP.travel.z, 0, -ETORP.travel.x);
+  ETORP.vant.copy(ETORP.D).addScaledVector(ETORP.travel, 125).addScaledVector(sd, 42).setY(44);
+  const po = [], pi = [];
+  for(let i=0;i<=200;i++){ po.push(new T.Vector3().lerpVectors(ETORP.A, ETORP.B, i/200));
+                           pi.push(new T.Vector3().lerpVectors(ETORP.C, ETORP.D, i/200)); }
+  for(const t of TOR.trailsEOut) retrace(t, po);
+  for(const t of TOR.trailsEIn) retrace(t, pi);
+  for(const t of TOR.trailsEOut.concat(TOR.trailsEIn)){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
+  ETORP.u = 0; ETORP.hitDone = false; ETORP.aim = 0;
+  MARKS_E[28].w = 0; marks[27].w = 0;
+  refreshUI();
+}
 const TOR_F0 = 0.38;
 /* distance run against the leg's clock: she gathers way, then holds her speed */
 function torRamp(f){ return (f < TOR_F0 ? f*f/(2*TOR_F0) : f - TOR_F0/2)/(1 - TOR_F0/2); }
@@ -5018,6 +5089,8 @@ function updateFX(dt){
      fly out, fall and fade on its own after she has gone — on each board */
   sprayTick(TOR.spray, TOR.grp, TOR.grp.userData.want && (TORP.v || 0) > 150 && ANIM.tor*TOR_DUR > 0.5, 1.0, dt);
   sprayTick(TOR.sprayE, TOR.inb, TOR.inb.userData.want, 2.6, dt);
+  sprayTick(TOR.sprayE, TOR.eOut, TOR.eOut.userData.want && ETORP.u*ETORP_DUR > 0.4, 2.6, dt);
+  sprayTick(TOR.spray, TOR.eIn, TOR.eIn.userData.want, 1.0, dt);
 
   /* detonation */
   updateDebris(dt);
@@ -5180,6 +5253,60 @@ function updateFX(dt){
     MIS.grp.userData.want = false; MIS.inb.userData.want = false; SALVO.aim = 0;
     for(const t of MIS.trails) t.material.uniforms.uFade.value = 0;
     for(const t of MIS.trailsIn) t.material.uniforms.uFade.value = 0;
+  }
+
+  /* THEIR TORPEDO */
+  if(ETORP.u >= 0){
+    ETORP.u = Math.min(1, ETORP.u + dt/ETORP_DUR);
+    const u = ETORP.u, ts = u*ETORP_DUR;
+    const run = (grp, P, Q, f, lift) => {
+      grp.position.lerpVectors(P, Q, f);
+      _tn.lerpVectors(P, Q, Math.min(1, f + 0.01));
+      grp.lookAt(_tn.x, grp.position.y, _tn.z);
+      grp.position.y = waterY(grp.position.x, grp.position.z, tt) - lift;
+    };
+    /* OUT on their plot: out of a boil, gathering way towards the near edge */
+    const so = Math.min(1, u/ET_OUT), po = so*so*(0.35 + 0.65*so);
+    const fo = u < ET_OUT ? Math.min(1, ts*4) : Math.max(0, 1 - (u - ET_OUT)/0.25);
+    for(const t of TOR.trailsEOut){ t.material.uniforms.uProg.value = po; t.material.uniforms.uFade.value = fo; }
+    TOR.eOut.userData.want = u < ET_OUT;
+    if(u < ET_OUT) run(TOR.eOut, ETORP.A, ETORP.B, po, 0.45*2.6);
+    if(TOR.eOut.userData.bow) TOR.eOut.userData.bow.uniforms.uI.value = u < ET_OUT ? Math.min(1, so*2.2) : 0;
+    if(ts < 1.6){ const k = ts/1.6; MARKS_E[28].set(ETORP.A.x, ETORP.A.z, 4 + 34*Math.sqrt(k), Math.pow(1 - k, 1.6)); }
+    else MARKS_E[28].w = 0;
+    /* IN on her board: steady and straight down the lane */
+    const si = Math.max(0, Math.min(1, (u - ET_IN)/(ET_HIT - ET_IN)));
+    const fi = u < ET_IN ? 0 : u < ET_HIT ? Math.min(1, (u - ET_IN)*20) : Math.max(0, 1 - (u - ET_HIT)/0.20);
+    for(const t of TOR.trailsEIn){ t.material.uniforms.uProg.value = si; t.material.uniforms.uFade.value = fi; }
+    TOR.eIn.userData.want = u >= ET_IN && u < ET_HIT;
+    if(TOR.eIn.userData.want) run(TOR.eIn, ETORP.C, ETORP.D, si, 0.45);
+    if(TOR.eIn.userData.bow) TOR.eIn.userData.bow.uniforms.uI.value = TOR.eIn.userData.want ? 0.82 + 0.10*Math.sin(tt*11.0) : 0;
+    ETORP.aim = TOR.eIn.userData.want ? 0.55 + 0.45*Math.sin(tt*9.0) : 0;
+    if(u >= ET_HIT && !ETORP.hitDone){
+      ETORP.hitDone = true;
+      const T0 = ETORP.D, at = ETORP.at, lab = colLetter(ETORP.cell[0]) + (ETORP.cell[1] + 1);
+      OWN_SHOT.add(ETORP.cell[0] + ',' + ETORP.cell[1]);
+      FX.hitFlash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z); FX.hitFlash.material.uniforms.uT0.value = tt;
+      FX.misSplash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z); FX.misSplash.material.uniforms.uT0.value = tt;
+      const set = OWN_HITS[at.key] = OWN_HITS[at.key] || new Set();
+      set.add(at.idx);
+      const sh = shipNamed(at.key);
+      if(sh) scar(sh, T0, 16.0);
+      ANIM.shake = Math.max(ANIM.shake, 1.0);
+      boom(T0, 0.46);
+      const gone = set.size >= at.n;
+      if(gone && sh) setSink(true, sh);
+      ETORP.label = 'Torpedo ' + lab + ' \u00b7 ' + (gone ? at.name.toLowerCase() + ' sunk' : 'hit');
+      LASTIN = { label: ETORP.label, kind:'hit' };
+      refreshUI();
+    }
+    if(u >= ET_HIT){
+      const a = Math.min(1, (u - ET_HIT)/(1 - ET_HIT));
+      marks[27].set(ETORP.D.x, ETORP.D.z, 9 + 42*a, (1-a)*(1-a));
+    }
+    if(u >= 1){ ETORP.u = -1; ETORP.aim = 0; marks[27].w = 0; MARKS_E[28].w = 0; refreshUI(); }
+  } else {
+    TOR.eOut.userData.want = false; TOR.eIn.userData.want = false;
   }
 
   /* THEIR ROUND */
@@ -5886,7 +6013,8 @@ function refreshUI(){
             : (ANIM.flrOut >= 0 || FLR.gap > 0 || ANIM.flr >= 0 || ANIM.flrWet >= 0) ? ('Star shell ' + FLR.label + (ANIM.flrWet >= 0 ? ' \u00b7 ' + FLR.n + ' found' : ''))
             : null;
   /* their fire takes the line while it is in the air: it is what matters most */
-  const them = ESALVO.u >= 0 ? (ESALVO.hitDone ? ESALVO.label : 'Incoming missile') : null;
+  const them = ETORP.u >= 0 ? (ETORP.hitDone ? ETORP.label : 'Incoming torpedo')
+             : ESALVO.u >= 0 ? (ESALVO.hitDone ? ESALVO.label : 'Incoming missile') : null;
   MATCH.act = them || act; MATCH.them = !!them; MATCH.dirty = true;
   setupUI();
   plotReadout();
@@ -6063,7 +6191,7 @@ function onCtl(e){
     if(SPLIT[SCREEN] !== undefined){ SPLIT[SCREEN] = SPLIT[SCREEN] ? 0 : 1; setScreen(SCREEN); }
     hideHint(); return;
   }
-  if(a === 'tor' && ANIM.era === 0) torpedo();
+  if(a === 'tor' && ANIM.era === 0){ if(enemySide) enemyTorpedo(); else torpedo(); }
   /* the star shell exists in both eras: a signal rocket is not a modern idea */
   if(a === 'flare') flare();
   if(a === 'sink') setSink(ANIM.sink < 0);
@@ -6351,6 +6479,14 @@ function cineUpdate(dt){
        eye stays about thirty units behind where it means to be */
     followRate = 16.0;
     obj = TOR.grp; D = 30 - 4*eIn; H = 10 - 6*eIn; S = 24 - 19*eIn; L = 60;
+  } else if(ETORP.u >= ET_IN + (ET_HIT - ET_IN)*0.38 && ETORP.u < ET_HIT + 0.12){
+    /* THEIR TORPEDO, SEEN FROM WHERE IT IS GOING. The eye stands past the
+       hull it is running at, low over the water, and watches it come down the
+       lane; after the hit it holds on the hull. It cuts in once she is near
+       enough to be seen — from the start it only showed the haze she was in */
+    age = (ETORP.u - ET_IN)*ETORP_DUR;
+    want = 1; blendIn = 2.2;
+    camAt = ETORP.vant; look = ETORP.u < ET_HIT ? TOR.eIn.position : ETORP.D;
   } else if(ANIM.flrOut >= 0){
     /* THE LAUNCH IS THE SHOT NOW. The fall happens over their plot, seen from
        straight up; what her own board has is the shell going up. So the eye
@@ -6660,6 +6796,7 @@ function boardVis(enemy){
   else if(enemy && TORP.aim > 0.002) waterUnis.uHitCell.value.set(TORP.cell[0], TORP.cell[1], TORP.aim);
   else if(enemy && STRK.aim >= 0) waterUnis.uHitCell.value.set(STRK.cells[STRK.aim][0], STRK.cells[STRK.aim][1], 0.55 + 0.45*Math.sin(tt*9.0));
   else if(!enemy && ESALVO.aim > 0.002) waterUnis.uHitCell.value.set(ESALVO.cell[0], ESALVO.cell[1], ESALVO.aim);
+  else if(!enemy && ETORP.aim > 0.002) waterUnis.uHitCell.value.set(ETORP.cell[0], ETORP.cell[1], ETORP.aim);
   else waterUnis.uHitCell.value.set(OWN_HIT[0], OWN_HIT[1], enemy ? 0 : ANIM.fire);
   /* the star shell hangs over their plot: its pool of light and the nine
      squares it reads are drawn there and nowhere else */
