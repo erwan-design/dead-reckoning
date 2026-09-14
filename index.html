@@ -4838,8 +4838,11 @@ function updateFX(dt){
     if(TOR.inb.userData.want) placeRun(TOR.inb, TORP.C, TORP.D, si, 0.45*2.6);
     TORP.aim = (u >= TOR_IN && u < TOR_HIT) ? 0.55 + 0.45*Math.sin(tt*9.0) : 0;
     /* the water parting at her nose, on whichever board she is on */
-    /* the bow wave grows with her speed; at the tube there is only a stir */
-    const wake = u < TOR_HOLD ? 0.18 : u < TOR_OUT ? 0.25 + 0.75*Math.min(1, so/TOR_F0) : (u >= TOR_IN && u < TOR_HIT) ? 1 : 0;
+    /* the bow wave grows with her speed, from nothing: at the tube, seen low
+       from her beam, even a faint one lay on the water as a white bar beside
+       a torpedo that was not moving */
+    const ks = Math.min(1, so/TOR_F0);
+    const wake = u < TOR_HOLD ? 0 : u < TOR_OUT ? ks*ks : (u >= TOR_IN && u < TOR_HIT) ? 1 : 0;
     TOR.bow.material.uniforms.uI.value = wake*(0.82 + 0.10*Math.sin(tt*11.0));
     if(u >= TOR_HIT && !ANIM.torHit){
       ANIM.torHit = true;
@@ -6025,7 +6028,7 @@ const _flrLook = new T.Vector3(), _flrDir = new T.Vector3(), _flrPair = new T.Ve
 function cineUpdate(dt){
   let want = 0, obj = null, D = 30, H = 8, S = 6, L = 45, look = null, age = 0,
       LD = 118, LH = 58, lookDir = null, lookSway = null, lookLag = 2.6, blendIn = 0.95, camAt = null,
-      zoomAmt = 2.8, zoomT0 = 1.1, zoomRate = 1.05;
+      zoomAmt = 2.8, zoomT0 = 1.1, zoomRate = 1.05, followRate = 3.4;
   /* THE GUN KEEPS THE PLOT. It is the shot you fire every turn, and a camera
      that leaves the board for it would make the ordinary thing ceremonial —
      and would take the plot away four seconds out of five. The three specials
@@ -6045,6 +6048,9 @@ function cineUpdate(dt){
        behind her sat inside it: so it starts wide on her beam and slides in
        behind as she gathers way */
     const kIn = Math.max(0, Math.min(1, (age - TOR_HOLD*TOR_DUR)/1.6)), eIn = kIn*kIn*(3 - 2*kIn);
+    /* a tighter hold on her: she goes from rest to full speed in a second,
+       and a lazy follow let her run out ahead of the frame */
+    followRate = 7.0;
     obj = TOR.grp; D = 30 - 4*eIn; H = 10 - 6*eIn; S = 24 - 19*eIn; L = 60;
   } else if(ANIM.flrOut >= 0){
     /* THE LAUNCH IS THE SHOT NOW. The fall happens over their plot, seen from
@@ -6144,8 +6150,8 @@ function cineUpdate(dt){
     _ct.y = Math.max(_ct.y, 6.5);
     if(!CINE.init){ CINE.pos.copy(_ct); CINE.look.copy(_cl); CINE.init = true; }
     else {
-      CINE.pos.lerp(_ct, 1 - Math.exp(-dt*3.4));
-      CINE.look.lerp(_cl, 1 - Math.exp(-dt*5.0));
+      CINE.pos.lerp(_ct, 1 - Math.exp(-dt*followRate));
+      CINE.look.lerp(_cl, 1 - Math.exp(-dt*Math.max(5.0, followRate*1.4)));
     }
   } else if(camAt && look){
     /* a vantage that stays put, and an aim that follows */
