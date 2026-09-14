@@ -3120,6 +3120,17 @@ const ESALVO = { u:-1, cell:[0,0], at:null, aim:0, hitDone:false, label:'',
                  P0:new T.Vector3(), P1:new T.Vector3(), P2:new T.Vector3(),
                  Q0:new T.Vector3(), Q1:new T.Vector3(), Q2:new T.Vector3(), tgt:new T.Vector3() };
 const ES_DUR = 5.6, ES_OUT = 0.28, ES_IN = 0.34, ES_HIT = 0.66;
+/* their air strike's state lives up here: its airframes and bombs are built
+   with the scene, before the functions that fly them */
+const EAIR = { t:-1, cells:[], cellP:[], tRel:[], tLand:[], done:[false,false,false], aim:-1, hits:0, sunk:null, label:'',
+               A:new T.Vector3(), A1:new T.Vector3(), A2:new T.Vector3(), curve:null, len:1, bombs:[],
+               relP:[new T.Vector3(), new T.Vector3(), new T.Vector3()],
+               travel:new T.Vector3(), mid:new T.Vector3(), vant:new T.Vector3(), look:new T.Vector3(),
+               camOn:1e9, camOff:-1, end:0 };
+const _ea1 = new T.Vector3(), _ea2 = new T.Vector3();
+/* fast in and fast out, slow over the lane: at one speed the three squares
+   went by in a quarter of a second and the stick landed as one burst */
+const EA_OUT = 2.4, EA_IN = 2.9, EA_V = 420, EA_VLO = 135, EA_FALL = 0.62, EA_LEAD = 40;
 function pickOwnTarget(){
   ownInit();
   const ships = [], free = [];
@@ -3923,6 +3934,34 @@ function updateDebris(dt){
      because the plot is read from straight up */
   CAT.inb = CAT.plane.clone(); CAT.inb.scale.setScalar(3.2); scene.add(CAT.inb);
   onBoard(BOARD_ENEMY, CAT.inb, false);
+  /* THEIR AIRCRAFT. Over their plot, the same airframe at plot size climbing
+     out of a burst of steam; over her board, life size, with a stick of three
+     under it and a burst and splash for each bomb */
+  CAT.eOut = CAT.plane.clone(); CAT.eOut.scale.setScalar(3.2); scene.add(CAT.eOut);
+  onBoard(BOARD_ENEMY, CAT.eOut, false);
+  CAT.eIn = CAT.plane.clone(); CAT.eIn.scale.setScalar(1.15); scene.add(CAT.eIn);
+  onBoard(BOARD_OWN, CAT.eIn, false);
+  CAT.eTrails = [
+    ribbon(catPts, {w:3.4, grow:12.0, life:0.34, seed:44.1, i:0.22, drift:[3.6, 2.0, -1.8], tint:0xeef1f3, order:6}),
+    ribbon(catPts, {w:1.5, grow:5.0, life:0.46, seed:47.9, i:0.44, drift:[2.0, 1.4, -1.0], tint:0xf6f8f9, order:7})
+  ];
+  for(const t of CAT.eTrails) onBoard(BOARD_ENEMY, t, true);
+  FX.eSteam = smokeColumn({pos:new T.Vector3(0, 2.0, 0), h:40, size:7.0, spread:16, speed:0.60, once:true, burst:9,
+    birth0:0.0, birthSpan:0.16, out:0.42, hold:0.24, rise:0.45,
+    drift:[0.30,-0.14], n:70, i:0.34, add:true, dark:0x93b3c0, lit:0xeaf7fb, order:13});
+  onBoard(BOARD_ENEMY, FX.eSteam, true);
+  FX.oHit = [], FX.oSpl = [], EAIR.bombs = [];
+  for(let i=0;i<3;i++){
+    FX.oSpl.push(smokeColumn({pos:new T.Vector3(0, 1.5, 0), h:50, size:3.4, spread:7, speed:0.30, once:true,
+      birth0:0.0, birthSpan:0.10, out:0.30, hold:0.28, rise:0.48,
+      drift:[0.10,-0.05], n:70, i:0.42, add:true, dark:0x7f9fb4, lit:0xf2fbff, order:14}));
+    FX.oHit.push(smokeColumn({pos:new T.Vector3(0, 2.0, 0), h:22, size:4.2, spread:6, speed:0.85, once:true,
+      birth0:0.0, birthSpan:0.12, out:0.42, hold:0.18, rise:0.5,
+      drift:[0.20,-0.10], n:46, i:0.55, add:true, dark:0x9a3c10, lit:0xffcf86, warm:0.7, order:15}));
+    onBoard(BOARD_OWN, FX.oSpl[i], true); onBoard(BOARD_OWN, FX.oHit[i], true);
+    const b = CAT.bomb.clone(); b.scale.setScalar(1.4); scene.add(b);
+    EAIR.bombs.push(onBoard(BOARD_OWN, b, false));
+  }
 }
 FX.farSmoke = smokeColumn({pos:new T.Vector3(1186, 6, 1432), h:150, size:13, spread:12, speed:0.022,
              drift:[0.34,-0.18], n:26, i:0.30, dark:0x2e2f42, lit:0xc9b0b0, order:9});
@@ -4224,7 +4263,7 @@ const CDN = { flare:'Star shell', cat:'Air strike', tor:'Torpedo' };
 const MATCH = { t:0, acc:-1, turn:6, sec:-1, dirty:true, act:null };
 /* the debug drawer's side switch, and which weapons the enemy has so far */
 var DBG_SIDE = 'own';
-const ENEMY_ARMS = ['fire', 'tor'];
+const ENEMY_ARMS = ['fire', 'tor', 'cat'];
 /* the two fleets' squares, kept by the readouts and read by the balance bar */
 const ENEMY_TALLY = { total:0, hit:0 }, OWN_TALLY = { total:0, lost:0 };   /* acc < 0: no exchange */
 function matchReset(){
@@ -4342,7 +4381,10 @@ const TOR_HOLD = 0, TOR_OUT = 0.405, TOR_IN = 0.464, TOR_HIT = 0.786, TOR_FOLLOW
 /* A LAUNCH, NOT A START. The tube throws her out on a slug of air: she leaves
    fast, under the surface, loses a little way as she rises to her running
    depth, and only then does her motor take her up to full speed. */
-const TOR_V0 = 95, TOR_EJECT = 0.55, TOR_ACC = 950, TOR_VMAX = 560, TOR_RUN = 1500;
+/* The kick was too hard: out at 95 and at full speed a second later read as
+   fast from the first frame. She now leaves the tube slowly and her motor
+   brings her up to speed over nearly two seconds, on a smooth curve. */
+const TOR_V0 = 45, TOR_EJECT = 0.5, TOR_ACC_T = 1.7, TOR_VMAX = 720, TOR_RUN = 1500;
 /* THEIR TORPEDO.
    out  0 → ET_OUT   off a square of their grid, running for the plot's near edge
    in   ET_IN → ET_HIT   in off her horizon down a lane of her grid, to the first hull in it */
@@ -4396,6 +4438,91 @@ function enemyTorpedo(){
   for(const t of TOR.trailsEOut.concat(TOR.trailsEIn)){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
   ETORP.u = 0; ETORP.hitDone = false; ETORP.aim = 0;
   MARKS_E[28].w = 0; marks[27].w = 0;
+  refreshUI();
+}
+/* THEIR AIR STRIKE.
+   out  0 → EA_OUT   out of a burst of steam on a square of their plot, climbing
+                     for the near edge — the square is any of the hundred
+   in   EA_IN → …    in off her horizon down a lane of her grid, low and level,
+                     laying a stick of three squares; then up and away */
+function pickOwnStick(){
+  ownInit();
+  const fwd = new T.Vector3(-Math.sin(CAM.az), 0, -Math.cos(CAM.az));
+  const o = cellW(5, 5), ex = cellW(6, 5).sub(o), ez = cellW(5, 6).sub(o);
+  const dx = fwd.dot(ex), dz = fwd.dot(ez);
+  const alongX = Math.abs(dx) > Math.abs(dz);
+  /* she comes from the far horizon towards the eye, like their torpedo */
+  const tsg = -Math.sign(alongX ? dx : dz);
+  const kOf = step => tsg > 0 ? step : 9 - step;
+  const sq = (lane, step) => alongX ? [kOf(step), lane] : [lane, kOf(step)];
+  const open = [], withHull = [];
+  for(let lane=0; lane<10; lane++) for(let s0=0; s0<8; s0++){
+    const cells = [sq(lane, s0), sq(lane, s0 + 1), sq(lane, s0 + 2)];
+    if(cells.every(c => OWN_SHOT.has(c[0] + ',' + c[1]))) continue;
+    const w = { lane, cells };
+    open.push(w);
+    if(cells.some(c => !OWN_SHOT.has(c[0] + ',' + c[1]) && ownShipAt(c[0], c[1]))) withHull.push(w);
+  }
+  if(!open.length) return null;
+  const pool = (withHull.length && Math.random() < 0.55) ? withHull : open;
+  const W = pool[Math.floor(Math.random()*pool.length)];
+  /* a point on her lane, a number of squares on from its far edge, at a height */
+  W.at = (step, y) => alongX ? cellW(kOf(step) + 0.5, W.lane + 0.5, y) : cellW(W.lane + 0.5, kOf(step) + 0.5, y);
+  return W;
+}
+function enemyAirStrike(){
+  const W = pickOwnStick(); if(!W) return;
+  EAIR.cells = W.cells;
+  EAIR.cellP = W.cells.map(c => cellW(c[0] + 0.5, c[1] + 0.5, 0.5));
+  /* on their plot: up out of any square, towards the eye and the near edge */
+  const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
+  const lx = Math.floor(Math.random()*10), lz = Math.floor(Math.random()*10);
+  EAIR.A.copy(cellW(lx + 0.5, lz + 0.5, 14));
+  EAIR.A1.copy(EAIR.A).addScaledVector(back, 150).setY(120);
+  EAIR.A2.copy(EAIR.A).addScaledVector(back, 560).setY(400);
+  const po = [];
+  for(let i=0;i<=180;i++) po.push(bez(EAIR.A, EAIR.A1, EAIR.A2, i/180, new T.Vector3()));
+  for(const t of CAT.eTrails){ retrace(t, po); t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
+  FX.eSteam.material.uniforms.uOrigin.value.set(EAIR.A.x, 0, EAIR.A.z);
+  FX.eSteam.material.uniforms.uT0.value = tt;
+  /* on her board: down out of the haze, level along the lane, then climbing away */
+  const pts = [W.at(-30, 150), W.at(-13, 72), W.at(-3, 46), W.at(12, 48), W.at(22, 105), W.at(34, 240)];
+  EAIR.curve = new T.CatmullRomCurve3(pts, false, 'centripetal');
+  EAIR.len = EAIR.curve.getLength();
+  EAIR.travel.subVectors(pts[3], pts[2]).setY(0).normalize();
+  /* how far along her track she is over each square */
+  const N = 600, q = new T.Vector3();
+  const dC = EAIR.cellP.map(w => {
+    let best = 1e9, bi = 0;
+    for(let i=0;i<=N;i++){ EAIR.curve.getPointAt(i/N, q); const d = Math.hypot(q.x - w.x, q.z - w.z); if(d < best){ best = d; bi = i; } }
+    return bi/N*EAIR.len;
+  });
+  /* her speed along the track: down to a crawl a little before the stick,
+     back up once it is laid; a time for every five units run */
+  const sm = x => { x = Math.max(0, Math.min(1, x)); return x*x*(3 - 2*x); };
+  const vAt = d => EA_V - (EA_V - EA_VLO)*Math.min(sm((d - (dC[0] - 330))/270), 1 - sm((d - (dC[2] + 40))/320));
+  const tab = [0], DS = 5, M = Math.ceil(EAIR.len/DS);
+  for(let i=1;i<=M;i++) tab.push(tab[i-1] + DS/vAt((i - 0.5)*DS));
+  EAIR.tab = tab; EAIR.ds = DS;
+  const tOf = d => { const k = Math.max(0, Math.min(M, d/DS)), i = Math.min(M - 1, Math.floor(k)); return tab[i] + (tab[i+1] - tab[i])*(k - i); };
+  /* each bomb is let go a little short of its square and falls onto it */
+  EAIR.tRel = dC.map(d => EA_IN + tOf(d - EA_LEAD));
+  EAIR.tLand = EAIR.tRel.map(t => t + EA_FALL);
+  EAIR.end = Math.max(EA_IN + tab[M], EAIR.tLand[2] + 2.4);
+  /* the eye stands past the stick, off to the side of the lane that is
+     nearer open water, low, and watches her come; then holds on the squares */
+  EAIR.mid.copy(EAIR.cellP[1]).setY(6);
+  const sd = new T.Vector3(EAIR.travel.z, 0, -EAIR.travel.x), ctr = cellW(5, 5);
+  if(sd.dot(_ea1.subVectors(EAIR.mid, ctr)) < 0) sd.negate();
+  /* high enough to see over the hulls between it and the stick */
+  EAIR.vant.copy(EAIR.cellP[2]).addScaledVector(EAIR.travel, 150).addScaledVector(sd, 75).setY(68);
+  EAIR.camOn = EAIR.tRel[0] - 1.9;
+  EAIR.camOff = EAIR.tLand[2] + 1.8;
+  EAIR.done = [false, false, false]; EAIR.hits = 0; EAIR.sunk = null; EAIR.aim = -1; EAIR.label = '';
+  for(const b of EAIR.bombs) b.userData.want = false;
+  for(let i=28;i<31;i++) marks[i].w = 0;
+  EAIR.t = 0;
+  hiss(CAT.world, 0.10, 3200, 700, 1.3, 0.6);
   refreshUI();
 }
 const TOR_F0 = 0.38;
@@ -5035,8 +5162,9 @@ function updateFX(dt){
     /* OUT: ejected, rising, then driven */
     const ts = u*TOR_DUR;
     if(u < TOR_OUT){
+      const ka = Math.min(1, Math.max(0, (ts - TOR_EJECT)/TOR_ACC_T));
       TORP.v = ts < TOR_EJECT ? TOR_V0*(1 - 0.42*ts/TOR_EJECT)
-             : Math.min(TOR_VMAX, TOR_V0*0.58 + TOR_ACC*(ts - TOR_EJECT)*Math.min(1, (ts - TOR_EJECT)/0.35));
+             : TOR_V0*0.58 + (TOR_VMAX - TOR_V0*0.58)*ka*ka*(3 - 2*ka);
       TORP.d = (TORP.d || 0) + TORP.v*dt;
     }
     const so = Math.min(1, (TORP.d || 0)/TOR_RUN), po = so;
@@ -5117,7 +5245,7 @@ function updateFX(dt){
   /* the plane's lights: steady navigation lights, a beacon that pulses about
      once a second, and strobes that double-flash — only while she flies */
   if(CAT.lights){
-    const airborne = ANIM.cat >= 0;
+    const airborne = ANIM.cat >= 0 || EAIR.t >= 0;
     const bt = tt % 1.1, st = tt % 1.4;
     const beacon = Math.exp(-bt*9.0);
     const strobe = (st < 0.05 || (st > 0.13 && st < 0.18)) ? 1 : 0;
@@ -5253,6 +5381,98 @@ function updateFX(dt){
     MIS.grp.userData.want = false; MIS.inb.userData.want = false; SALVO.aim = 0;
     for(const t of MIS.trails) t.material.uniforms.uFade.value = 0;
     for(const t of MIS.trailsIn) t.material.uniforms.uFade.value = 0;
+  }
+
+  /* THEIR AIR STRIKE */
+  if(EAIR.t >= 0){
+    EAIR.t += dt;
+    const t = EAIR.t;
+    /* OUT on their plot: slow off the square, then climbing hard for the edge */
+    const so = Math.min(1, t/EA_OUT), po = so*so*(0.45 + 0.55*so);
+    CAT.eOut.userData.want = t < EA_OUT;
+    if(t < EA_OUT){
+      bez(EAIR.A, EAIR.A1, EAIR.A2, po, _ea1); CAT.eOut.position.copy(_ea1);
+      bez(EAIR.A, EAIR.A1, EAIR.A2, Math.min(1, po + 0.01), _ea2);
+      if(_ea2.distanceToSquared(_ea1) > 1e-6) CAT.eOut.lookAt(_ea2);
+    }
+    const fo = t < EA_OUT ? Math.min(1, t*3) : Math.max(0, 1 - (t - EA_OUT)/1.2);
+    for(const tr of CAT.eTrails){ tr.material.uniforms.uProg.value = po; tr.material.uniforms.uFade.value = fo; }
+    /* IN on her board, at a steady speed along her track */
+    const tab = EAIR.tab, ti = t - EA_IN;
+    let d = -1;
+    if(ti >= 0){
+      let lo = 0, hi = tab.length - 1;
+      if(ti >= tab[hi]) d = EAIR.len + 1;
+      else { while(hi - lo > 1){ const m = (lo + hi) >> 1; if(tab[m] <= ti) lo = m; else hi = m; }
+             d = (lo + (ti - tab[lo])/(tab[hi] - tab[lo]))*EAIR.ds; }
+    }
+    const fin = d/EAIR.len;
+    CAT.eIn.userData.want = d >= 0 && fin < 1;
+    EAIR.d = d;
+    if(CAT.eIn.userData.want){
+      EAIR.curve.getPointAt(fin, _ea1); CAT.eIn.position.copy(_ea1);
+      EAIR.curve.getPointAt(Math.min(1, fin + 0.004), _ea2);
+      if(_ea2.distanceToSquared(_ea1) > 1e-6) CAT.eIn.lookAt(_ea2);
+    }
+    /* THE STICK */
+    EAIR.aim = -1;
+    for(let i=0;i<3;i++){
+      const B = EAIR.bombs[i], T0 = EAIR.cellP[i], tr = EAIR.tRel[i], tl = EAIR.tLand[i];
+      if(d >= 0 && !EAIR.done[i] && EAIR.aim < 0) EAIR.aim = i;
+      if(t >= tr && t < tl){
+        if(!B.userData.want){ B.userData.want = true; EAIR.relP[i].copy(CAT.eIn.position); EAIR.relP[i].y -= 1.8;
+          if(i === 0) hiss(EAIR.mid, 0.20, 1100, 260, 1.8, 0.5); }
+        const R = EAIR.relP[i];
+        const at = (f, out) => { const h = 1 - Math.pow(1 - f, 1.7);
+          return out.set(R.x + (T0.x - R.x)*h, R.y + (T0.y - R.y)*f*f, R.z + (T0.z - R.z)*h); };
+        const f = (t - tr)/EA_FALL;
+        at(f, _ea1); B.position.copy(_ea1);
+        B.lookAt(at(Math.min(1, f + 0.03), _ea2));
+      } else B.userData.want = false;
+      if(!EAIR.done[i] && t >= tl){
+        EAIR.done[i] = true;
+        const c = EAIR.cells[i], own = ownShipAt(c[0], c[1]);
+        OWN_SHOT.add(c[0] + ',' + c[1]);
+        FX.oSpl[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.oSpl[i].material.uniforms.uT0.value = tt;
+        if(own){
+          FX.oHit[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.oHit[i].material.uniforms.uT0.value = tt;
+          const set = OWN_HITS[own.key] = OWN_HITS[own.key] || new Set();
+          const was = set.size >= own.n;
+          set.add(own.idx);
+          const sh = shipNamed(own.key);
+          if(sh) scar(sh, T0, 12.0);
+          ANIM.shake = Math.max(ANIM.shake, 0.6);
+          boom(T0, 0.34);
+          if(!was && set.size >= own.n){ if(sh) setSink(true, sh); EAIR.sunk = own.name; }
+          EAIR.hits++;
+        } else {
+          let k = -1;
+          for(let j=16;j<26;j++) if(marks[j].w <= 0.004){ k = j; break; }
+          if(k < 0) k = 16 + Math.floor(Math.random()*10);
+          marks[k].set(T0.x, T0.z, 8.6 + Math.random()*2.2, 1);
+          hiss(T0, 0.22, 2400, 500, 0.9, 0.8);
+        }
+        if(i === 2){
+          const lab = q => colLetter(q[0]) + (q[1] + 1);
+          EAIR.label = 'Air strike ' + lab(EAIR.cells[0]) + '\u2013' + lab(EAIR.cells[2]) + ' \u00b7 '
+                     + (EAIR.sunk ? EAIR.sunk.toLowerCase() + ' sunk' : EAIR.hits + ' hit' + (EAIR.hits === 1 ? '' : 's'));
+          LASTIN = { label: EAIR.label, kind: EAIR.hits ? 'hit' : 'miss' };
+        }
+        refreshUI();
+      }
+      if(EAIR.done[i]){ const a = Math.min(1, (t - tl)/2.2); marks[28 + i].set(T0.x, T0.z, 8 + 38*a, a < 1 ? (1-a)*(1-a) : 0); }
+    }
+    if(t >= EAIR.end){
+      EAIR.t = -1; EAIR.aim = -1;
+      for(let i=28;i<31;i++) marks[i].w = 0;
+      CAT.eOut.userData.want = false; CAT.eIn.userData.want = false;
+      for(const b of EAIR.bombs) b.userData.want = false;
+      refreshUI();
+    }
+  } else {
+    CAT.eOut.userData.want = false; CAT.eIn.userData.want = false;
+    for(const b of EAIR.bombs) b.userData.want = false;
+    for(const tr of CAT.eTrails) tr.material.uniforms.uFade.value = 0;
   }
 
   /* THEIR TORPEDO */
@@ -6013,7 +6233,8 @@ function refreshUI(){
             : (ANIM.flrOut >= 0 || FLR.gap > 0 || ANIM.flr >= 0 || ANIM.flrWet >= 0) ? ('Star shell ' + FLR.label + (ANIM.flrWet >= 0 ? ' \u00b7 ' + FLR.n + ' found' : ''))
             : null;
   /* their fire takes the line while it is in the air: it is what matters most */
-  const them = ETORP.u >= 0 ? (ETORP.hitDone ? ETORP.label : 'Incoming torpedo')
+  const them = EAIR.t >= 0 ? (EAIR.done[2] ? EAIR.label : 'Incoming aircraft')
+             : ETORP.u >= 0 ? (ETORP.hitDone ? ETORP.label : 'Incoming torpedo')
              : ESALVO.u >= 0 ? (ESALVO.hitDone ? ESALVO.label : 'Incoming missile') : null;
   MATCH.act = them || act; MATCH.them = !!them; MATCH.dirty = true;
   setupUI();
@@ -6186,7 +6407,7 @@ function onCtl(e){
   if(b.dataset.side !== undefined){ DBG_SIDE = b.dataset.side; refreshUI(); hideHint(); return; }
   const enemySide = DBG_SIDE === 'enemy' && !!b.closest('#dbg');
   if(a === 'fire'){ if(enemySide) enemyMissile(); else launch(); }
-  if(a === 'cat' && ANIM.era === 0) catapult();
+  if(a === 'cat' && ANIM.era === 0){ if(enemySide) enemyAirStrike(); else catapult(); }
   if(a === 'split'){
     if(SPLIT[SCREEN] !== undefined){ SPLIT[SCREEN] = SPLIT[SCREEN] ? 0 : 1; setScreen(SCREEN); }
     hideHint(); return;
@@ -6197,6 +6418,7 @@ function onCtl(e){
   if(a === 'sink') setSink(ANIM.sink < 0);
   if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true);
     ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
+    EAIR.t = -1; EAIR.aim = -1; for(let i=28;i<31;i++) marks[i].w = 0;
     ANIM.flr = -1; ANIM.flrWet = -1; ANIM.flrOut = -1; FLR.gap = 0; MARKS_E[22].w = 0; FLR.lI = 0; matchReset();
     if(FLR.lit){ FLR.lit.visible = false; FLR.lit.material.uniforms.uI.value = 0; }
     if(ANIM.cat >= 0){ ANIM.cat = -1; CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0,0,0);
@@ -6475,8 +6697,9 @@ function cineUpdate(dt){
     const kIn = Math.max(0, Math.min(1, (age - 0.35)/1.5)), eIn = kIn*kIn*(3 - 2*kIn);
     /* a tighter hold on her: she goes from rest to full speed in a second,
        and a lazy follow let her run out ahead of the frame */
-    /* at 560 units a second a follow at rate r trails her by 560/r: at 16 the
-       eye stays about thirty units behind where it means to be */
+    /* at 720 units a second a follow at rate r trails her by 720/r: at 16 the
+       eye stays about forty-five units behind where it means to be — and she
+       only reaches that speed as the eye lets her go */
     followRate = 16.0;
     obj = TOR.grp; D = 30 - 4*eIn; H = 10 - 6*eIn; S = 24 - 19*eIn; L = 60;
   } else if(ETORP.u >= ET_IN + (ET_HIT - ET_IN)*0.38 && ETORP.u < ET_HIT + 0.12){
@@ -6487,6 +6710,17 @@ function cineUpdate(dt){
     age = (ETORP.u - ET_IN)*ETORP_DUR;
     want = 1; blendIn = 2.2;
     camAt = ETORP.vant; look = ETORP.u < ET_HIT ? TOR.eIn.position : ETORP.D;
+  } else if(EAIR.t >= EAIR.camOn && EAIR.t < EAIR.camOff){
+    /* THEIR AIR STRIKE, SEEN FROM WHERE IT FALLS. The eye stands past the
+       stick, off the lane, low, and watches her come down it; as the bombs go
+       the aim slides off her onto the squares, and holds there while she
+       climbs away out of the frame */
+    age = EAIR.t - EAIR.camOn;
+    want = 1; blendIn = 2.2;
+    camAt = EAIR.vant;
+    const k = Math.max(0, Math.min(1, (EAIR.t - EAIR.tRel[0])/(EAIR.tLand[2] + 0.3 - EAIR.tRel[0]))), e = k*k*(3 - 2*k);
+    if(CAT.eIn.userData.want) EAIR.look.copy(CAT.eIn.position).lerp(EAIR.mid, e); else EAIR.look.copy(EAIR.mid);
+    look = EAIR.look;
   } else if(ANIM.flrOut >= 0){
     /* THE LAUNCH IS THE SHOT NOW. The fall happens over their plot, seen from
        straight up; what her own board has is the shell going up. So the eye
@@ -6797,6 +7031,7 @@ function boardVis(enemy){
   else if(enemy && STRK.aim >= 0) waterUnis.uHitCell.value.set(STRK.cells[STRK.aim][0], STRK.cells[STRK.aim][1], 0.55 + 0.45*Math.sin(tt*9.0));
   else if(!enemy && ESALVO.aim > 0.002) waterUnis.uHitCell.value.set(ESALVO.cell[0], ESALVO.cell[1], ESALVO.aim);
   else if(!enemy && ETORP.aim > 0.002) waterUnis.uHitCell.value.set(ETORP.cell[0], ETORP.cell[1], ETORP.aim);
+  else if(!enemy && EAIR.aim >= 0) waterUnis.uHitCell.value.set(EAIR.cells[EAIR.aim][0], EAIR.cells[EAIR.aim][1], 0.55 + 0.45*Math.sin(tt*9.0));
   else waterUnis.uHitCell.value.set(OWN_HIT[0], OWN_HIT[1], enemy ? 0 : ANIM.fire);
   /* the star shell hangs over their plot: its pool of light and the nine
      squares it reads are drawn there and nowhere else */
