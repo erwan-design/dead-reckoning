@@ -3039,7 +3039,7 @@ function pickSalvoCell(){
 }
 
 /* ---- 5c. a torpedo : out of the boat's forward tubes, running shallow ---- */
-const TOR_DUR = 7.4;
+const TOR_DUR = 8.4;
 const TOR = { grp:null, A:new T.Vector3(), B:new T.Vector3(), trails:[],
               tmp:new T.Vector3(), tmp2:new T.Vector3() };
 {
@@ -3152,8 +3152,66 @@ const BOW_FS = G_HEAD + G_SKY + G_FOG + `
      ahead of her nose, on the surface above her */
   bow.scale.set(9.0, 1, 15); bow.position.set(0, 0.50, 5.25 - 0.40*15);
   bow.renderOrder = 8; TOR.grp.add(bow); TOR.bow = bow;
+  /* WHICH BOARD. The run out of her own board is hers; the same torpedo
+     coming in on theirs is a second body, larger, with its own wake and
+     spray, that only the enemy plot draws. */
+  onBoard(BOARD_OWN, TOR.grp, false);
+  for(const t of TOR.trails) onBoard(BOARD_OWN, t, true);
+  TOR.inb = TOR.grp.clone(); TOR.inb.scale.setScalar(2.6); scene.add(TOR.inb);
+  onBoard(BOARD_ENEMY, TOR.inb, false);
+  const run0 = [];
+  for(let i=0;i<=200;i++) run0.push(new T.Vector3(i, 0.05, 0));
+  TOR.trailsIn = [
+    ribbon(run0, {w:4.6, grow:9.0, life:1.00, seed:5.1, i:0.55, sea:true,
+                  drift:[0.30, 0.10, -0.25], tint:0xdff2ee, order:7}),
+    ribbon(run0, {w:1.8, grow:3.0, life:0.52, seed:9.7, i:0.85, sea:true,
+                  drift:[0.16, 0.05, -0.12], tint:0xf6fffd, tintI:1.15, order:9, add:true})
+  ];
+  for(const t of TOR.trailsIn) onBoard(BOARD_ENEMY, t, true);
 
-  /* the spray: a pool of points recycled in turn */
+  TOR.spray = makeSpray(); onBoard(BOARD_OWN, TOR.spray.pts, true);
+  TOR.sprayE = makeSpray(); onBoard(BOARD_ENEMY, TOR.sprayE.pts, true);
+}
+function sprayTick(S, grp, emit, k, dt){
+  if(!S) return;
+  if(emit){
+    S.acc += dt*150;
+    grp.getWorldDirection(_tf); _tf.y = 0; _tf.normalize();
+    _tr.set(_tf.z, 0, -_tf.x);
+    grp.localToWorld(_tn.set(0, 0.45, 4.8));
+    const sea = waterY(_tn.x, _tn.z, tt);
+    while(S.acc >= 1){
+      S.acc -= 1;
+      const i = S.next; S.next = (S.next + 1) % S.N;
+      const side = Math.random() < 0.5 ? -1 : 1, sp = (2.0 + Math.random()*3.6)*k, fw = (2.0 + Math.random()*4.0)*k;
+      S.P[i*3]   = _tn.x + _tr.x*side*0.55*k;
+      S.P[i*3+1] = sea + 0.12;
+      S.P[i*3+2] = _tn.z + _tr.z*side*0.55*k;
+      S.V[i*3]   = _tr.x*side*sp + _tf.x*fw;
+      S.V[i*3+1] = (2.4 + Math.random()*3.6)*Math.sqrt(k);
+      S.V[i*3+2] = _tr.z*side*sp + _tf.z*fw;
+      S.age[i] = 0; S.life[i] = 0.30 + Math.random()*0.36;
+    }
+  }
+  let dirty = false;
+  for(let i=0;i<S.N;i++){
+    if(S.age[i] >= S.life[i]){ if(S.A[i] !== 0){ S.A[i] = 0; dirty = true; } continue; }
+    dirty = true;
+    S.age[i] += dt;
+    S.V[i*3+1] -= 15.0*dt;
+    S.P[i*3] += S.V[i*3]*dt; S.P[i*3+1] += S.V[i*3+1]*dt; S.P[i*3+2] += S.V[i*3+2]*dt;
+    const q = Math.min(1, S.age[i]/S.life[i]);
+    S.A[i] = Math.pow(1 - q, 1.6)*0.82;
+    S.S[i] = (0.26 + 0.60*q)*k;
+  }
+  if(dirty){
+    S.g.attributes.position.needsUpdate = true;
+    S.g.attributes.aA.needsUpdate = true;
+    S.g.attributes.aS.needsUpdate = true;
+  }
+}
+/* a pool of spray points, recycled in turn — one per board a torpedo runs on */
+function makeSpray(){
   const N = 180;
   const g = new T.BufferGeometry();
   const P = new Float32Array(N*3), A = new Float32Array(N), S = new Float32Array(N);
@@ -3170,8 +3228,8 @@ const BOW_FS = G_HEAD + G_SKY + G_FOG + `
   const vp = new T.Vector4();
   pts.onBeforeRender = r => { r.getCurrentViewport(vp); m.uniforms.uVH.value = vp.w; };
   scene.add(pts);
-  TOR.spray = { N, P, A, S, g, V:new Float32Array(N*3),
-                age:new Float32Array(N).fill(9), life:new Float32Array(N).fill(1), next:0, acc:0 };
+  return { N, P, A, S, g, pts, V:new Float32Array(N*3),
+           age:new Float32Array(N).fill(9), life:new Float32Array(N).fill(1), next:0, acc:0 };
 }
 const _tf = new T.Vector3(), _tr = new T.Vector3(), _tn = new T.Vector3();
 
@@ -3676,6 +3734,7 @@ function updateDebris(dt){
     drift:[0.20,-0.10], n:60, i:0.62, add:true, dark:0x9a3c10, lit:0xffcf86, warm:0.7, order:15});
   onBoard(BOARD_ENEMY, FX.eSplash, true); onBoard(BOARD_ENEMY, FX.eHit, true);
   onBoard(BOARD_OWN, FX.launch, true);
+  onBoard(BOARD_OWN, FX.torBlow, true);
 }
 FX.farSmoke = smokeColumn({pos:new T.Vector3(1186, 6, 1432), h:150, size:13, spread:12, speed:0.022,
              drift:[0.34,-0.18], n:26, i:0.30, dark:0x2e2f42, lit:0xc9b0b0, order:9});
@@ -4073,12 +4132,57 @@ function launch(){
   if(sail) boom(MIS.A, 0.34); else hiss(MIS.A, 0.30, 260, 2600, 1.1, 0.8);
   refreshUI();
 }
+/* A TORPEDO: from the boat's tubes to the first hull in its lane.
+   out  0 → OUT   runs off her own board and over its horizon
+   gap  OUT → IN
+   in   IN → HIT  enters their plot across its near edge, straight down a lane
+   It always finds a hull — that is what a torpedo is for — and the hull it
+   finds is the first one in the lane, seen from the edge it comes in over. */
+const TORP = { cell:[0,0], group:-1, gcell:-1, aim:0, dirOut:new T.Vector3(),
+               A:new T.Vector3(), B:new T.Vector3(), C:new T.Vector3(), D:new T.Vector3() };
+const TOR_OUT = 0.40, TOR_IN = 0.46, TOR_HIT = 0.78, TOR_FOLLOW = 2.4;
+function pickTorpedoLane(){
+  const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
+  const o = cellW(5, 5), ex = cellW(6, 5).sub(o), ez = cellW(5, 6).sub(o);
+  const dx = back.dot(ex), dz = back.dot(ez);
+  const alongX = Math.abs(dx) > Math.abs(dz), sgn = alongX ? Math.sign(dx) : Math.sign(dz);
+  const hullAt = (gx, gz) => { for(let gi=0; gi<CON_GROUPS.length; gi++){ const g = CON_GROUPS[gi];
+    for(let ci=0; ci<g.cells.length; ci++) if(g.cells[ci][0] === gx && g.cells[ci][1] === gz) return [gi, ci]; } return null; };
+  const lanes = [];
+  for(let lane=0; lane<10; lane++){
+    for(let step=0; step<10; step++){
+      const k = sgn > 0 ? 9 - step : step;
+      const gx = alongX ? k : lane, gz = alongX ? lane : k;
+      const h = hullAt(gx, gz);
+      if(h){ lanes.push({gx, gz, gi:h[0], ci:h[1], fresh:!CON_GROUPS[h[0]].hit[h[1]], lane}); break; }
+    }
+  }
+  const fresh = lanes.filter(l => l.fresh), pool = fresh.length ? fresh : lanes;
+  const L = pool[Math.floor(Math.random()*pool.length)];
+  /* where the lane crosses the edge, two squares out */
+  const ek = sgn > 0 ? 11.5 : -2.5;
+  const entry = alongX ? cellW(ek, L.gz + 0.5, 0.05) : cellW(L.gx + 0.5, ek, 0.05);
+  return { L, entry };
+}
 function torpedo(){
-  setSink(false);
   matchSpend('tor');
-  ANIM.tor = 0; ANIM.torHit = false;
-  for(const t of TOR.trails){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
-  marks[14].w = marks[15].w = 0;
+  const { L, entry } = pickTorpedoLane();
+  TORP.cell[0] = L.gx; TORP.cell[1] = L.gz; TORP.group = L.gi; TORP.gcell = L.ci;
+  /* out: from the boat, away from the eye */
+  TORP.dirOut.set(-Math.sin(CAM.az), 0, -Math.cos(CAM.az)).normalize();
+  TORP.A.copy(TOR.A).setY(0.05);
+  TORP.B.copy(TOR.A).addScaledVector(TORP.dirOut, 1500).setY(0.05);
+  /* in: along the lane, from outside the plot to the square */
+  TORP.C.copy(entry);
+  TORP.D.copy(cellW(L.gx + 0.5, L.gz + 0.5, 0.05));
+  const po = [], pi = [];
+  for(let i=0;i<=200;i++){ po.push(new T.Vector3().lerpVectors(TORP.A, TORP.B, i/200));
+                           pi.push(new T.Vector3().lerpVectors(TORP.C, TORP.D, i/200)); }
+  for(const t of TOR.trails) retrace(t, po);
+  for(const t of TOR.trailsIn) retrace(t, pi);
+  ANIM.tor = 0; ANIM.torHit = false; TORP.aim = 0;
+  for(const t of TOR.trails.concat(TOR.trailsIn)){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
+  MARKS_E[14].w = 0;
   /* the boat blows her tube: air, not flame */
   FX.torBlow.material.uniforms.uT0.value = tt;
   hiss(TOR.A, 0.30, 1800, 300, 1.1, 0.9);
@@ -4531,83 +4635,54 @@ function updateFX(dt){
   }
   for(let i=DMG.length;i<NDMG;i++) DMGW[i].material.uniforms.uI.value = 0;
 
-  /* the torpedo run: straight, shallow, and the sea boils over her */
+  /* the torpedo: out over her horizon, in down a lane of theirs */
   if(ANIM.tor >= 0){
     ANIM.tor = Math.min(1, ANIM.tor + dt/TOR_DUR);
-    const u = ANIM.tor, fp = Math.min(u/0.80, 1);
-    const fade = u < 0.80 ? Math.min(1, u*11) : Math.max(0, 1 - (u - 0.80)/0.20);
-    for(const t of TOR.trails){ t.material.uniforms.uProg.value = fp; t.material.uniforms.uFade.value = fade; }
-    if(u < 0.80){
-      TOR.grp.visible = true;
-      TOR.grp.position.copy(TOR.at(fp, TOR.tmp));
-      TOR.grp.lookAt(TOR.at(Math.min(1, fp + 0.02), TOR.tmp2));
-      /* she runs under, riding the swell: only the top of her casing cuts
-         the surface, and the sea closes over her in the troughs */
-      TOR.grp.position.y = waterY(TOR.grp.position.x, TOR.grp.position.z, tt) - 0.45;
-      /* no ring round her: the boil drawn on the surface above her read as an
-         impact travelling with the torpedo. The bow wave and the spray say
-         she is cutting the water; the wake says where she has been. */
-      marks[14].w = 0;
-      /* the water parting at her nose: it breathes a little with the swell */
-      TOR.bow.material.uniforms.uI.value = Math.min(1, u*10)*(0.82 + 0.10*Math.sin(tt*11.0));
-    } else {
-      if(!ANIM.torHit){
-        ANIM.torHit = true; TOR.grp.visible = false; marks[14].w = 0;
-        FX.misSplash.material.uniforms.uT0.value = tt;
-        FX.hitFlash.material.uniforms.uOrigin.value.set(0, 0, 0);
-        FX.hitFlash.material.uniforms.uT0.value = tt;
-        boom(TOR.B, 0.44);
-        setSink(true); CINE.hold = 1.8; CINE.kick = 1; refreshUI();
-      }
-      const a = Math.min(1, (u - 0.80)/0.20);
-      marks[15].set(TOR.B.x, TOR.B.z, 9 + 42*a, (1-a)*(1-a));
+    const u = ANIM.tor;
+    const placeRun = (grp, P, Q, f, lift) => {
+      grp.position.lerpVectors(P, Q, f);
+      _tn.lerpVectors(P, Q, Math.min(1, f + 0.01));
+      grp.lookAt(_tn.x, grp.position.y, _tn.z);
+      /* she runs under, riding the swell: only the top of her casing cuts it */
+      grp.position.y = waterY(grp.position.x, grp.position.z, tt) - lift;
+    };
+    /* OUT */
+    const so = Math.min(1, u/TOR_OUT), po = so*(0.55 + 0.45*so);
+    const fo = u < TOR_OUT ? Math.min(1, u*11) : Math.max(0, 1 - (u - TOR_OUT)/0.34);
+    for(const t of TOR.trails){ t.material.uniforms.uProg.value = po; t.material.uniforms.uFade.value = fo; }
+    TOR.grp.userData.want = u < TOR_OUT;
+    if(u < TOR_OUT) placeRun(TOR.grp, TORP.A, TORP.B, po, 0.45);
+    /* IN */
+    const si = Math.max(0, Math.min(1, (u - TOR_IN)/(TOR_HIT - TOR_IN)));
+    const fi = u < TOR_IN ? 0 : u < TOR_HIT ? Math.min(1, (u - TOR_IN)*20) : Math.max(0, 1 - (u - TOR_HIT)/0.22);
+    for(const t of TOR.trailsIn){ t.material.uniforms.uProg.value = si; t.material.uniforms.uFade.value = fi; }
+    TOR.inb.userData.want = u >= TOR_IN && u < TOR_HIT;
+    if(TOR.inb.userData.want) placeRun(TOR.inb, TORP.C, TORP.D, si, 0.45*2.6);
+    TORP.aim = (u >= TOR_IN && u < TOR_HIT) ? 0.55 + 0.45*Math.sin(tt*9.0) : 0;
+    /* the water parting at her nose, on whichever board she is on */
+    TOR.bow.material.uniforms.uI.value = (u < TOR_OUT || (u >= TOR_IN && u < TOR_HIT)) ? (0.82 + 0.10*Math.sin(tt*11.0)) : 0;
+    if(u >= TOR_HIT && !ANIM.torHit){
+      ANIM.torHit = true;
+      const T0 = TORP.D;
+      FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
+      FX.eSplash.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eSplash.material.uniforms.uT0.value = tt;
+      CON_GROUPS[TORP.group].hit[TORP.gcell] = true; pushContacts();
+      boom(T0, 0.44);
+      refreshUI();
     }
-    if(u >= 1){ ANIM.tor = -1; refreshUI(); }
+    if(u >= TOR_HIT){
+      const a = Math.min(1, (u - TOR_HIT)/(1 - TOR_HIT));
+      MARKS_E[14].set(TORP.D.x, TORP.D.z, 9 + 42*a, (1-a)*(1-a));
+    }
+    if(u >= 1){ ANIM.tor = -1; MARKS_E[14].w = 0; refreshUI(); }
   } else {
-    if(TOR.grp.visible) TOR.grp.visible = false;
-    marks[14].w = marks[15].w = 0;
-    for(const t of TOR.trails) t.material.uniforms.uFade.value = 0;
+    TOR.grp.userData.want = false; TOR.inb.userData.want = false; TORP.aim = 0;
+    for(const t of TOR.trails.concat(TOR.trailsIn)) t.material.uniforms.uFade.value = 0;
   }
   /* the spray she throws: made at the nose while she runs, then left to
-     fly out, fall and fade on its own after she has gone */
-  if(TOR.spray){
-    const S = TOR.spray;
-    if(ANIM.tor >= 0 && ANIM.tor < 0.80 && TOR.grp.visible){
-      S.acc += dt*150;
-      TOR.grp.getWorldDirection(_tf); _tf.y = 0; _tf.normalize();
-      _tr.set(_tf.z, 0, -_tf.x);
-      TOR.grp.localToWorld(_tn.set(0, 0.45, 4.8));
-      const sea = waterY(_tn.x, _tn.z, tt);
-      while(S.acc >= 1){
-        S.acc -= 1;
-        const i = S.next; S.next = (S.next + 1) % S.N;
-        const side = Math.random() < 0.5 ? -1 : 1, sp = 2.0 + Math.random()*3.6, fw = 2.0 + Math.random()*4.0;
-        S.P[i*3]   = _tn.x + _tr.x*side*0.55;
-        S.P[i*3+1] = sea + 0.12;
-        S.P[i*3+2] = _tn.z + _tr.z*side*0.55;
-        S.V[i*3]   = _tr.x*side*sp + _tf.x*fw;
-        S.V[i*3+1] = 2.4 + Math.random()*3.6;
-        S.V[i*3+2] = _tr.z*side*sp + _tf.z*fw;
-        S.age[i] = 0; S.life[i] = 0.30 + Math.random()*0.36;
-      }
-    }
-    let dirty = false;
-    for(let i=0;i<S.N;i++){
-      if(S.age[i] >= S.life[i]){ if(S.A[i] !== 0){ S.A[i] = 0; dirty = true; } continue; }
-      dirty = true;
-      S.age[i] += dt;
-      S.V[i*3+1] -= 15.0*dt;
-      S.P[i*3] += S.V[i*3]*dt; S.P[i*3+1] += S.V[i*3+1]*dt; S.P[i*3+2] += S.V[i*3+2]*dt;
-      const k = Math.min(1, S.age[i]/S.life[i]);
-      S.A[i] = Math.pow(1 - k, 1.6)*0.82;
-      S.S[i] = 0.26 + 0.60*k;
-    }
-    if(dirty){
-      S.g.attributes.position.needsUpdate = true;
-      S.g.attributes.aA.needsUpdate = true;
-      S.g.attributes.aS.needsUpdate = true;
-    }
-  }
+     fly out, fall and fade on its own after she has gone — on each board */
+  sprayTick(TOR.spray, TOR.grp, TOR.grp.userData.want, 1.0, dt);
+  sprayTick(TOR.sprayE, TOR.inb, TOR.inb.userData.want, 2.6, dt);
 
   /* detonation */
   updateDebris(dt);
@@ -5163,7 +5238,7 @@ function sndFrame(dt, tt){
   /* a round in the air, tracked and dopplered */
   /* only the leg that leaves her own board is near enough to be heard */
   const flying = ANIM.mis >= 0 && ANIM.mis < SALVO_OUT;
-  const running = !flying && ANIM.tor >= 0 && ANIM.tor < 0.80;
+  const running = !flying && ANIM.tor >= 0 && ANIM.tor < TOR_OUT;
   const wsrc = flying ? MIS.grp.position : (running ? TOR.grp.position : null);
   setVoice(SND.misN, wsrc, flying ? 0.34 : 0.24, dt, 'mis', flying ? 420 : (running ? 240 : 0));
   setVoice(SND.misT, wsrc, flying ? 0.13 : 0.11, dt, 'mis', flying ? 96 : (running ? 150 : 0));
@@ -5277,7 +5352,7 @@ function refreshUI(){
   const cs = (ANIM.ship || shipNamed('escort')).cells;
   const SPAN = colLetter(cs[2] - 1) + (cs[1] + 1) + '\u2013' + colLetter(cs[0]) + cs[3];
   rSta.textContent = running && !ANIM.torHit ? 'torpedo running'
-                   : running ? 'target hit'
+                   : running ? ('torpedo hit ' + colLetter(TORP.cell[0]) + (TORP.cell[1] + 1))
                    : cating ? 'aircraft away'
                    : flying && !ANIM.misHit ? 'salvo away'
                    /* the result is theirs: name the square it fell on */
@@ -5739,10 +5814,11 @@ function cineUpdate(dt){
   if(ANIM.tor >= 0){
     const u = ANIM.tor;
     age = u*TOR_DUR;
-    want = (age > 1.0 && u < 0.93) ? 1 : 0;
-    /* low and close: a torpedo is only worth watching from the water */
-    if(u < 0.80){ obj = TOR.grp; D = 26; H = 4.0; S = 5.0; L = 60; }
-    else look = TOR.B;
+    /* low and close from the water, for as long as she is still near her
+       own board; then the eye lets her go and she runs on over the horizon
+       — following her there would take the camera half a mile off the plot */
+    want = (age > 1.0 && age < TOR_FOLLOW) ? 1 : 0;
+    obj = TOR.grp; D = 26; H = 4.0; S = 5.0; L = 60;
   } else if(ANIM.flr >= 0){
     /* THE STAR SHELL IS WATCHED TWICE OVER. On the way up the subject is the
        shell, from low down so it climbs out of the frame; once it is lit the
@@ -6039,6 +6115,7 @@ function boardVis(enemy){
   /* the square being aimed at is bracketed on the plot; below, the bracket
      is still the burning cruiser's */
   if(enemy && SALVO.aim > 0.002) waterUnis.uHitCell.value.set(SALVO.cell[0], SALVO.cell[1], SALVO.aim);
+  else if(enemy && TORP.aim > 0.002) waterUnis.uHitCell.value.set(TORP.cell[0], TORP.cell[1], TORP.aim);
   else waterUnis.uHitCell.value.set(OWN_HIT[0], OWN_HIT[1], enemy ? 0 : ANIM.fire);
 }
 /* dress the scene for one board or the other, then draw it */
