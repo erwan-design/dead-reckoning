@@ -597,6 +597,17 @@
 
   /* how her shooting has gone */
   .gun{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:7px 8px}
+  /* what is left of them to find: the lengths of the hulls still afloat */
+  .afl{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:8px}
+  .afl .k{margin-right:2px}
+  .afl svg{width:auto;height:10px;display:block;overflow:visible}
+  .afl .o{fill:none;stroke:rgba(206,224,236,.46);stroke-width:1}
+  .afl .d{stroke:rgba(206,224,236,.24);stroke-width:1}
+  /* our own shooting: the last result, and how often it tells */
+  .fire{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;align-items:baseline}
+  .fire .v{text-align:left}
+  .fire .v.hit{color:rgba(255,176,120,.86)}
+  .fire .v.lit{color:rgba(180,246,230,.90)}
   .gun .v{text-align:right}
   .gun .k{font-size:7.5px;line-height:1.4;letter-spacing:.22em;text-transform:uppercase}
   .half{position:absolute;left:26px;top:22px;z-index:5;pointer-events:none;user-select:none;
@@ -625,10 +636,22 @@
       background:currentColor;box-shadow:0 0 10px currentColor;opacity:.85}
   .half.b b{color:rgba(255,186,128,.92)}
   .half .ln{padding-left:15px}
-  #rown{display:flex;align-items:center;gap:5px}
-  #rown .segs{margin-right:4px}
-  #rown .segs i.hurt{background:rgba(255,176,120,.72);box-shadow:0 0 6px rgba(255,150,70,.30)}
-  #rsta{color:rgba(168,240,224,.52)}
+  /* one row per hull: her silhouette at the length she is, struck squares
+     filled, and her name; a lost ship reads in amber */
+  #rown{display:grid;grid-template-columns:62px auto;align-items:center;gap:5px 10px;margin-top:6px}
+  #rown .shp{height:14px;display:block;overflow:visible}
+  #rown .o{fill:none;stroke:rgba(168,240,224,.52);stroke-width:1}
+  #rown .d{stroke:rgba(168,240,224,.24);stroke-width:1}
+  #rown .x{fill:rgba(255,150,70,.46);stroke:rgba(255,186,128,.82);stroke-width:1}
+  #rown .nm{font-size:8.5px;letter-spacing:.20em;line-height:1.2;color:rgba(236,228,235,.62)}
+  #rown .lost .o{stroke:rgba(255,186,128,.80)}
+  #rown .nm.lost{color:rgba(255,176,120,.80)}
+  #rown .nm em{font-style:normal;color:rgba(255,176,120,.62);margin-left:6px}
+  /* the last round that came our way */
+  #rinc{margin-top:9px;font-size:9px;letter-spacing:.16em;line-height:1.5}
+  #rinc .k{color:rgba(233,224,232,.46)}
+  #rinc .v{color:rgba(240,232,238,.82)}
+  #rinc .v.hit{color:rgba(255,176,120,.86)}
   .half .ln{display:block}
   .half i{font-style:normal;color:rgba(168,240,224,.5)}
   body.split .hint{display:none}
@@ -658,7 +681,20 @@
       overflow:hidden;background:rgba(236,241,246,.14)}
   #match .mb i{display:block;width:100%;height:100%;transform-origin:left center;
       transform:scaleX(0);background:rgba(236,241,246,.58)}
-  body.trad #match .mr{display:none}
+  /* WHAT IS HAPPENING NOW. Idle, the move is hers and says so in her colour;
+     with a round in the air it names what is flying, in plain ink */
+  #match .mo{margin:2px -.15em 0 0;color:rgba(240,232,238,.80)}
+  #match .mo.you{color:rgba(180,246,230,.94)}
+  /* WHO IS AHEAD: the share of their fleet we have put down, against the
+     share of ours they have — one track, ours from the left, theirs from the right */
+  #match .mbal{margin:10px -.15em 0 0}
+  #match .mbal .bt{position:relative;display:block;height:3px;margin:6px 0 0 auto;width:176px;
+      border-radius:2px;background:rgba(236,241,246,.10);overflow:hidden}
+  #match .mbal .bt i{position:absolute;top:0;bottom:0;border-radius:2px}
+  #match .mbal .bt .u{left:0;background:rgba(168,240,224,.80);box-shadow:0 0 6px rgba(157,240,220,.40)}
+  #match .mbal .bt .t{right:0;background:rgba(255,176,120,.80);box-shadow:0 0 6px rgba(255,150,70,.35)}
+  #match .mbal .u2{color:rgba(180,246,230,.94)}
+  #match .mbal .t2{color:rgba(255,186,128,.92)}
   /* one shot a turn: while the exchange runs the rail takes no second one,
      and says so by dimming until the hand comes back */
   body.exch #rail .chip.rdy{opacity:.45}
@@ -826,15 +862,20 @@
   <div class="col l">
     <div class="pan" id="rfleet"></div>
     <div class="pan" id="rhulls"></div>
+    <div class="pan" id="rfire"></div>
   </div>
 </div>
 <!-- THE ENGAGEMENT, TOP RIGHT: the match's own clock. It answers to the stage,
      not to a half, so the swap never moves it. -->
+<!-- THE MATCH: the clock and the turn, what is happening right now, and who
+     is ahead. The next battery is no longer spelled out here: its ring on the
+     rail already says it, on the button that fires it. -->
 <div id="match">
   <b class="mt">T+00:20</b>
   <div class="mu"></div>
+  <div class="mo"></div>
   <span class="mb"><i></i></span>
-  <div class="mr"></div>
+  <div class="mbal"></div>
 </div>
 <!-- TWO CHIPS BECOME ONE. Sound and the four framings are both settings,
      not manoeuvres: they belong behind one entry rather than taking two
@@ -1063,11 +1104,12 @@
   </button>
 </div>
 <div class="srule"></div>
+<!-- HER OWN FLEET, SHIP BY SHIP: what she still has is the first thing a
+     captain needs, and a single count of hulls could not say which. -->
 <div class="half a">
   <b>Own plot</b>
-  <div class="ln" id="rtf">Task Force Meridian</div>
   <div class="ln" id="rown"></div>
-  <div class="ln" id="rsta">solution held</div>
+  <div class="ln" id="rinc"></div>
 </div>
 <div class="half b"><b>Enemy plot</b></div>
 <div class="rd hint" id="hint">drag orbit &middot; scroll range &middot; shift-drag pan &middot; r reset &middot; h hide</div>
@@ -4080,7 +4122,9 @@ const CDN = { flare:'Star shell', cat:'Air strike', tor:'Torpedo' };
    readable: nothing on it changes while the game is waiting for your move.
    The readout's turn number and the rings notch on the same frame, because
    they are the same clock. */
-const MATCH = { t:0, acc:-1, turn:6, sec:-1, dirty:true };   /* acc < 0: no exchange */
+const MATCH = { t:0, acc:-1, turn:6, sec:-1, dirty:true, act:null };
+/* the two fleets' squares, kept by the readouts and read by the balance bar */
+const ENEMY_TALLY = { total:0, hit:0 }, OWN_TALLY = { total:0, lost:0 };   /* acc < 0: no exchange */
 function matchReset(){
   /* the opening rail is staged to show the three reload states side by side:
      the torpedo cold, the strike half-way, the star shell ready to use */
@@ -4124,19 +4168,20 @@ function matchReadout(){
   if(sec === MATCH.sec && !MATCH.dirty) return;
   MATCH.sec = sec; MATCH.dirty = false;
   const mm = String(Math.floor(sec/60)).padStart(2, '0'), ss = String(sec % 60).padStart(2, '0');
-  const ready = Object.keys(CD).filter(k => CD[k].t >= CD[k].n);
-  let bat;
-  if(ready.length === 3) bat = '<span class="k">Batteries</span> <span class="v ok">all ready</span>';
-  else if(ready.length)  bat = '<span class="k">Ready</span> <span class="v ok">'
-                              + ready.map(k => CDN[k]).join(' &middot; ') + '</span>';
-  else {
-    const k = Object.keys(CD).sort((a, b) => (CD[a].n - CD[a].t) - (CD[b].n - CD[b].t))[0];
-    bat = '<span class="k">Next</span> <span class="v">' + CDN[k] + ' in ' + (CD[k].n - CD[k].t) + '</span>';
-  }
   matchEl.querySelector('.mt').textContent = 'T+' + mm + ':' + ss;
   matchEl.querySelector('.mu').innerHTML = '<span class="k">Turn</span> <span class="v">'
                                          + String(MATCH.turn).padStart(2, '0') + '</span>';
-  matchEl.querySelector('.mr').innerHTML = bat;
+  /* the move is hers unless something of hers is in the air */
+  const mo = matchEl.querySelector('.mo');
+  mo.textContent = MATCH.act || 'Your move';
+  mo.classList.toggle('you', !MATCH.act);
+  /* who is ahead */
+  const us = ENEMY_TALLY.total ? ENEMY_TALLY.hit/ENEMY_TALLY.total : 0;
+  const them = OWN_TALLY.total ? OWN_TALLY.lost/OWN_TALLY.total : 0;
+  matchEl.querySelector('.mbal').innerHTML =
+      '<span class="k">Squares </span><span class="u2">' + String(ENEMY_TALLY.hit).padStart(2, '0') + '</span>'
+    + '<span class="k"> \u00b7 </span><span class="t2">' + String(OWN_TALLY.lost).padStart(2, '0') + '</span>'
+    + '<span class="bt"><i class="u" style="width:' + (us*50).toFixed(1) + '%"></i><i class="t" style="width:' + (them*50).toFixed(1) + '%"></i></span>';
 }
 const SINK_DUR = 11.0;
 const SALVO_DUR = 5.6;
@@ -4870,6 +4915,7 @@ function updateFX(dt){
       FX.eSplash.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eSplash.material.uniforms.uT0.value = tt;
       CON_GROUPS[TORP.group].hit[TORP.gcell] = true; pushContacts();
       boom(T0, 0.44);
+      noteShot('Torpedo ' + colLetter(TORP.cell[0]) + (TORP.cell[1] + 1) + ' \u00b7 hit', 'hit');
       refreshUI();
     }
     if(u >= TOR_HIT){
@@ -4964,6 +5010,8 @@ function updateFX(dt){
           }
           FX.sSpl[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.sSpl[i].material.uniforms.uT0.value = tt;
           STRK[ 't' + i ] = u;
+          STRK.hits = (i === 0 ? 0 : (STRK.hits || 0)) + (h ? 1 : 0);
+          if(i === 2) noteShot('Strike ' + STRK.label + ' \u00b7 ' + STRK.hits + ' hit' + (STRK.hits === 1 ? '' : 's'), STRK.hits ? 'hit' : 'miss');
           refreshUI();
         }
         if(STRK.done[i]){
@@ -5022,6 +5070,7 @@ function updateFX(dt){
         FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
         CON_GROUPS[SALVO.group].hit[SALVO.gcell] = true; pushContacts();
         boom(T0, 0.30);
+        noteShot('Missile ' + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1) + ' \u00b7 hit', 'hit');
       } else {
         /* a miss leaves its ring on their sea for good */
         let k = -1;
@@ -5030,6 +5079,7 @@ function updateFX(dt){
         MARKS_E[k].set(T0.x, T0.z, 8.6 + Math.random()*2.2, 1);
         MISSM.push(k);
         hiss(T0, 0.28, 2400, 500, 0.9, 0.8);
+        noteShot('Missile ' + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1) + ' \u00b7 miss', 'miss');
       }
       FX.eSplash.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eSplash.material.uniforms.uT0.value = tt;
       refreshUI();
@@ -5231,6 +5281,7 @@ function updateFX(dt){
       FLR.wetP.copy(FLR.pos);
       FLR.wetI = FLR.fI;
       FLR.wetH = FLR.rig.position.y;
+      noteShot('Flare ' + FLR.label + ' \u00b7 ' + FLR.n + ' found', 'lit');
       /* the wet phase works in the sea's own coordinates */
       FLR.rig.position.set(0, 0, 0); FLR.rig.rotation.set(0, 0, 0);
       FLR.hx = 0; FLR.hz = 0;
@@ -5513,8 +5564,7 @@ function sndFrame(dt, tt){
 /* ---------- controls ---------- */
 const railEl = document.getElementById('rail'), utilEl = document.getElementById('util'),
       dbgEl = document.getElementById('dbg'), navEl = document.getElementById('nav');
-const rSta = document.getElementById('rsta'), rOwn = document.getElementById('rown'),
-      rTf = document.getElementById('rtf'),
+const rOwn = document.getElementById('rown'),
       rFleet = document.getElementById('rfleet'),
       rHulls = document.getElementById('rhulls');
 
@@ -5527,6 +5577,64 @@ const ICO = {
   pct :'<path d="M2.6 11.4 11.4 2.6"/><circle cx="4.3" cy="4.3" r="1.6"/><circle cx="9.7" cy="9.7" r="1.6"/>'
 };
 const svg = k => '<svg viewBox="0 0 14 14" aria-hidden="true">' + ICO[k] + '</svg>';
+const rFire = document.getElementById('rfire'), rInc = document.getElementById('rinc');
+/* a hull seen flat: n squares, u units each, struck squares filled */
+function hullSvg(n, hit, u, h, cls){
+  const w = n*u, m = h/2;
+  const d = 'M1 ' + m + ' Q1 1, 7 1 H' + (w - 8) + ' Q' + (w - 1) + ' 1, ' + (w - 1) + ' ' + m
+          + ' Q' + (w - 1) + ' ' + (h - 1) + ', ' + (w - 8) + ' ' + (h - 1) + ' H7 Q1 ' + (h - 1) + ', 1 ' + m + ' Z';
+  let inner = '<path class="o" d="' + d + '"/>';
+  for(let c = 1; c < n; c++) inner += '<path class="d" d="M' + (c*u) + ' 2.5 V' + (h - 2.5) + '"/>';
+  for(let c = 0; c < n; c++) if(hit && hit[c])
+    inner += '<rect class="x" x="' + (c*u + 3) + '" y="' + (m - h*0.22) + '" width="' + (u - 6) + '" height="' + (h*0.44) + '" rx="1.5"/>';
+  return '<svg class="' + (cls || '') + '" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" aria-hidden="true">' + inner + '</svg>';
+}
+/* THE LAST ROUND WE FIRED, named the way the plot names it */
+var LASTSHOT = null;
+function noteShot(label, kind){ LASTSHOT = { label, kind }; }
+/* HER OWN FLEET: every hull, the length she is on the plot, and what has been
+   put into her. The carrier sits in no sinking register, so her squares are
+   written here from where she lies. */
+const OWN_FLEET = [
+  ['carrier',   'Carrier',   [4, 6, 8, 7]],
+  ['cruiser',   'Cruiser',   null],
+  ['destroyer', 'Destroyer', null],
+  ['escort',    'Escort',    null],
+  ['submarine', 'Submarine', null]
+];
+function ownReadout(){
+  if(!rOwn) return;
+  const sinkShip = ANIM.sink >= 0 ? (ANIM.ship || shipNamed('escort')) : null;
+  let rows = '', total = 0, lost = 0;
+  for(const [key, name, fixed] of OWN_FLEET){
+    const sh = shipNamed(key);
+    const cells = fixed || (sh ? sh.cells : null);
+    if(!cells) continue;
+    const horiz = (cells[2] - cells[0]) >= (cells[3] - cells[1]);
+    const n = horiz ? cells[2] - cells[0] : cells[3] - cells[1];
+    const hit = new Array(n).fill(false);
+    /* the cruiser burning on D3 */
+    if(key === 'cruiser' && ANIM.fireGoal > 0.5){
+      const k = Math.floor(POS.cruiser[0]) - cells[0];
+      if(k >= 0 && k < n) hit[k] = true;
+    }
+    const sunk = !!(sinkShip && sh && sinkShip === sh && ANIM.sink > 0.35);
+    if(sunk) hit.fill(true);
+    total += n; lost += hit.filter(Boolean).length;
+    rows += hullSvg(n, hit, 15, 14, 'shp' + (sunk ? ' lost' : ''))
+          + '<span class="nm' + (sunk ? ' lost' : '') + '">' + name + (sunk ? '<em>sunk</em>' : '') + '</span>';
+  }
+  rOwn.innerHTML = rows;
+  OWN_TALLY.total = total; OWN_TALLY.lost = lost;
+  /* the last round that came our way */
+  const cs = (ANIM.ship || shipNamed('escort')).cells;
+  const SPAN = colLetter(cs[2] - 1) + (cs[1] + 1) + '\u2013' + colLetter(cs[0]) + cs[3];
+  const CELL = colLetter(POS.cruiser[0]) + (Math.floor(POS.cruiser[1]) + 1);
+  const inc = sinkShip ? [SPAN, 'sunk', true] : ANIM.fireGoal > 0.5 ? [CELL, 'hit', true] : null;
+  rInc.innerHTML = '<span class="k">Incoming </span><span class="v' + (inc && inc[2] ? ' hit' : '') + '">'
+                 + (inc ? inc[0] + ' \u00b7 ' + inc[1] : '\u2014') + '</span>';
+}
+
 
 /* how fast the beam turns, in radians a second */
 const _RAD_W = 0.42;
@@ -5579,6 +5687,22 @@ function plotReadout(){
       + (done ? '<em>sunk</em>' : '') + '</div></div>';
   }).join('');
 
+
+  /* WHAT IS LEFT TO FIND: the length of every hull of theirs still afloat —
+     the one thing that decides where the next round should go */
+  const afloat = CON_GROUPS.filter(g => !g.hit.every(Boolean)).map(g => g.cells.length).sort((x, y) => y - x);
+  rFleet.innerHTML += '<div class="afl"><span class="k">Afloat</span>'
+    + (afloat.length ? afloat.map(n => hullSvg(n, null, 11, 10)).join('') : '<span class="v">none</span>') + '</div>';
+  /* OUR FIRE: the last result and how often we find something */
+  const shots = sqHit + miss, acc = shots ? Math.round(100*sqHit/shots) : 0;
+  if(rFire){
+    const L = LASTSHOT;
+    rFire.innerHTML = '<h6>Your fire</h6><div class="fire">'
+      + '<span class="k">Last</span><span class="v' + (L ? ' ' + L.kind : '') + '">' + (L ? L.label : '\u2014') + '</span>'
+      + '<span class="k">Accuracy</span><span class="v">' + pad(sqHit) + '/' + pad(shots) + ' \u00b7 ' + acc + '%</span>'
+      + '</div>';
+  }
+  ENEMY_TALLY.total = sqTot; ENEMY_TALLY.hit = sqHit;
 }
 
 function refreshUI(){
@@ -5590,36 +5714,18 @@ function refreshUI(){
   const CELL = colLetter(POS.cruiser[0]) + (Math.floor(POS.cruiser[1]) + 1);
   const cs = (ANIM.ship || shipNamed('escort')).cells;
   const SPAN = colLetter(cs[2] - 1) + (cs[1] + 1) + '\u2013' + colLetter(cs[0]) + cs[3];
-  rSta.textContent = running && !ANIM.torHit ? 'torpedo running'
-                   : running ? ('torpedo hit ' + colLetter(TORP.cell[0]) + (TORP.cell[1] + 1))
-                   : cating ? (STRK.done[0] ? ('air strike ' + STRK.label) : 'aircraft away')
-                   : flying && !ANIM.misHit ? 'salvo away'
-                   /* the result is theirs: name the square it fell on */
-                   : flying ? ((SALVO.hit ? 'hit ' : 'splash ') + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1))
-                   : (ANIM.flrOut >= 0 || FLR.gap > 0 || ANIM.flr >= 0 || ANIM.flrWet >= 0) ? ('star shell ' + FLR.label + (ANIM.flrWet >= 0 ? ' \u00b7 ' + FLR.n + ' found' : ''))
-                   : sinking && ANIM.sink > 0.9 ? ('lost ' + SPAN)
-                   : sinking ? ('going down ' + SPAN)
-                   : burning ? ('hit ' + CELL + ' \u00b7 burning')
-                   : DMG.length ? (DMG.length + ' hull' + (DMG.length>1?'s':'') + ' damaged')
-                   : ANIM.con ? (() => {
-                       const done = CON_GROUPS.filter(g => g.hit.every(Boolean)).length;
-                       const hits = CON_GROUPS.reduce((a, g) => a + g.hit.filter(Boolean).length, 0);
-                       return hits + ' struck \u00b7 ' + done + ' of ' + CON_GROUPS.length + ' resolved';
-                     })()
-                   : 'solution held';
-  /* her own fleet, in the same language the enemy panel uses */
-  {
-    const mine = SHIPS.filter(x => x.era === ANIM.era);
-    const hurt = DMG.length;
-    let pips = '';
-    for(let i=0;i<mine.length;i++) pips += '<i class="' + (i < hurt ? 'hurt' : 'on') + '"></i>';
-    rOwn.innerHTML = '<span class="segs">' + pips + '</span><span class="v">'
-      + String(mine.length).padStart(2, '0') + '</span><span class="k">hulls &middot; </span><span class="v">'
-      + String(hurt).padStart(2, '0') + '</span><span class="k">damaged</span>';
-  }
+  /* WHAT IS HAPPENING NOW, for the match readout */
+  const act = running && !ANIM.torHit ? 'Torpedo running'
+            : running ? ('Torpedo hit ' + colLetter(TORP.cell[0]) + (TORP.cell[1] + 1))
+            : cating ? (STRK.done[0] ? ('Air strike ' + STRK.label) : 'Aircraft away')
+            : flying && !ANIM.misHit ? 'Salvo away'
+            : flying ? ((SALVO.hit ? 'Hit ' : 'Splash ') + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1))
+            : (ANIM.flrOut >= 0 || FLR.gap > 0 || ANIM.flr >= 0 || ANIM.flrWet >= 0) ? ('Star shell ' + FLR.label + (ANIM.flrWet >= 0 ? ' \u00b7 ' + FLR.n + ' found' : ''))
+            : null;
+  MATCH.act = act; MATCH.dirty = true;
   setupUI();
   plotReadout();
-  rTf.textContent = ANIM.era === 1 ? 'Line of Battle' : 'Task Force Meridian';
+  ownReadout();
   /* one pass over the HUD: every control lights from the state it reports */
   for(const b of navEl.querySelectorAll('[data-scr]')) b.classList.toggle('on', b.dataset.scr === SCREEN);
   for(const b of document.querySelectorAll('#rail button, #util button, #dbg button')){
