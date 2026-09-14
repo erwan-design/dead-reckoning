@@ -661,7 +661,6 @@
   body.trad #match .mr{display:none}
   /* one shot a turn: while the exchange runs the rail takes no second one,
      and says so by dimming until the hand comes back */
-  body.exch #rail .chip{pointer-events:none}
   body.exch #rail .chip.rdy{opacity:.45}
   /* traditional: one cell a turn, and no battery to choose from */
   body.trad #rail{opacity:0!important;pointer-events:none}
@@ -749,7 +748,8 @@
   .chip .cd{opacity:1;transition:opacity 340ms ease}
   .chip.rdy .cd{opacity:0}
   /* charging is not the same as unavailable: it is dim, but it is working */
-  .chip.cool{opacity:1;pointer-events:none;color:rgba(224,233,240,.34)}
+  /* still pressable: the prototype fires any battery whenever it is asked to */
+  .chip.cool{opacity:1;color:rgba(224,233,240,.34)}
   .chip.on .cd{filter:none}
   .chip.rdy{color:rgba(180,246,230,.98);background:rgba(157,240,220,.13)}
   .chip.rdy svg{filter:drop-shadow(0 0 5px rgba(157,240,220,.75))}
@@ -869,6 +869,10 @@
      disc of its own. Missile, Sink and Reset are not manoeuvres you choose —
      they stay in the debug tray, where the rest of the scaffolding lives. -->
 <div class="rail in-a" id="rail">
+  <!-- the base gun has no cadence: no ring, always ready -->
+  <div class="cap">
+    <button class="chip" data-a="fire" data-l="Missile"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 11 11 3"/><path d="M7.2 3H11v3.8"/><path d="M3.1 8.4 5.6 10.9"/></svg></button>
+  </div>
   <div class="cap">
     <button class="chip" data-a="tor" data-l="Torpedo"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.9 7c0 1-1.6 1.8-3.4 1.8S5.1 8 5.1 7s1.6-1.8 3.4-1.8S11.9 6 11.9 7z"/><path d="M5.1 5.6 3.7 4.4M5.1 8.4 3.7 9.6"/><circle cx="1.9" cy="7" r=".65"/></svg></button>
   </div>
@@ -2680,6 +2684,8 @@ const CAT = { plane:null, rest:new T.Vector3(), world:new T.Vector3(),
    away CAT_OUT_E → CAT_RET_S   she is over the enemy — see the strike
    home CAT_RET_S → CAT_END     back off the same horizon, round astern, down
                                 the catapult track to the spot she left */
+/* declared up here: the path is built at start-up, before the rest of the catapult code */
+const CAT_DUR = 25.0;
 const CAT_OUT_E = 0.30, CAT_ST_S = 0.34, CAT_ST_E = 0.56, CAT_RET_S = 0.62, CAT_END = 0.985, CAT_FOLLOW = 6.0;
 function buildCatPath(dirW){
   const z0 = CAT.rest.z, V = T.Vector3, UP = new V(0, 1, 0);
@@ -2688,15 +2694,24 @@ function buildCatPath(dirW){
      frame — by her heading only, so the swell she rides does not tilt a
      point two kilometres out by thirty metres */
   const L = (dir, d, alt) => new V(dir.x*d, alt, dir.z*d).applyAxisAngle(UP, -yaw);
-  const ld = new V(dirW.x, 0, dirW.z).applyAxisAngle(UP, -yaw);
+  const ld = new V(dirW.x, 0, dirW.z).applyAxisAngle(UP, -yaw).normalize();
   const side = ld.x >= 0 ? 1 : -1;
-  const out = [
-    new V(4.2, 10.3, z0),  new V(4.2, 10.3, z0 + 32), new V(4.1, 11.5, z0 + 62),
-    new V(4.5, 27, 112),   new V(6, 42, 182),         new V(9, 58, 290)
-  ];
-  /* a horizon astern of her needs a turn, or the curve folds back on itself */
-  if(ld.z < 0.25){ out.push(new V(side*300, 78, 430), new V(side*520, 94, 240)); }
-  out.push(L(dirW, 800, 112), L(dirW, 1400, 150));
+  /* OUT: the stroke and a straight climb-out, then ONE turn of constant
+     radius onto the horizon, then straight. Routed through loose waypoints
+     the spline overshot one way before turning the other — the wobble after
+     the launch. Laid down as an actual arc it cannot. */
+  const out = [ new V(4.2, 10.3, z0), new V(4.2, 10.3, z0 + 32), new V(4.1, 11.5, z0 + 62), new V(4.4, 24, 120) ];
+  const P1 = out[3], R = 230;
+  const th = Math.atan2(ld.x, ld.z), sg = th >= 0 ? 1 : -1;
+  const C = new V(P1.x + sg*R, 0, P1.z);
+  const n = Math.max(2, Math.ceil(Math.abs(th)/(Math.PI/14)));
+  let last = P1.clone();
+  for(let k=1;k<=n;k++){
+    const ph = th*k/n;
+    last = new V(C.x - sg*R*Math.cos(ph), 24 + 40*(k/n), C.z + sg*R*Math.sin(ph));
+    out.push(last);
+  }
+  out.push(last.clone().addScaledVector(ld, 420).setY(100), last.clone().addScaledVector(ld, 1300).setY(150));
   CAT.curveOut = new T.CatmullRomCurve3(out, false, 'centripetal');
   /* home off a bearing a little to one side of the way she left */
   const dirR = new V(dirW.x, 0, dirW.z).applyAxisAngle(UP, 0.18*side);
@@ -2707,17 +2722,29 @@ function buildCatPath(dirW){
     new V(3.2, 14.8, -280), new V(4.2, 13.6, -210), new V(4.2, 12.4, -140),
     new V(4.2, 11.3, -90),  new V(4.2, 10.6, -58),  new V(4.2, 10.3, -40), new V(4.2, 10.3, z0));
   CAT.curveRet = new T.CatmullRomCurve3(home, false, 'centripetal');
+  /* ONE SPEED. Off the stroke she reaches her cruise and holds it; the pass
+     over their plot is timed from that same speed, and she comes home at it
+     before slowing to her spot. Each leg used to keep its own clock, so she
+     crossed the plot at one speed and her own sky at another. */
+  const Tout = (CAT_OUT_E - 0.045)*CAT_DUR;
+  CAT.vCruise = CAT.curveOut.getLength()/((1 - CAT_F0/2)*Tout);
+  const Tret = (CAT_END - CAT_RET_S)*CAT_DUR;
+  CAT.kRet = Math.max(1.1, Math.min(3.5, CAT.vCruise*Tret/CAT.curveRet.getLength()));
 }
+const CAT_F0 = 0.16;
+/* distance flown against the leg's clock: a ramp up to cruise, then cruise */
+function catRamp(f){ return (f < CAT_F0 ? f*f/(2*CAT_F0) : f - CAT_F0/2)/(1 - CAT_F0/2); }
 function catPath(a, out){
   if(a < CAT_OUT_E){
     /* slow off the stroke, faster as she climbs away */
     const f = a < 0.045 ? 0 : Math.min(1, (a - 0.045)/(CAT_OUT_E - 0.045));
-    return CAT.curveOut.getPointAt(Math.pow(f, 1.7), out);
+    return CAT.curveOut.getPointAt(catRamp(f), out);
   }
-  if(a < CAT_RET_S) return CAT.curveOut.getPointAt(1, out);
+  const rs = CAT.retS || CAT_RET_S;
+  if(a < rs) return CAT.curveOut.getPointAt(1, out);
   /* and home decelerating all the way, to a stop on her spot */
-  const f = Math.min(1, (a - CAT_RET_S)/(CAT_END - CAT_RET_S));
-  return CAT.curveRet.getPointAt(1 - Math.pow(1 - f, 1.6), out);
+  const f = Math.min(1, (a - rs)/(CAT_END - rs));
+  return CAT.curveRet.getPointAt(1 - Math.pow(1 - f, CAT.kRet || 1.6), out);
 }
 const _cb1 = new T.Vector3(), _cb2 = new T.Vector3(), _cb3 = new T.Vector3();
 function catBank(a){
@@ -2985,7 +3012,8 @@ const MIS = { grp:null, trail:null, A:new T.Vector3(), B:new T.Vector3(), H:58, 
 const SALVO = { cell:[0,0], hit:false, aim:0, dirOut:new T.Vector3(), from:new T.Vector3(),
                 P0:new T.Vector3(), P1:new T.Vector3(), P2:new T.Vector3(),
                 Q0:new T.Vector3(), Q1:new T.Vector3(), Q2:new T.Vector3(), tgt:new T.Vector3(), group:-1, gcell:-1 };
-const SALVO_OUT = 0.40, SALVO_IN = 0.47, SALVO_HIT = 0.76;
+/* out 1.8 s, a breath between the boards, in 1.6 s, then two seconds of splash */
+const SALVO_OUT = 0.32, SALVO_IN = 0.357, SALVO_HIT = 0.643;
 function bez(a, b, c, t, out){
   const u = 1 - t;
   return out.set(u*u*a.x + 2*u*t*b.x + t*t*c.x, u*u*a.y + 2*u*t*b.y + t*t*c.y, u*u*a.z + 2*u*t*b.z + t*t*c.z);
@@ -4084,7 +4112,7 @@ function matchReadout(){
   matchEl.querySelector('.mr').innerHTML = bat;
 }
 const SINK_DUR = 11.0;
-const SALVO_DUR = 8.0;
+const SALVO_DUR = 5.6;
 const ANIM = { flrOut:-1, fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, flrWet:-1, swap:0, env:1, envK:0 };
 
 function setStrike(on){
@@ -4132,7 +4160,7 @@ function launch(){
    finds is the first one in the lane, seen from the edge it comes in over. */
 const TORP = { cell:[0,0], group:-1, gcell:-1, aim:0, dirOut:new T.Vector3(),
                A:new T.Vector3(), B:new T.Vector3(), C:new T.Vector3(), D:new T.Vector3() };
-const TOR_OUT = 0.40, TOR_IN = 0.46, TOR_HIT = 0.78, TOR_FOLLOW = 2.4;
+const TOR_OUT = 0.40, TOR_IN = 0.46, TOR_HIT = 0.78, TOR_FOLLOW = 2.8;
 function pickTorpedoLane(){
   const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
   const o = cellW(5, 5), ex = cellW(6, 5).sub(o), ez = cellW(5, 6).sub(o);
@@ -4487,7 +4515,7 @@ function pickFlareBlock(){
   const pool = (live.length && Math.random() < 0.5) ? live : all;
   return pool[Math.floor(Math.random()*pool.length)];
 }
-const FLR_OUT_DUR = 2.6, FLR_GAP = 0.45;
+const FLR_OUT_DUR = 4.6, FLR_GAP = 0.35;
 function flare(){
   matchSpend('flare');
   /* THE LAUNCH, on her own board: from the escort, up and away over the
@@ -4497,6 +4525,9 @@ function flare(){
   const d = new T.Vector3(-Math.sin(CAM.az), 0, -Math.cos(CAM.az)).normalize();
   FLR.oC.copy(FLR.oA).addScaledVector(d, 110).setY(260);
   FLR.oB.copy(FLR.oA).addScaledVector(d, 900).setY(520);
+  /* the vantage: behind and beside the escort, low, looking the way it goes */
+  FLR.vant = FLR.vant || new T.Vector3();
+  FLR.vant.copy(FLR.oA).addScaledVector(d, -70).add(new T.Vector3(d.z, 0, -d.x).multiplyScalar(26)).setY(16);
   const po = [];
   for(let i=0;i<=180;i++) po.push(bez(FLR.oA, FLR.oC, FLR.oB, i/180, new T.Vector3()));
   for(const t of FLR.osTrails){ retrace(t, po); t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
@@ -4534,7 +4565,6 @@ function flare(){
   refreshUI();
 }
 
-const CAT_DUR = 25.0;
 const _tl = new T.Vector3(), _bw = new T.Vector3(), _bw2 = new T.Vector3();
 /* THE STICK. An air strike lays three squares in a row, flown along a lane
    of their plot from the edge nearest her own board. */
@@ -4573,6 +4603,7 @@ function pickStrike(){
     return alongX ? cellW(k + 0.5, W.lane + 0.5, alt) : cellW(W.lane + 0.5, k + 0.5, alt); };
   STRK.cells = W.cells;
   STRK.P.copy(edge(-4, 70)); STRK.Q.copy(edge(13, 70));
+  STRK.len = STRK.P.distanceTo(STRK.Q);
   /* each bomb lands a little after she passes over its square */
   STRK.at = [0, 1, 2].map(i => ((W.s0 + i + 0.5) + 4 + 0.55)/17);
   STRK.done = [false, false, false];
@@ -4584,6 +4615,12 @@ function catapult(){
   pickStrike();
   STRK.dirOut.set(-Math.sin(CAM.az), 0, -Math.cos(CAM.az)).normalize();
   buildCatPath(STRK.dirOut);
+  /* the pass over their plot flown at her cruise speed */
+  STRK.e = Math.min(CAT_RET_S - 0.02, CAT_ST_S + STRK.len/CAT.vCruise/CAT_DUR);
+  /* and she turns for home soon after the pass, not after a fixed wait —
+     starting home at the same speed, then slowing to her spot */
+  CAT.retS = Math.min(CAT_RET_S, STRK.e + 0.06);
+  CAT.kRet = Math.max(1.1, Math.min(3.5, CAT.vCruise*(CAT_END - CAT.retS)*CAT_DUR/CAT.curveRet.getLength()));
   const pts = [];
   for(let i=0;i<=180;i++) pts.push(catPath(0.045 + (CAT_OUT_E - 0.045)*(i/180), new T.Vector3()));
   for(const t of CAT.trails) retrace(t, pts);
@@ -4800,7 +4837,7 @@ function updateFX(dt){
   if(ANIM.cat >= 0){
     ANIM.cat = Math.min(1, ANIM.cat + dt/CAT_DUR);
     const u = ANIM.cat, p = CAT.plane;
-    const home = u < CAT_OUT_E || u >= CAT_RET_S;
+    const home = u < CAT_OUT_E || u >= (CAT.retS || CAT_RET_S);
     p.userData.want = home;
     if(home){
       p.position.copy(catPath(u, CAT.a));
@@ -4811,7 +4848,7 @@ function updateFX(dt){
       }
     }
     /* THE STRIKE, over their plot */
-    const sf = (u - CAT_ST_S)/(CAT_ST_E - CAT_ST_S);
+    const sf = (u - CAT_ST_S)/((STRK.e || CAT_ST_E) - CAT_ST_S);
     CAT.inb.userData.want = sf >= 0 && sf < 1;
     if(CAT.inb.userData.want){
       CAT.inb.position.lerpVectors(STRK.P, STRK.Q, sf);
@@ -4872,7 +4909,7 @@ function updateFX(dt){
     const TW = ANIM.era === 1 ? MIS_TW_SAIL : MIS_TW_MOD;
     /* OUT: accelerating away, so it is quick to leave and slow to vanish */
     const so = Math.min(1, u/SALVO_OUT), po = Math.pow(so, 1.55);
-    const fo = u < SALVO_OUT ? Math.min(1, u*20) : Math.max(0, 1 - (u - SALVO_OUT)/0.30);
+    const fo = u < SALVO_OUT ? Math.min(1, u*20) : Math.max(0, 1 - (u - SALVO_OUT)/0.40);
     for(let i=0;i<MIS.trails.length;i++){ const m = MIS.trails[i].material.uniforms; m.uProg.value = po; m.uFade.value = fo*TW[i]; }
     MIS.grp.userData.want = u < SALVO_OUT;
     if(u < SALVO_OUT){
@@ -5916,7 +5953,7 @@ const _c1 = new T.Vector3(), _c2 = new T.Vector3(), _c3 = new T.Vector3(),
 const _flrLook = new T.Vector3(), _flrDir = new T.Vector3(), _flrPair = new T.Vector3();
 function cineUpdate(dt){
   let want = 0, obj = null, D = 30, H = 8, S = 6, L = 45, look = null, age = 0,
-      LD = 118, LH = 58, lookDir = null, lookSway = null, lookLag = 2.6;
+      LD = 118, LH = 58, lookDir = null, lookSway = null, lookLag = 2.6, blendIn = 0.95, camAt = null;
   /* THE GUN KEEPS THE PLOT. It is the shot you fire every turn, and a camera
      that leaves the board for it would make the ordinary thing ceremonial —
      and would take the plot away four seconds out of five. The three specials
@@ -5927,8 +5964,18 @@ function cineUpdate(dt){
     /* low and close from the water, for as long as she is still near her
        own board; then the eye lets her go and she runs on over the horizon
        — following her there would take the camera half a mile off the plot */
-    want = (age > 1.0 && age < TOR_FOLLOW) ? 1 : 0;
+    want = (age > 0.05 && age < TOR_FOLLOW) ? 1 : 0;
+    blendIn = 2.4;
     obj = TOR.grp; D = 26; H = 4.0; S = 5.0; L = 60;
+  } else if(ANIM.flrOut >= 0){
+    /* THE LAUNCH IS THE SHOT NOW. The fall happens over their plot, seen from
+       straight up; what her own board has is the shell going up. So the eye
+       stands on the quarter of the ship that fires it and watches it climb
+       away — a vantage that holds still while the aim follows the light. */
+    age = ANIM.flrOut*FLR_OUT_DUR;
+    want = (age > 0.05 && age < FLR_OUT_DUR - 0.35) ? 1 : 0;
+    blendIn = 2.4;
+    camAt = FLR.vant; look = FLR.os.position;
   } else if(FLR_CINE && ANIM.flr >= 0){
     /* THE STAR SHELL IS WATCHED TWICE OVER. On the way up the subject is the
        shell, from low down so it climbs out of the frame; once it is lit the
@@ -5991,7 +6038,8 @@ function cineUpdate(dt){
     /* off the stroke and into the climb, then the eye lets her go: the strike
        is watched on the plot above, and following her over the horizon would
        take the camera kilometres off her own board */
-    want = (age > 1.4 && age < CAT_FOLLOW) ? 1 : 0;
+    want = (age > 0.1 && age < CAT_FOLLOW) ? 1 : 0;
+    blendIn = 2.2;
     obj = CAT.plane; D = 46; H = 13.0; S = 10.5; L = 80;
   }
   /* start wide so the launch is not missed, then close in */
@@ -6004,7 +6052,7 @@ function cineUpdate(dt){
   if(!(ANIM.flr >= FLR_UP)) CINE.rollWant = 0;
   CINE.roll += (CINE.rollWant - CINE.roll)*(1 - Math.exp(-dt*6.0));
   CINE.want = want;
-  CINE.w += (want - CINE.w)*(1 - Math.exp(-dt*(want ? 0.95 : 0.75)));
+  CINE.w += (want - CINE.w)*(1 - Math.exp(-dt*(want ? blendIn : 0.75)));
   if(CINE.w < 0.004){ CINE.w = 0; CINE.init = false; return; }
 
   if(obj){
@@ -6020,6 +6068,11 @@ function cineUpdate(dt){
       CINE.pos.lerp(_ct, 1 - Math.exp(-dt*3.4));
       CINE.look.lerp(_cl, 1 - Math.exp(-dt*5.0));
     }
+  } else if(camAt && look){
+    /* a vantage that stays put, and an aim that follows */
+    if(!CINE.init){ CINE.pos.copy(camera.position); CINE.look.copy(look); CINE.init = true; }
+    CINE.pos.lerp(camAt, 1 - Math.exp(-dt*3.0));
+    CINE.look.lerp(look, 1 - Math.exp(-dt*5.5));
   } else if(look){
     /* the round has landed: pull back off the impact and watch it */
     if(lookDir){ _c2.copy(lookDir); }
