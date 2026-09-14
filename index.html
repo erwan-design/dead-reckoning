@@ -6864,7 +6864,10 @@ function cineUpdate(dt){
     want = 1; blendIn = 2.6; posRate = 3.0;
     lookDir = EFLR.dir;
     if(u < EFLR.up){
-      _flrLook.copy(EFLR.B); LD = 150; LH = 20; lookLag = 3.0;
+      /* LOOKING DOWN ON IT. Level with the chute the shot was all sky and
+         horizon; from about thirty degrees above, the sea it lights and the
+         squares under it are behind it the whole way down */
+      _flrLook.copy(EFLR.B); LD = 140; LH = 82; lookLag = 3.0;
     } else {
       const ah = Math.min(1, (u - EFLR.up)/(1 - EFLR.up));
       /* the aim slides from the burst point onto the rig as the canopy opens */
@@ -6872,8 +6875,9 @@ function cineUpdate(dt){
       _flrPair.copy(EFLR.pos).lerp(EFLR.rig.position, 0.5);
       _flrLook.copy(EFLR.B).lerp(_flrPair, e);
       const sp = Math.max(20, EFLR.pos.y);
-      LD = 150 + (118 + sp*0.30 - 150)*e;
-      LH = 20 + (8 + sp*0.12 - 20)*e;
+      const ld = 104 + sp*0.26;
+      LD = 140 + (ld - 140)*e;
+      LH = 82 + (ld*0.64 - 82)*e;
       /* THE EYE HEELS WITH THE CHUTE: its roll is the rig's heel as seen from
          where it stands — the part of the tilt that lies across the frame —
          so the horizon leans exactly as the canopy does. The camera sits on
@@ -6891,7 +6895,7 @@ function cineUpdate(dt){
        of the shot, and handing back before it would cut the ending off */
     want = 1; lookDir = EFLR.dir; posRate = 3.0;
     _flrLook.copy(EFLR.wetP); _flrLook.y = waterY(EFLR.wetP.x, EFLR.wetP.z, tt);
-    LD = 128; LH = 26; lookLag = 2.4;
+    LD = 110; LH = 74; lookLag = 2.4;
     look = _flrLook;
   } else if(ANIM.cat >= 0){
     const u = ANIM.cat;
