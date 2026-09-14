@@ -3065,7 +3065,7 @@ function pickSalvoCell(){
 }
 
 /* ---- 5c. a torpedo : out of the boat's forward tubes, running shallow ---- */
-const TOR_DUR = 9.2;
+const TOR_DUR = 8.4;
 const TOR = { grp:null, A:new T.Vector3(), B:new T.Vector3(), trails:[],
               tmp:new T.Vector3(), tmp2:new T.Vector3() };
 {
@@ -4187,7 +4187,12 @@ const TORP = { cell:[0,0], group:-1, gcell:-1, aim:0, dirOut:new T.Vector3(),
                A:new T.Vector3(), B:new T.Vector3(), C:new T.Vector3(), D:new T.Vector3() };
 /* hold 0.8 s at the tube while the eye settles behind her, run out 3.4 s,
    half a second between the boards, 2.7 s in, then the splash */
-const TOR_HOLD = 0.087, TOR_OUT = 0.457, TOR_IN = 0.511, TOR_HIT = 0.804, TOR_FOLLOW = 2.9;
+/* out 3.4 s, half a second between the boards, 2.7 s in, then the splash */
+const TOR_HOLD = 0, TOR_OUT = 0.405, TOR_IN = 0.464, TOR_HIT = 0.786, TOR_FOLLOW = 2.3;
+/* A LAUNCH, NOT A START. The tube throws her out on a slug of air: she leaves
+   fast, under the surface, loses a little way as she rises to her running
+   depth, and only then does her motor take her up to full speed. */
+const TOR_V0 = 95, TOR_EJECT = 0.55, TOR_ACC = 950, TOR_VMAX = 560, TOR_RUN = 1500;
 const TOR_F0 = 0.38;
 /* distance run against the leg's clock: she gathers way, then holds her speed */
 function torRamp(f){ return (f < TOR_F0 ? f*f/(2*TOR_F0) : f - TOR_F0/2)/(1 - TOR_F0/2); }
@@ -4230,7 +4235,7 @@ function torpedo(){
                            pi.push(new T.Vector3().lerpVectors(TORP.C, TORP.D, i/200)); }
   for(const t of TOR.trails) retrace(t, po);
   for(const t of TOR.trailsIn) retrace(t, pi);
-  ANIM.tor = 0; ANIM.torHit = false; TORP.aim = 0;
+  ANIM.tor = 0; ANIM.torHit = false; TORP.aim = 0; TORP.d = 0; TORP.v = TOR_V0;
   for(const t of TOR.trails.concat(TOR.trailsIn)){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
   MARKS_E[26].w = 0;
   /* the boat blows her tube: air, not flame */
@@ -4822,14 +4827,24 @@ function updateFX(dt){
       /* she runs under, riding the swell: only the top of her casing cuts it */
       grp.position.y = waterY(grp.position.x, grp.position.z, tt) - lift;
     };
-    /* OUT */
-    /* SHE GATHERS WAY. A beat at the tube with the eye already behind her,
-       then a slow start that builds to full speed — not a shot out of a gun */
-    const so = Math.max(0, Math.min(1, (u - TOR_HOLD)/(TOR_OUT - TOR_HOLD))), po = torRamp(so);
-    const fo = u < TOR_OUT ? Math.min(1, Math.max(0, u - TOR_HOLD)*14) : Math.max(0, 1 - (u - TOR_OUT)/0.34);
+    /* OUT: ejected, rising, then driven */
+    const ts = u*TOR_DUR;
+    if(u < TOR_OUT){
+      TORP.v = ts < TOR_EJECT ? TOR_V0*(1 - 0.42*ts/TOR_EJECT)
+             : Math.min(TOR_VMAX, TOR_V0*0.58 + TOR_ACC*(ts - TOR_EJECT)*Math.min(1, (ts - TOR_EJECT)/0.35));
+      TORP.d = (TORP.d || 0) + TORP.v*dt;
+    }
+    const so = Math.min(1, (TORP.d || 0)/TOR_RUN), po = so;
+    const fo = u < TOR_OUT ? Math.min(1, ts*4) : Math.max(0, 1 - (u - TOR_OUT)/0.34);
     for(const t of TOR.trails){ t.material.uniforms.uProg.value = po; t.material.uniforms.uFade.value = fo; }
     TOR.grp.userData.want = u < TOR_OUT;
-    if(u < TOR_OUT) placeRun(TOR.grp, TORP.A, TORP.B, po, 0.45);
+    /* she leaves the tube three metres down and comes up to where her casing
+       just cuts the water */
+    const rise = Math.min(1, ts/0.65), depth = 0.45 + 2.8*(1 - rise*rise*(3 - 2*rise));
+    if(u < TOR_OUT) placeRun(TOR.grp, TORP.A, TORP.B, po, depth);
+    /* the slug of air breaks the surface over the tube: a boil that spreads */
+    if(ts < 1.5){ const k = ts/1.5; marks[14].set(TORP.A.x, TORP.A.z, 3 + 26*Math.sqrt(k), Math.pow(1 - k, 1.6)); }
+    else marks[14].w = 0;
     /* IN */
     const si = Math.max(0, Math.min(1, (u - TOR_IN)/(TOR_HIT - TOR_IN)));
     const fi = u < TOR_IN ? 0 : u < TOR_HIT ? Math.min(1, (u - TOR_IN)*20) : Math.max(0, 1 - (u - TOR_HIT)/0.22);
@@ -4841,8 +4856,10 @@ function updateFX(dt){
     /* the bow wave grows with her speed, from nothing: at the tube, seen low
        from her beam, even a faint one lay on the water as a white bar beside
        a torpedo that was not moving */
-    const ks = Math.min(1, so/TOR_F0);
-    const wake = u < TOR_HOLD ? 0 : u < TOR_OUT ? ks*ks : (u >= TOR_IN && u < TOR_HIT) ? 1 : 0;
+    /* the bow wave is her speed made visible, and only once she is up at the
+       surface to make one */
+    const ks = Math.min(1, (TORP.v || 0)/TOR_VMAX)*rise;
+    const wake = u < TOR_OUT ? ks : (u >= TOR_IN && u < TOR_HIT) ? 1 : 0;
     TOR.bow.material.uniforms.uI.value = wake*(0.82 + 0.10*Math.sin(tt*11.0));
     if(u >= TOR_HIT && !ANIM.torHit){
       ANIM.torHit = true;
@@ -4859,12 +4876,12 @@ function updateFX(dt){
     }
     if(u >= 1){ ANIM.tor = -1; MARKS_E[26].w = 0; refreshUI(); }
   } else {
-    TOR.grp.userData.want = false; TOR.inb.userData.want = false; TORP.aim = 0;
+    TOR.grp.userData.want = false; TOR.inb.userData.want = false; TORP.aim = 0; marks[14].w = 0;
     for(const t of TOR.trails.concat(TOR.trailsIn)) t.material.uniforms.uFade.value = 0;
   }
   /* the spray she throws: made at the nose while she runs, then left to
      fly out, fall and fade on its own after she has gone — on each board */
-  sprayTick(TOR.spray, TOR.grp, TOR.grp.userData.want && ANIM.tor >= TOR_HOLD + 0.03, 1.0, dt);
+  sprayTick(TOR.spray, TOR.grp, TOR.grp.userData.want && (TORP.v || 0) > 150 && ANIM.tor*TOR_DUR > 0.5, 1.0, dt);
   sprayTick(TOR.sprayE, TOR.inb, TOR.inb.userData.want, 2.6, dt);
 
   /* detonation */
@@ -6039,18 +6056,21 @@ function cineUpdate(dt){
     /* low and close from the water, for as long as she is still near her
        own board; then the eye lets her go and she runs on over the horizon
        — following her there would take the camera half a mile off the plot */
-    /* in at once, while she is still at the tube, and let go a little
-       before she is small enough to lose */
+    /* in at once — she is under the water for the first half second, which
+       is the time the eye needs — and let go a little before she is small
+       enough to lose */
     want = (age < TOR_FOLLOW) ? 1 : 0;
     blendIn = 3.2;
     zoomAmt = 0.8; zoomT0 = 0.0; zoomRate = 2.2;
     /* at the tube she is right under the boat's sail, and a camera straight
        behind her sat inside it: so it starts wide on her beam and slides in
        behind as she gathers way */
-    const kIn = Math.max(0, Math.min(1, (age - TOR_HOLD*TOR_DUR)/1.6)), eIn = kIn*kIn*(3 - 2*kIn);
+    const kIn = Math.max(0, Math.min(1, (age - 0.35)/1.5)), eIn = kIn*kIn*(3 - 2*kIn);
     /* a tighter hold on her: she goes from rest to full speed in a second,
        and a lazy follow let her run out ahead of the frame */
-    followRate = 7.0;
+    /* at 560 units a second a follow at rate r trails her by 560/r: at 16 the
+       eye stays about thirty units behind where it means to be */
+    followRate = 16.0;
     obj = TOR.grp; D = 30 - 4*eIn; H = 10 - 6*eIn; S = 24 - 19*eIn; L = 60;
   } else if(ANIM.flrOut >= 0){
     /* THE LAUNCH IS THE SHOT NOW. The fall happens over their plot, seen from
