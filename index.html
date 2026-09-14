@@ -4085,7 +4085,7 @@ function matchReadout(){
 }
 const SINK_DUR = 11.0;
 const SALVO_DUR = 8.0;
-const ANIM = { fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, flrWet:-1, swap:0, env:1, envK:0 };
+const ANIM = { flrOut:-1, fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, flrWet:-1, swap:0, env:1, envK:0 };
 
 function setStrike(on){
   if(on && ANIM.fireGoal < 0.5){ FX.splash.material.uniforms.uT0.value = tt; boom(FIRE, 0.30);
@@ -4353,12 +4353,17 @@ const SPRAY = { mesh:null, k:0 };
 const FLR_DUR = 9.8;        /* the whole run, launch to touchdown */
 const FLR_WET = 2.6;        /* and after it: the chute lies on the water, then goes under */
 const FLR_FOOT = 1.25;      /* half the canister: the height its centre rides above the sea */
-const FLR_UP  = 0.15;       /* the share of it spent climbing */
+const FLR_UP  = 0.15;
+/* the immersive view of the fall belonged to a flare over her own board. The
+   fall now happens on the enemy plot, which is read from a fixed plan view;
+   the view is kept here, switched off, for a board that may want it again. */
+const FLR_CINE = false;       /* the share of it spent climbing */
 const _wetCol = TC(0x5a6878);
-const FLR = { grp:null, star:null, canopy:null, trails:[],
+const FLR = { grp:null, star:null, canopy:null, trails:[], fI:0, lI:0, gap:0, n:-1, label:'',
+              oA:new T.Vector3(), oB:new T.Vector3(), oC:new T.Vector3(), os:null, osTrails:[],
               A:new T.Vector3(), B:new T.Vector3(), D:new T.Vector3(),
               pos:new T.Vector3(), tmp:new T.Vector3(), H:34,
-              cx:2, cz:8, lit:null, n:-1 };
+              cx:2, cz:8, lit:null };
 {
   /* the burning star itself: an additive point, left to the bloom to flare */
   const can = document.createElement('canvas'); can.width = can.height = 128;
@@ -4445,50 +4450,87 @@ const FLR = { grp:null, star:null, canopy:null, trails:[],
     ribbon(arc, {w:0.30, grow:1.0, life:0.10, seed:8.1, i:0.92, drift:[0.4, 0.2, -0.2],
                  tint:0xdfeaff, tintI:1.45, order:9, add:true})
   ];
+  /* WHICH BOARD. Everything that bursts, hangs, lights and reads is the
+     enemy plot's: one group, so the pass decides for all of it and the fall
+     can go on managing its own pieces. What leaves her own board is a second
+     star and trail, the shell going up and away. */
+  FLR.g = new T.Group(); scene.add(FLR.g);
+  for(const o of [FLR.star, FLR.rig, FLR.lit].concat(FLR.trails)) FLR.g.add(o);
+  onBoard(BOARD_ENEMY, FLR.g, true);
+  FLR.os = new T.Sprite(FLR.star.material.clone()); FLR.os.scale.setScalar(20); scene.add(FLR.os);
+  onBoard(BOARD_OWN, FLR.os, false);
+  FLR.osTrails = [
+    ribbon(arc, {w:0.80, grow:7.0, life:0.62, seed:5.4, i:0.50, drift:[2.6, 1.4, -1.2],
+                 tint:0xe6e8ee, order:7}),
+    ribbon(arc, {w:0.30, grow:1.0, life:0.10, seed:3.1, i:0.92, drift:[0.4, 0.2, -0.2],
+                 tint:0xdfeaff, tintI:1.45, order:9, add:true})
+  ];
+  for(const t of FLR.osTrails) onBoard(BOARD_OWN, t, true);
 }
 /* how many of the nine squares hold a hull — the whole answer the weapon
    gives, and the reason it is worth a turn that does no damage */
 function litCount(x0, z0){
+  /* the squares of the nine that hold a hull of theirs — struck or not: the
+     light does not care what we already know */
   let n = 0;
-  for(let gx = x0; gx < x0 + 3; gx++)
-    for(let gz = z0; gz < z0 + 3; gz++)
-      for(const sh of SHIPS){
-        if(sh.era !== ANIM.era) continue;
-        const [a, b, cx, cz] = sh.cells;
-        if(gx >= a && gx < cx && gz >= b && gz < cz){ n++; break; }
-      }
+  for(const g of CON_GROUPS) for(const c of g.cells)
+    if(c[0] >= x0 && c[0] < x0 + 3 && c[1] >= z0 && c[1] < z0 + 3) n++;
   return n;
 }
+/* the block: a fair chance of one that still hides a hull we have not hit */
+function pickFlareBlock(){
+  const all = [], live = [];
+  for(let cx=1; cx<=8; cx++) for(let cz=1; cz<=8; cz++){
+    all.push([cx, cz]);
+    if(CON_GROUPS.some(g => g.cells.some((c, i) => !g.hit[i] && Math.abs(c[0] - cx) <= 1 && Math.abs(c[1] - cz) <= 1))) live.push([cx, cz]);
+  }
+  const pool = (live.length && Math.random() < 0.5) ? live : all;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+const FLR_OUT_DUR = 2.6, FLR_GAP = 0.45;
 function flare(){
-  setSink(false);
   matchSpend('flare');
-  /* the escort carries the eyes: the smallest hull, the one most easily lost */
+  /* THE LAUNCH, on her own board: from the escort, up and away over the
+     horizon of the board it is watched on */
   const sh = shipNamed('escort') || shipNamed('destroyer');
-  FLR.A.set(sh ? sh.pos.x : 0, 9, sh ? sh.pos.z : 0);
-  /* the block it is fired at: designated before it leaves the rail */
+  FLR.oA.set(sh ? sh.pos.x : 0, 9, sh ? sh.pos.z : 0);
+  const d = new T.Vector3(-Math.sin(CAM.az), 0, -Math.cos(CAM.az)).normalize();
+  FLR.oC.copy(FLR.oA).addScaledVector(d, 110).setY(260);
+  FLR.oB.copy(FLR.oA).addScaledVector(d, 900).setY(520);
+  const po = [];
+  for(let i=0;i<=180;i++) po.push(bez(FLR.oA, FLR.oC, FLR.oB, i/180, new T.Vector3()));
+  for(const t of FLR.osTrails){ retrace(t, po); t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
+  ANIM.flrOut = 0; FLR.gap = 0; ANIM.flr = -1;
+
+  /* THE PLOT, above: the block it will burst over, designated now */
+  const blk = pickFlareBlock();
+  FLR.cx = blk[0]; FLR.cz = blk[1];
   const x0 = FLR.cx - 1, z0 = FLR.cz - 1;
   waterUnis.uLitR.value.set(x0, z0, x0 + 3, z0 + 3);
-  waterUnis.uLitI.value = 0;
+  FLR.lI = 0;
   const n = litCount(x0, z0);
   if(n !== FLR.n){ FLR.n = n; FLR.lit.material.uniforms.map.value = glyph(String(n)); }
   FLR.lit.position.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 0.62));
   FLR.lit.material.uniforms.uI.value = 0;
   FLR.lit.visible = true;
-
-  /* stand off on the far side of the block from the plot's middle: that way
-     the eye looks in across open water and nothing of the fleet is in front */
+  const lab = (gx, gz) => colLetter(gx) + (gz + 1);
+  /* columns are lettered right to left on the plot, so the block reads from its high column */
+  FLR.label = lab(x0 + 2, z0) + '\u2013' + lab(x0, z0 + 2);
   _flrDir.copy(FLR.lit.position).sub(cellW(5, 5, 0)); _flrDir.y = 0;
   if(_flrDir.lengthSq() < 1) _flrDir.set(0.8, 0, 0.6);
   _flrDir.normalize();
-
-  FLR.B.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 150));  /* it bursts over the block */
-  FLR.D.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 9));    /* and comes down in its middle */
+  /* on the plot it climbs in over the edge nearest her board, bursts over
+     the block and comes down in its middle */
+  const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
+  FLR.A.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 60)).addScaledVector(back, 520);
+  FLR.B.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 150));
+  FLR.D.copy(cellW(FLR.cx + 0.5, FLR.cz + 0.5, 9));
   const pts = [];
   for(let i=0;i<=180;i++) pts.push(FLR.arcP(i/180, new T.Vector3()));
   for(const t of FLR.trails) retrace(t, pts);
-  ANIM.flr = 0; ANIM.flrLit = false; CINE.init = false;
+  ANIM.flrLit = false;
   for(const t of FLR.trails){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
-  hiss(FLR.A, 0.24, 280, 2400, 1.0, 0.85);
+  hiss(FLR.oA, 0.24, 280, 2400, 1.0, 0.85);
   refreshUI();
 }
 
@@ -4937,7 +4979,23 @@ function updateFX(dt){
     }
   }
 
-  /* the star shell: a climb, a burst, then a long fall under its own light */
+  /* the star shell leaving her board, then — after a moment between the
+     boards — the same shell arriving over the plot */
+  if(ANIM.flrOut >= 0){
+    ANIM.flrOut = Math.min(1, ANIM.flrOut + dt/FLR_OUT_DUR);
+    const f = ANIM.flrOut, e = f*(0.55 + 0.45*f);
+    FLR.os.userData.want = f < 0.95;
+    bez(FLR.oA, FLR.oC, FLR.oB, e, FLR.os.position);
+    FLR.os.material.opacity = 0.9;
+    const fd = f < 0.85 ? Math.min(1, f*9) : Math.max(0, 1 - (f - 0.85)/0.15);
+    for(const t of FLR.osTrails){ t.material.uniforms.uProg.value = e; t.material.uniforms.uFade.value = fd; }
+    if(f >= 1){ ANIM.flrOut = -1; FLR.gap = FLR_GAP; FLR.os.userData.want = false; }
+  }
+  if(FLR.gap > 0){
+    FLR.gap -= dt;
+    if(FLR.gap <= 0){ FLR.gap = 0; ANIM.flr = 0; ANIM.flrLit = false; boom(FLR.B, 0.06); refreshUI(); }
+  }
+  /* the star shell over their plot: a climb, a burst, then a long fall under its own light */
   if(ANIM.flr >= 0){
     ANIM.flr = Math.min(1, ANIM.flr + dt/FLR_DUR);
     const u = ANIM.flr;
@@ -4951,7 +5009,7 @@ function updateFX(dt){
       for(const t of FLR.trails){
         t.material.uniforms.uProg.value = fp; t.material.uniforms.uFade.value = fade;
       }
-      waterUnis.uFlareI.value = 0;
+      FLR.fI = 0;
     } else {
       const a = (u - FLR_UP)/(1 - FLR_UP);
       if(!ANIM.flrLit){ ANIM.flrLit = true; boom(FLR.B, 0.12); }
@@ -5024,11 +5082,11 @@ function updateFX(dt){
       FLR.trails[1].material.uniforms.uFade.value = tf*0.5;
       /* the pool on the water: the lower it gets the less of the sea it reaches */
       waterUnis.uFlareP.value.copy(FLR.pos);
-      waterUnis.uFlareI.value = burn*(0.55 + 0.45*Math.min(1, FLR.pos.y/120)) + flash*0.85;
+      FLR.fI = burn*(0.55 + 0.45*Math.min(1, FLR.pos.y/120)) + flash*0.85;
       /* the squares come up as the light comes down — it is the light that
          reveals them, so they must not be finished before it is spent. The
          count lands last, exactly as the star goes out. */
-      waterUnis.uLitI.value = a*a*(3 - 2*a);
+      FLR.lI = a*a*(3 - 2*a);
       FLR.lit.material.uniforms.uI.value =
         0.78*Math.max(0, Math.min(1, (a - 0.58)/0.42));
     }
@@ -5037,11 +5095,11 @@ function updateFX(dt){
          weapon — but the light does not fade out, it is put out: a hiss, a
          ring on the water, and the star is gone in the same instant. */
       ANIM.flr = -1;
-      waterUnis.uLitI.value = 1;
+      FLR.lI = 1;
       FLR.lit.material.uniforms.uI.value = 0.78;
       ANIM.flrWet = 0;
       FLR.wetP.copy(FLR.pos);
-      FLR.wetI = waterUnis.uFlareI.value;
+      FLR.wetI = FLR.fI;
       FLR.wetH = FLR.rig.position.y;
       /* the wet phase works in the sea's own coordinates */
       FLR.rig.position.set(0, 0, 0); FLR.rig.rotation.set(0, 0, 0);
@@ -5059,7 +5117,7 @@ function updateFX(dt){
     const w = ANIM.flrWet, P = FLR.wetP;
     const sea = waterY(P.x, P.z, tt);
     /* the last of the light, snuffed in a fraction of a second */
-    waterUnis.uFlareI.value = (FLR.wetI || 0)*Math.max(0, 1 - w/0.05);
+    FLR.fI = (FLR.wetI || 0)*Math.max(0, 1 - w/0.05);
     const tip = Math.min(1, w/0.30), ts = tip*tip*(3 - 2*tip);
     const sink = Math.max(0, (w - 0.12)/0.88);
     FLR.can.visible = true;
@@ -5077,19 +5135,19 @@ function updateFX(dt){
     FLR.canopy.material.opacity = 0.86;
     FLR.canopy.material.color.copy(FLR.canCol).lerp(_wetCol, Math.min(1, w*1.6));
     /* the ring where it went in */
-    marks[12].set(P.x, P.z, 3 + 26*Math.min(1, w/0.6), Math.pow(Math.max(0, 1 - w/0.6), 2));
+    MARKS_E[22].set(P.x, P.z, 3 + 26*Math.min(1, w/0.6), Math.pow(Math.max(0, 1 - w/0.6), 2));
     if(w >= 1){
-      ANIM.flrWet = -1; marks[12].w = 0;
+      ANIM.flrWet = -1; MARKS_E[22].w = 0; refreshUI();
       FLR.can.visible = false; FLR.canopy.visible = false;
       FLR.canopy.material.color.copy(FLR.canCol);
-      waterUnis.uFlareI.value = 0;
+      FLR.fI = 0;
       for(const t of FLR.trails) t.material.uniforms.uFade.value = 0;
     }
-  } else if(FLR.star.visible || FLR.can.visible || waterUnis.uFlareI.value > 0){
+  } else if(FLR.star.visible || FLR.can.visible || FLR.fI > 0){
     FLR.rig.position.set(0, 0, 0); FLR.rig.rotation.set(0, 0, 0); FLR.hx = 0; FLR.hz = 0;
     FLR.star.visible = false; FLR.canopy.visible = false;
     FLR.can.visible = false; FLR.lines.visible = false;
-    waterUnis.uFlareI.value = 0;
+    FLR.fI = 0;
     for(const t of FLR.trails) t.material.uniforms.uFade.value = 0;
   }
 
@@ -5408,6 +5466,7 @@ function refreshUI(){
                    : flying && !ANIM.misHit ? 'salvo away'
                    /* the result is theirs: name the square it fell on */
                    : flying ? ((SALVO.hit ? 'hit ' : 'splash ') + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1))
+                   : (ANIM.flrOut >= 0 || FLR.gap > 0 || ANIM.flr >= 0 || ANIM.flrWet >= 0) ? ('star shell ' + FLR.label + (ANIM.flrWet >= 0 ? ' \u00b7 ' + FLR.n + ' found' : ''))
                    : sinking && ANIM.sink > 0.9 ? ('lost ' + SPAN)
                    : sinking ? ('going down ' + SPAN)
                    : burning ? ('hit ' + CELL + ' \u00b7 burning')
@@ -5603,7 +5662,7 @@ function onCtl(e){
   if(a === 'sink') setSink(ANIM.sink < 0);
   if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true);
     ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
-    ANIM.flr = -1; ANIM.flrWet = -1; marks[12].w = 0; waterUnis.uLitI.value = 0; matchReset();
+    ANIM.flr = -1; ANIM.flrWet = -1; ANIM.flrOut = -1; FLR.gap = 0; MARKS_E[22].w = 0; FLR.lI = 0; matchReset();
     if(FLR.lit){ FLR.lit.visible = false; FLR.lit.material.uniforms.uI.value = 0; }
     if(ANIM.cat >= 0){ ANIM.cat = -1; CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0,0,0);
       for(const t of CAT.trails) t.material.uniforms.uFade.value = 0; } }
@@ -5870,7 +5929,7 @@ function cineUpdate(dt){
        — following her there would take the camera half a mile off the plot */
     want = (age > 1.0 && age < TOR_FOLLOW) ? 1 : 0;
     obj = TOR.grp; D = 26; H = 4.0; S = 5.0; L = 60;
-  } else if(ANIM.flr >= 0){
+  } else if(FLR_CINE && ANIM.flr >= 0){
     /* THE STAR SHELL IS WATCHED TWICE OVER. On the way up the subject is the
        shell, from low down so it climbs out of the frame; once it is lit the
        subject is no longer the light but the nine squares under it, so the
@@ -5919,7 +5978,7 @@ function cineUpdate(dt){
       lookLag = ah < 0.12 ? 2.8 : 3.4;
     }
     look = _flrLook;
-  } else if(ANIM.flrWet >= 0 && ANIM.flrWet < 0.55){
+  } else if(FLR_CINE && ANIM.flrWet >= 0 && ANIM.flrWet < 0.55){
     /* it stays for the splash: the light going out in the water is the end
        of the shot, and handing back before it would cut the ending off */
     want = 1; lookDir = _flrDir;
@@ -6164,6 +6223,10 @@ function boardVis(enemy){
   else if(enemy && TORP.aim > 0.002) waterUnis.uHitCell.value.set(TORP.cell[0], TORP.cell[1], TORP.aim);
   else if(enemy && STRK.aim >= 0) waterUnis.uHitCell.value.set(STRK.cells[STRK.aim][0], STRK.cells[STRK.aim][1], 0.55 + 0.45*Math.sin(tt*9.0));
   else waterUnis.uHitCell.value.set(OWN_HIT[0], OWN_HIT[1], enemy ? 0 : ANIM.fire);
+  /* the star shell hangs over their plot: its pool of light and the nine
+     squares it reads are drawn there and nowhere else */
+  waterUnis.uFlareI.value = enemy ? FLR.fI : 0;
+  waterUnis.uLitI.value   = enemy ? FLR.lI : 0;
 }
 /* dress the scene for one board or the other, then draw it */
 function board(enemy){
