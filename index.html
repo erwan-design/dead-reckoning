@@ -4760,7 +4760,7 @@ const FLR = { grp:null, star:null, canopy:null, trails:[], fI:0, lI:0, gap:0, n:
               oA:new T.Vector3(), oB:new T.Vector3(), oC:new T.Vector3(), os:null, osTrails:[],
               A:new T.Vector3(), B:new T.Vector3(), D:new T.Vector3(),
               pos:new T.Vector3(), tmp:new T.Vector3(), H:34,
-              cx:2, cz:8, lit:null, rs:FLR_RS, u:-1, wet:-1, litOn:false,
+              cx:2, cz:8, lit:null, rs:FLR_RS, u:-1, wet:-1, litOn:false, dur:FLR_DUR, up:FLR_UP,
               litR:new T.Vector4(0, 0, 1, 1), dir:new T.Vector3(0.8, 0, 0.6), marks:MARKS_E, mk:22 };
 /* THEIR STAR SHELL, the same rig at life size over her own board: the fall
    is watched from the water there, so it keeps the size the immersive view
@@ -4769,7 +4769,9 @@ const EFLR = { trails:[], fI:0, lI:0, gap:0, out:-1, n:-1, label:'',
                oA:new T.Vector3(), oB:new T.Vector3(), oC:new T.Vector3(), os:null, osTrails:[],
                A:new T.Vector3(), B:new T.Vector3(), D:new T.Vector3(),
                pos:new T.Vector3(), tmp:new T.Vector3(), H:60,
-               cx:5, cz:5, lit:null, rs:1.0, u:-1, wet:-1, litOn:false,
+               /* a shorter fall than hers: watched from the water, eight seconds under
+                  the canopy was a long wait for one reading */
+               cx:5, cz:5, lit:null, rs:1.0, u:-1, wet:-1, litOn:false, dur:6.6, up:0.21,
                litR:new T.Vector4(0, 0, 1, 1), dir:new T.Vector3(0.8, 0, 0.6), marks:null, mk:31 };
 /* the rest of the scene still speaks of ANIM.flr and its kin: they are
    her star shell's own clock, now kept on the rig */
@@ -4973,9 +4975,10 @@ function enemyFlare(){
   EFLR.dir.copy(EFLR.lit.position).sub(cellW(5, 5, 0)); EFLR.dir.y = 0;
   if(EFLR.dir.lengthSq() < 1) EFLR.dir.set(0.8, 0, 0.6);
   EFLR.dir.normalize();
-  /* in off the horizon the eye is facing, arcing over to burst above the block */
-  const fwd = new T.Vector3(-Math.sin(CAM.az), 0, -Math.cos(CAM.az)).normalize();
-  EFLR.A.copy(cellW(EFLR.cx + 0.5, EFLR.cz + 0.5, 90)).addScaledVector(fwd, 900);
+  /* in from beyond the block as the eye will see it — from the far side of
+     the grid — so it flies into the frame and bursts in the middle of it,
+     instead of coming over the camera's shoulder */
+  EFLR.A.copy(cellW(EFLR.cx + 0.5, EFLR.cz + 0.5, 90)).addScaledVector(EFLR.dir, -900);
   EFLR.B.copy(cellW(EFLR.cx + 0.5, EFLR.cz + 0.5, 150));
   EFLR.D.copy(cellW(EFLR.cx + 0.5, EFLR.cz + 0.5, 9));
   const pts = [];
@@ -4991,10 +4994,10 @@ function enemyFlare(){
 function flrStep(R, dt){
   /* the star shell over their plot: a climb, a burst, then a long fall under its own light */
   if(R.u >= 0){
-    R.u = Math.min(1, R.u + dt/FLR_DUR);
+    R.u = Math.min(1, R.u + dt/R.dur);
     const u = R.u;
-    if(u < FLR_UP){
-      const fp = u/FLR_UP;
+    if(u < R.up){
+      const fp = u/R.up;
       R.star.visible = true; R.canopy.visible = false;
       R.star.position.copy(R.arcP(fp, R.tmp));
       R.star.scale.setScalar(9 + 6*fp);
@@ -5005,7 +5008,7 @@ function flrStep(R, dt){
       }
       R.fI = 0;
     } else {
-      const a = (u - FLR_UP)/(1 - FLR_UP);
+      const a = (u - R.up)/(1 - R.up);
       if(!R.litOn){ R.litOn = true; boom(R.B, 0.12); }
       /* IT COMES DOWN TO THE SEA, not to a height. The end of the fall is the
          surface under it, read every frame, so the foot of the canister meets
@@ -6793,7 +6796,7 @@ const _c1 = new T.Vector3(), _c2 = new T.Vector3(), _c3 = new T.Vector3(),
 const _flrLook = new T.Vector3(), _flrDir = new T.Vector3(), _flrPair = new T.Vector3();
 function cineUpdate(dt){
   let want = 0, obj = null, D = 30, H = 8, S = 6, L = 45, look = null, age = 0,
-      LD = 118, LH = 58, lookDir = null, lookSway = null, lookLag = 2.6, blendIn = 0.95, camAt = null,
+      LD = 118, LH = 58, lookDir = null, lookSway = null, lookLag = 2.6, blendIn = 0.95, camAt = null, posRate = 1.9,
       zoomAmt = 2.8, zoomT0 = 1.1, zoomRate = 1.05, followRate = 3.4;
   /* THE GUN KEEPS THE PLOT. It is the shot you fire every turn, and a camera
      that leaves the board for it would make the ordinary thing ceremonial —
@@ -6850,63 +6853,45 @@ function cineUpdate(dt){
     want = (age > 0.05 && age < FLR_OUT_DUR - 0.35) ? 1 : 0;
     blendIn = 2.4;
     camAt = FLR.vant; look = FLR.os.position;
-  } else if(EFLR.u >= 0){
-    /* the view that was made for her star shell over her own board is theirs
-       now: it is their shell that comes down among her ships */
-    /* THE STAR SHELL IS WATCHED TWICE OVER. On the way up the subject is the
-       shell, from low down so it climbs out of the frame; once it is lit the
-       subject is no longer the light but the nine squares under it, so the
-       eye leaves the star and frames the block instead. Following the light
-       all the way would show the one thing that does not matter. */
+  } else if(EFLR.out >= 0.5 || EFLR.gap > 0 || EFLR.u >= 0){
+    /* THEIR STAR SHELL, WATCHED FROM THE WATER. The eye is in place before
+       the shell arrives, aimed at the point where it will burst, so the burst
+       and the canopy opening happen in the middle of the frame instead of
+       while the camera is still on its way. Then it keeps the rig itself —
+       canopy and canister — centred all the way down; low over the water that
+       is also the middle of the lit block. */
     const u = EFLR.u;
-    age = u*FLR_DUR;
-    want = (age > 0.5) ? 1 : 0;
-    /* the stand-off side is decided by the board, not by where the rig
-       happens to be. On the split the orbit sits low in the middle of her own
-       formation, so the default — pull back along CINE.pos minus look — put
-       the camera over the fleet and filled the frame with a flight deck. */
+    want = 1; blendIn = 2.6; posRate = 3.0;
     lookDir = EFLR.dir;
-    if(u < FLR_UP){ _flrLook.copy(EFLR.star.position); LD = 132; LH = 26; }
-    else {
-      /* FRAME THE PAIR, not the block. Aimed at the squares alone the star sat
-         above the top edge for most of the fall — a shot of a star shell has
-         to contain the star shell. So the eye holds a point between them and
-         stands off far enough for the whole drop to fit, closing in as the
-         light comes down and the pair draws together. */
-      const sp = Math.max(34, EFLR.pos.y);
-      const ah = Math.min(1, (u - FLR_UP)/(1 - FLR_UP));
-      /* the hand-off is eased, not cut: at the burst the aim is still on the
-         star, and over the first part of the fall it slides to the pair —
-         a jump there swept the star off the top of the frame for a second */
-      const hb = Math.min(1, ah/0.16), e = hb*hb*(3 - 2*hb);
-      _flrPair.copy(EFLR.lit.position).lerp(EFLR.pos, 0.40);
-      _flrLook.copy(EFLR.star.position).lerp(_flrPair, e);
-      LD = 132 + (128 + sp*1.05 - 132)*e;
-      LH = 26 + (22 + sp*0.26 - 26)*e;
-      /* THE EYE HEELS WITH THE CHUTE. It used to rock on periods of its own,
-         so camera and canopy swung out of step and the shot looked unsteady
-         rather than windblown. Now it has no motion of its own: its roll is
-         the rig's heel as seen from where it stands — the part of the tilt
-         that lies across the frame — so the horizon leans exactly as the
-         canopy does, and the aim follows the drift with its usual lag. The
-         camera sits on the +EFLR.dir side looking back along it, so the
-         frame's right is (dir.z, 0, -dir.x). */
+    if(u < EFLR.up){
+      _flrLook.copy(EFLR.B); LD = 150; LH = 20; lookLag = 3.0;
+    } else {
+      const ah = Math.min(1, (u - EFLR.up)/(1 - EFLR.up));
+      /* the aim slides from the burst point onto the rig as the canopy opens */
+      const hb = Math.min(1, ah/0.10), e = hb*hb*(3 - 2*hb);
+      _flrPair.copy(EFLR.pos).lerp(EFLR.rig.position, 0.5);
+      _flrLook.copy(EFLR.B).lerp(_flrPair, e);
+      const sp = Math.max(20, EFLR.pos.y);
+      LD = 150 + (118 + sp*0.30 - 150)*e;
+      LH = 20 + (8 + sp*0.12 - 20)*e;
+      /* THE EYE HEELS WITH THE CHUTE: its roll is the rig's heel as seen from
+         where it stands — the part of the tilt that lies across the frame —
+         so the horizon leans exactly as the canopy does. The camera sits on
+         the +dir side looking back along it, so the frame's right is
+         (dir.z, 0, -dir.x). */
       const dl = Math.hypot(EFLR.dir.x, EFLR.dir.z) || 1;
       const heel = (EFLR.hx*EFLR.dir.z - EFLR.hz*EFLR.dir.x)/dl;
       lookSway = null;
       CINE.rollWant = heel*e;
-      /* the lag is only for the fall. Through the hand-off from the climb the
-         aim has to travel a long way fast, and a lazy aim there let the star
-         run off the right edge of the frame */
-      lookLag = ah < 0.12 ? 2.8 : 3.4;
+      lookLag = 3.6;
     }
     look = _flrLook;
   } else if(EFLR.wet >= 0 && EFLR.wet < 0.55){
     /* it stays for the splash: the light going out in the water is the end
        of the shot, and handing back before it would cut the ending off */
-    want = 1; lookDir = EFLR.dir;
+    want = 1; lookDir = EFLR.dir; posRate = 3.0;
     _flrLook.copy(EFLR.wetP); _flrLook.y = waterY(EFLR.wetP.x, EFLR.wetP.z, tt);
-    LD = 160; LH = 36; lookLag = 1.8;
+    LD = 128; LH = 26; lookLag = 2.4;
     look = _flrLook;
   } else if(ANIM.cat >= 0){
     const u = ANIM.cat;
@@ -6925,7 +6910,7 @@ function cineUpdate(dt){
   }
   if(CINE.hold > 0) CINE.hold -= dt;
   CINE.kick *= Math.exp(-dt*2.2);
-  if(!(EFLR.u >= FLR_UP)) CINE.rollWant = 0;
+  if(!(EFLR.u >= EFLR.up)) CINE.rollWant = 0;
   CINE.roll += (CINE.rollWant - CINE.roll)*(1 - Math.exp(-dt*6.0));
   CINE.want = want;
   CINE.w += (want - CINE.w)*(1 - Math.exp(-dt*(want ? blendIn : 0.75)));
@@ -6966,7 +6951,7 @@ function cineUpdate(dt){
     _ct.copy(look).addScaledVector(_c2, LD); _ct.y = look.y + LH;
     if(lookSway) _ct.add(lookSway);
     if(!CINE.init){ CINE.pos.copy(camera.position); CINE.look.copy(look); CINE.init = true; }
-    CINE.pos.lerp(_ct, 1 - Math.exp(-dt*(1.9 + 4.2*CINE.kick)));
+    CINE.pos.lerp(_ct, 1 - Math.exp(-dt*(posRate + 4.2*CINE.kick)));
     CINE.look.lerp(look, 1 - Math.exp(-dt*lookLag));
   }
 }
