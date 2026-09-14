@@ -2686,7 +2686,8 @@ const CAT = { plane:null, rest:new T.Vector3(), world:new T.Vector3(),
                                 the catapult track to the spot she left */
 /* declared up here: the path is built at start-up, before the rest of the catapult code */
 const CAT_DUR = 25.0;
-const CAT_OUT_E = 0.30, CAT_ST_S = 0.34, CAT_ST_E = 0.56, CAT_RET_S = 0.62, CAT_END = 0.985, CAT_FOLLOW = 4.9, CAT_HOME_S = 7.5;
+/* out in 5 s (was 7.5), over their plot at 5.75 s (was 8.5) */
+const CAT_OUT_E = 0.20, CAT_ST_S = 0.23, CAT_ST_E = 0.45, CAT_RET_S = 0.52, CAT_END = 0.985, CAT_FOLLOW = 3.9, CAT_HOME_S = 7.5;
 function buildCatPath(dirW){
   const z0 = CAT.rest.z, V = T.Vector3, UP = new V(0, 1, 0);
   const yaw = carrier.rotation.y;
@@ -2711,7 +2712,8 @@ function buildCatPath(dirW){
     last = new V(C.x - sg*R*Math.cos(ph), 24 + 40*(k/n), C.z + sg*R*Math.sin(ph));
     out.push(last);
   }
-  out.push(last.clone().addScaledVector(ld, 420).setY(100), last.clone().addScaledVector(ld, 1300).setY(150));
+  /* a shorter run to the horizon, so she reaches their plot sooner at much the same cruise */
+  out.push(last.clone().addScaledVector(ld, 260).setY(92), last.clone().addScaledVector(ld, 700).setY(130));
   CAT.curveOut = new T.CatmullRomCurve3(out, false, 'centripetal');
   /* home off a bearing a little to one side of the way she left */
   const dirR = new V(dirW.x, 0, dirW.z).applyAxisAngle(UP, 0.18*side);
