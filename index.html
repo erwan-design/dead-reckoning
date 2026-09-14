@@ -1107,7 +1107,7 @@ const SUN = new T.Vector3(
   Math.sin(AD.sunAz)*Math.cos(AD.sunEl), Math.sin(AD.sunEl), Math.cos(AD.sunAz)*Math.cos(AD.sunEl)
 );
 
-const NOCC = 12, NMARK = 16, NPOST = 16, NDMG = 3, NCON = 8;
+const NOCC = 12, NMARK = 28, NPOST = 16, NDMG = 3, NCON = 8;
 
 /* ---------- renderer ---------- */
 const canvas = document.getElementById('c');
@@ -2674,77 +2674,50 @@ const carrier = new T.Group();
 const CAT = { plane:null, rest:new T.Vector3(), world:new T.Vector3(),
               a:new T.Vector3(), b:new T.Vector3(), trails:[],
               relW:new T.Vector3(), tgtW:new T.Vector3(), target:null, bomb:null, curve:null };
-/* the circuit is a curve through waypoints, so the attack leg can be
-   re-routed over whichever ship is picked */
-function buildCatPath(tgtLocal){
-  const z0 = CAT.rest.z, V = T.Vector3;
-  const tgt = tgtLocal.clone(); tgt.y = 46;
-  /* the attack run is a straight line through the target; everything
-     upstream feeds into it and everything downstream flies the recovery */
-  const ex = new V(-50, 38, -26);
-  const d = new V(ex.x - tgt.x, 0, ex.z - tgt.z).normalize();
-  const at = (k, y) => new V(tgt.x - d.x*k, y, tgt.z - d.z*k);
-  /* solve the outbound turn so it rolls out tangent to the firing line:
-     one circle from the end of the climb-out to a point on that line */
-  const P0 = new V(7, 54, 258);
-  let turn = Math.atan2(d.x, d.z);
-  while(turn < 0.35) turn += Math.PI*2;
-  const A = 1 - Math.cos(turn), B = Math.sin(turn);
-  const det = A*d.z - B*d.x;
-  let R = ((tgt.x - P0.x)*d.z - (tgt.z - P0.z)*d.x)/det;
-  R = Math.max(70, Math.min(170, R));
-  const Cx = P0.x + R, Cz = P0.z;
-  const arc = [];
-  for(let n = 1; n <= 8; n++){
-    const ph = Math.PI - turn*(n/8);
-    arc.push(new V(Cx + R*Math.cos(ph), 54 + 9*Math.sin(Math.PI*n/8), Cz + R*Math.sin(ph)));
-  }
-  const kEnd = Math.hypot(arc[7].x - tgt.x, arc[7].z - tgt.z);
-  const wp = [
+/* THE CIRCUIT, IN TWO LEGS. The strike itself is flown over their plot, so
+   her own board only sees the plane leave and come home:
+   out  0 → CAT_OUT_E    the stroke, the climb-out, a turn onto the horizon
+   away CAT_OUT_E → CAT_RET_S   she is over the enemy — see the strike
+   home CAT_RET_S → CAT_END     back off the same horizon, round astern, down
+                                the catapult track to the spot she left */
+const CAT_OUT_E = 0.30, CAT_ST_S = 0.34, CAT_ST_E = 0.56, CAT_RET_S = 0.62, CAT_END = 0.985, CAT_FOLLOW = 6.0;
+function buildCatPath(dirW){
+  const z0 = CAT.rest.z, V = T.Vector3, UP = new V(0, 1, 0);
+  const yaw = carrier.rotation.y;
+  /* a point so far along a world direction, at an altitude, in the carrier's
+     frame — by her heading only, so the swell she rides does not tilt a
+     point two kilometres out by thirty metres */
+  const L = (dir, d, alt) => new V(dir.x*d, alt, dir.z*d).applyAxisAngle(UP, -yaw);
+  const ld = new V(dirW.x, 0, dirW.z).applyAxisAngle(UP, -yaw);
+  const side = ld.x >= 0 ? 1 : -1;
+  const out = [
     new V(4.2, 10.3, z0),  new V(4.2, 10.3, z0 + 32), new V(4.1, 11.5, z0 + 62),
-    new V(4.5, 27, 112),   new V(6, 42, 182),         P0,
-    arc[0], arc[1], arc[2], arc[3], arc[4], arc[5], arc[6], arc[7],
-    at(kEnd*0.66, 55), at(kEnd*0.33, 51),
-    tgt,
-    at(-78, 42), at(-160, 38),
-    new V(-112, 34, -92),  new V(-174, 30, -176),     new V(-204, 26, -270),
-    new V(-182, 22, -352), new V(-110, 19, -398),     new V(-40, 17, -392),
-    /* A CLOSED LOOP. She comes home to the spot she left: round astern,
-       lined up on the catapult track, down over the round-down and along
-       the deck to where she stood — no longer onto the angled deck, from
-       which she used to jump back to the bow in a single frame. */
-    new V(-6, 16, -350),   new V(3.2, 14.8, -280),    new V(4.2, 13.6, -210),
-    new V(4.2, 12.4, -140), new V(4.2, 11.3, -90),    new V(4.2, 10.6, -58),
-    new V(4.2, 10.3, -40), new V(4.2, 10.3, z0)
+    new V(4.5, 27, 112),   new V(6, 42, 182),         new V(9, 58, 290)
   ];
-  CAT.curve = new T.CatmullRomCurve3(wp, false, 'centripetal');
-  let best = 0, bd = 1e9, q = new V();
-  for(let i=0;i<=500;i++){
-    const u = i/500; CAT.curve.getPointAt(u, q);
-    const dd = (q.x-tgt.x)*(q.x-tgt.x) + (q.z-tgt.z)*(q.z-tgt.z);
-    if(dd < bd){ bd = dd; best = u; }
-  }
-  CAT.uOver = best;
-  CAT.uRel = Math.max(0.05, best - 0.048);
-  /* THE ROLL-OUT. Everything up to the touchdown flies at one speed; from
-     there to her spot she brakes evenly to a stop. tTD is where on the curve
-     she touches (the first point over the round-down), and the time is shared
-     so the speed carries straight across it: braking over a distance r from
-     speed v takes 2r/v, and the rest of the clock is the flight. */
-  let tTD = 1;
-  for(let i=500;i>=0;i--){ CAT.curve.getPointAt(i/500, q); if(q.z < -52){ tTD = (i + 1)/500; break; } }
-  CAT.tTD = Math.min(0.999, tTD);
-  CAT.fTD = 1/(1 + 2*(1 - CAT.tTD)/CAT.tTD);
-}
-/* clock (0..1 of the flight) to position on the curve */
-function catCurveT(f){
-  if(f <= CAT.fTD) return f*CAT.tTD/CAT.fTD;
-  const s = Math.min(1, (f - CAT.fTD)/(1 - CAT.fTD));
-  return CAT.tTD + (1 - CAT.tTD)*(2*s - s*s);
+  /* a horizon astern of her needs a turn, or the curve folds back on itself */
+  if(ld.z < 0.25){ out.push(new V(side*300, 78, 430), new V(side*520, 94, 240)); }
+  out.push(L(dirW, 800, 112), L(dirW, 1400, 150));
+  CAT.curveOut = new T.CatmullRomCurve3(out, false, 'centripetal');
+  /* home off a bearing a little to one side of the way she left */
+  const dirR = new V(dirW.x, 0, dirW.z).applyAxisAngle(UP, 0.18*side);
+  const home = [ L(dirR, 1400, 150), L(dirR, 760, 104) ];
+  const lr = new V(dirR.x, 0, dirR.z).applyAxisAngle(UP, -yaw);
+  if(lr.z > -0.25) home.push(new V(side*380, 60, -60), new V(side*300, 40, -420));
+  home.push(new V(side*120, 22, -470), new V(side*20, 17, -400),
+    new V(3.2, 14.8, -280), new V(4.2, 13.6, -210), new V(4.2, 12.4, -140),
+    new V(4.2, 11.3, -90),  new V(4.2, 10.6, -58),  new V(4.2, 10.3, -40), new V(4.2, 10.3, z0));
+  CAT.curveRet = new T.CatmullRomCurve3(home, false, 'centripetal');
 }
 function catPath(a, out){
-  const f = a < 0.045 ? 0 : Math.min(1, (a - 0.045)/0.94);
-  return CAT.curve.getPointAt(catCurveT(f), out);
+  if(a < CAT_OUT_E){
+    /* slow off the stroke, faster as she climbs away */
+    const f = a < 0.045 ? 0 : Math.min(1, (a - 0.045)/(CAT_OUT_E - 0.045));
+    return CAT.curveOut.getPointAt(Math.pow(f, 1.7), out);
+  }
+  if(a < CAT_RET_S) return CAT.curveOut.getPointAt(1, out);
+  /* and home decelerating all the way, to a stop on her spot */
+  const f = Math.min(1, (a - CAT_RET_S)/(CAT_END - CAT_RET_S));
+  return CAT.curveRet.getPointAt(1 - Math.pow(1 - f, 1.6), out);
 }
 const _cb1 = new T.Vector3(), _cb2 = new T.Vector3(), _cb3 = new T.Vector3();
 function catBank(a){
@@ -3689,9 +3662,9 @@ function updateDebris(dt){
     }
     bg.visible = false; scene.add(bg); CAT.bomb = bg;
   }
-  buildCatPath(new T.Vector3(0, 44, -60));
+  buildCatPath(new T.Vector3(0, 0, -1));
   const catPts = [];
-  for(let i=0;i<=180;i++) catPts.push(catPath(0.10 + 0.82*(i/180), new T.Vector3()));
+  for(let i=0;i<=180;i++) catPts.push(catPath(0.045 + (CAT_OUT_E - 0.045)*(i/180), new T.Vector3()));
   CAT.trails = [
     ribbon(catPts, {w:1.15, grow:5.2, life:0.30, seed:21.7, i:0.20, drift:[1.8, 1.0, -0.9],
                     tint:0xeef1f3, order:6, parent:carrier}),
@@ -3735,6 +3708,25 @@ function updateDebris(dt){
   onBoard(BOARD_ENEMY, FX.eSplash, true); onBoard(BOARD_ENEMY, FX.eHit, true);
   onBoard(BOARD_OWN, FX.launch, true);
   onBoard(BOARD_OWN, FX.torBlow, true);
+  onBoard(BOARD_OWN, FX.catSteam, true);
+  for(const t of CAT.trails) onBoard(BOARD_OWN, t, true);
+  onBoard(BOARD_OWN, CAT.plane, true);
+  /* the strike's three bursts, one pair each, so a stick of three is three
+     columns standing at once rather than one restarted twice */
+  FX.sHit = [], FX.sSpl = [];
+  for(let i=0;i<3;i++){
+    FX.sSpl.push(smokeColumn({pos:new T.Vector3(0, 1.5, 0), h:62, size:5.6, spread:11, speed:0.30, once:true,
+      birth0:0.0, birthSpan:0.10, out:0.30, hold:0.28, rise:0.48,
+      drift:[0.10,-0.05], n:70, i:0.46, add:true, dark:0x7f9fb4, lit:0xf2fbff, order:14}));
+    FX.sHit.push(smokeColumn({pos:new T.Vector3(0, 2.0, 0), h:34, size:6.6, spread:10, speed:0.85, once:true,
+      birth0:0.0, birthSpan:0.12, out:0.42, hold:0.18, rise:0.5,
+      drift:[0.20,-0.10], n:50, i:0.62, add:true, dark:0x9a3c10, lit:0xffcf86, warm:0.7, order:15}));
+    onBoard(BOARD_ENEMY, FX.sSpl[i], true); onBoard(BOARD_ENEMY, FX.sHit[i], true);
+  }
+  /* the aircraft over their plot: the same airframe, three times the size,
+     because the plot is read from straight up */
+  CAT.inb = CAT.plane.clone(); CAT.inb.scale.setScalar(3.2); scene.add(CAT.inb);
+  onBoard(BOARD_ENEMY, CAT.inb, false);
 }
 FX.farSmoke = smokeColumn({pos:new T.Vector3(1186, 6, 1432), h:150, size:13, spread:12, speed:0.022,
              drift:[0.34,-0.18], n:26, i:0.30, dark:0x2e2f42, lit:0xc9b0b0, order:9});
@@ -4127,7 +4119,7 @@ function launch(){
   for(const t of MIS.trailsIn) retrace(t, pi);
   for(const t of MIS.trails.concat(MIS.trailsIn)){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
   ANIM.mis = 0; ANIM.misHit = false; SALVO.aim = 0;
-  MARKS_E[15].w = 0;
+  MARKS_E[27].w = 0;
   FX.launch.material.uniforms.uT0.value = tt;
   if(sail) boom(MIS.A, 0.34); else hiss(MIS.A, 0.30, 260, 2600, 1.1, 0.8);
   refreshUI();
@@ -4182,7 +4174,7 @@ function torpedo(){
   for(const t of TOR.trailsIn) retrace(t, pi);
   ANIM.tor = 0; ANIM.torHit = false; TORP.aim = 0;
   for(const t of TOR.trails.concat(TOR.trailsIn)){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
-  MARKS_E[14].w = 0;
+  MARKS_E[26].w = 0;
   /* the boat blows her tube: air, not flame */
   FX.torBlow.material.uniforms.uT0.value = tt;
   hiss(TOR.A, 0.30, 1800, 300, 1.1, 0.9);
@@ -4500,19 +4492,62 @@ function flare(){
   refreshUI();
 }
 
-const CAT_DUR = 21.0;
+const CAT_DUR = 25.0;
 const _tl = new T.Vector3(), _bw = new T.Vector3(), _bw2 = new T.Vector3();
+/* THE STICK. An air strike lays three squares in a row, flown along a lane
+   of their plot from the edge nearest her own board. */
+const STRK = { cells:[], at:[], done:[false,false,false], P:new T.Vector3(), Q:new T.Vector3(),
+               label:'', aim:-1, dirOut:new T.Vector3() };
+function shotSquares(){
+  const shot = new Set();
+  for(const g of CON_GROUPS) g.cells.forEach((c, i) => { if(g.hit[i]) shot.add(c[0] + ',' + c[1]); });
+  for(let i=0;i<22;i++){ const m = MARKS_E[i]; if(m.w < 0.99 || m.w > 1.0) continue;
+    for(let gx=0; gx<10; gx++) for(let gz=0; gz<10; gz++){ const w = cellW(gx + 0.5, gz + 0.5);
+      if(Math.hypot(w.x - m.x, w.z - m.y) < AD.cell*0.4) shot.add(gx + ',' + gz); } }
+  return shot;
+}
+function hullUnder(gx, gz){
+  for(let gi=0; gi<CON_GROUPS.length; gi++){ const g = CON_GROUPS[gi];
+    for(let ci=0; ci<g.cells.length; ci++) if(g.cells[ci][0] === gx && g.cells[ci][1] === gz) return [gi, ci]; }
+  return null;
+}
+function pickStrike(){
+  const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
+  const o = cellW(5, 5), ex = cellW(6, 5).sub(o), ez = cellW(5, 6).sub(o);
+  const dx = back.dot(ex), dz = back.dot(ez);
+  const alongX = Math.abs(dx) > Math.abs(dz), sgn = alongX ? Math.sign(dx) : Math.sign(dz);
+  const sq = (lane, step) => { const k = sgn > 0 ? 9 - step : step; return alongX ? [k, lane] : [lane, k]; };
+  const shot = shotSquares(), withHull = [], open = [];
+  for(let lane=0; lane<10; lane++) for(let s0=0; s0<8; s0++){
+    const cells = [sq(lane, s0), sq(lane, s0 + 1), sq(lane, s0 + 2)];
+    if(cells.every(c => shot.has(c[0] + ',' + c[1]))) continue;
+    const w = { lane, s0, cells };
+    open.push(w);
+    if(cells.some(c => { const h = hullUnder(c[0], c[1]); return h && !CON_GROUPS[h[0]].hit[h[1]]; })) withHull.push(w);
+  }
+  const pool = (withHull.length && Math.random() < 0.45) ? withHull : (open.length ? open : withHull);
+  const W = pool[Math.floor(Math.random()*pool.length)];
+  const edge = (step, alt) => { const c = sq(W.lane, 0); const k = sgn > 0 ? 9 - step : step;
+    return alongX ? cellW(k + 0.5, W.lane + 0.5, alt) : cellW(W.lane + 0.5, k + 0.5, alt); };
+  STRK.cells = W.cells;
+  STRK.P.copy(edge(-4, 70)); STRK.Q.copy(edge(13, 70));
+  /* each bomb lands a little after she passes over its square */
+  STRK.at = [0, 1, 2].map(i => ((W.s0 + i + 0.5) + 4 + 0.55)/17);
+  STRK.done = [false, false, false];
+  const lab = c => colLetter(c[0]) + (c[1] + 1);
+  STRK.label = lab(W.cells[0]) + '\u2013' + lab(W.cells[2]);
+}
 function catapult(){
   matchSpend('cat');
-  /* same hull the missile is laid on, so both weapons work one target */
-  CAT.target = shipNamed('escort');
-  carrier.worldToLocal(_tl.copy(CAT.target.pos));
-  buildCatPath(_tl);
+  pickStrike();
+  STRK.dirOut.set(-Math.sin(CAM.az), 0, -Math.cos(CAM.az)).normalize();
+  buildCatPath(STRK.dirOut);
   const pts = [];
-  for(let i=0;i<=180;i++) pts.push(catPath(0.10 + 0.82*(i/180), new T.Vector3()));
+  for(let i=0;i<=180;i++) pts.push(catPath(0.045 + (CAT_OUT_E - 0.045)*(i/180), new T.Vector3()));
   for(const t of CAT.trails) retrace(t, pts);
   ANIM.bomb = -1; CAT.bomb.visible = false;
-  CINE.done = false;
+  CINE.done = false; STRK.aim = -1;
+  for(let i=23;i<26;i++) MARKS_E[i].w = 0;
   ANIM.cat = 0;
   FX.catSteam.material.uniforms.uT0.value = tt;
   hiss(CAT.world, 0.26, 3200, 700, 1.3, 0.6);
@@ -4672,9 +4707,9 @@ function updateFX(dt){
     }
     if(u >= TOR_HIT){
       const a = Math.min(1, (u - TOR_HIT)/(1 - TOR_HIT));
-      MARKS_E[14].set(TORP.D.x, TORP.D.z, 9 + 42*a, (1-a)*(1-a));
+      MARKS_E[26].set(TORP.D.x, TORP.D.z, 9 + 42*a, (1-a)*(1-a));
     }
-    if(u >= 1){ ANIM.tor = -1; MARKS_E[14].w = 0; refreshUI(); }
+    if(u >= 1){ ANIM.tor = -1; MARKS_E[26].w = 0; refreshUI(); }
   } else {
     TOR.grp.userData.want = false; TOR.inb.userData.want = false; TORP.aim = 0;
     for(const t of TOR.trails.concat(TOR.trailsIn)) t.material.uniforms.uFade.value = 0;
@@ -4719,57 +4754,73 @@ function updateFX(dt){
       L.h.material.uniforms.uI.value = L.inten*on;
     }
   }
-  /* catapult stroke, circuit and recovery */
+  /* catapult stroke, the strike over their plot, and recovery */
   if(ANIM.cat >= 0){
     ANIM.cat = Math.min(1, ANIM.cat + dt/CAT_DUR);
     const u = ANIM.cat, p = CAT.plane;
-    p.visible = true;
-    p.position.copy(catPath(u, CAT.a));
-    catPath(Math.min(1, u + 0.004), CAT.b);
-    if(CAT.b.distanceToSquared(CAT.a) > 1e-5){
-      p.lookAt(carrier.localToWorld(CAT.b));
-      p.rotateZ(catBank(u));
-    }
-    /* the bomb goes at the release point, then flies its own arc */
-    const uRelA = 0.045 + (CAT.uRel*CAT.fTD/CAT.tTD)*0.94;
-    if(ANIM.bomb < 0 && CAT.target && u >= uRelA){
-      ANIM.bomb = 0;
-      CAT.relW.copy(p.getWorldPosition(_bw));
-      CAT.tgtW.set(CAT.target.pos.x, 7, CAT.target.pos.z);
-      CAT.bomb.visible = true;
-      hiss(CAT.relW, 0.16, 900, 240, 0.8, 0.9);
-    }
-    if(ANIM.bomb >= 0 && ANIM.bomb < 1){
-      ANIM.bomb = Math.min(1, ANIM.bomb + dt/2.1);
-      const q = ANIM.bomb;
-      _bw.lerpVectors(CAT.relW, CAT.tgtW, q);
-      _bw.y = CAT.relW.y + (CAT.tgtW.y - CAT.relW.y)*q*q;
-      CAT.bomb.position.copy(_bw);
-      const q2 = Math.min(1, q + 0.02);
-      _bw2.lerpVectors(CAT.relW, CAT.tgtW, q2);
-      _bw2.y = CAT.relW.y + (CAT.tgtW.y - CAT.relW.y)*q2*q2;
-      CAT.bomb.lookAt(_bw2);
-      if(ANIM.bomb >= 1){
-        CAT.bomb.visible = false;
-        FX.hitFlash.material.uniforms.uOrigin.value.subVectors(CAT.target.pos, MIS.B);
-        FX.hitFlash.material.uniforms.uT0.value = tt;
-        setSink(true, CAT.target); CINE.hold = 2.0; CINE.kick = 1;
-        /* what there was to watch has happened: the circuit and the recovery
-           are the plane going home, and nobody needs to be strapped in for it */
-        CINE.done = true; refreshUI();
+    const home = u < CAT_OUT_E || u >= CAT_RET_S;
+    p.userData.want = home;
+    if(home){
+      p.position.copy(catPath(u, CAT.a));
+      catPath(Math.min(1, u + 0.004), CAT.b);
+      if(CAT.b.distanceToSquared(CAT.a) > 1e-5){
+        p.lookAt(carrier.localToWorld(CAT.b));
+        p.rotateZ(catBank(u));
       }
     }
-    const tp = Math.max(0, Math.min(1, (u - 0.10)/0.82));
-    const tf = u < 0.90 ? Math.min(1, (u - 0.10)*16) : Math.max(0, 1 - (u - 0.90)/0.09);
+    /* THE STRIKE, over their plot */
+    const sf = (u - CAT_ST_S)/(CAT_ST_E - CAT_ST_S);
+    CAT.inb.userData.want = sf >= 0 && sf < 1;
+    if(CAT.inb.userData.want){
+      CAT.inb.position.lerpVectors(STRK.P, STRK.Q, sf);
+      _tn.lerpVectors(STRK.P, STRK.Q, Math.min(1, sf + 0.01));
+      CAT.inb.lookAt(_tn);
+    }
+    STRK.aim = -1;
+    if(sf >= 0 && sf < 1.2){
+      for(let i=0;i<3;i++){
+        if(!STRK.done[i] && STRK.aim < 0) STRK.aim = i;
+        if(!STRK.done[i] && sf >= STRK.at[i]){
+          STRK.done[i] = true;
+          const c = STRK.cells[i], T0 = cellW(c[0] + 0.5, c[1] + 0.5);
+          const h = hullUnder(c[0], c[1]);
+          if(h){
+            FX.sHit[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.sHit[i].material.uniforms.uT0.value = tt;
+            CON_GROUPS[h[0]].hit[h[1]] = true; pushContacts();
+            boom(T0, 0.26);
+          } else {
+            let k = -1;
+            for(let j=0;j<22;j++) if(MARKS_E[j].w <= 0.004){ k = j; break; }
+            if(k < 0) k = MISSM.length ? MISSM.shift() : 0;
+            MARKS_E[k].set(T0.x, T0.z, 8.6 + Math.random()*2.2, 1);
+            MISSM.push(k);
+          }
+          FX.sSpl[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.sSpl[i].material.uniforms.uT0.value = tt;
+          STRK[ 't' + i ] = u;
+          refreshUI();
+        }
+        if(STRK.done[i]){
+          const c = STRK.cells[i], T0 = cellW(c[0] + 0.5, c[1] + 0.5);
+          const a = Math.min(1, (u - STRK['t' + i])*CAT_DUR/2.2);
+          MARKS_E[23 + i].set(T0.x, T0.z, 8 + 38*a, a < 1 ? (1-a)*(1-a) : 0);
+        }
+      }
+    }
+    /* contrails on the way out only */
+    const tp = Math.max(0, Math.min(1, (u - 0.045)/(CAT_OUT_E - 0.045)));
+    const tf = u < CAT_OUT_E ? Math.min(1, (u - 0.045)*16) : Math.max(0, 1 - (u - CAT_OUT_E)/0.10);
     for(const t of CAT.trails){
       t.material.uniforms.uProg.value = tp;
       t.material.uniforms.uFade.value = Math.max(0, tf);
     }
-    if(u >= 1){ ANIM.cat = -1; ANIM.bomb = -1; CAT.bomb.visible = false;
+    if(u >= 1){ ANIM.cat = -1; ANIM.bomb = -1; CAT.bomb.visible = false; STRK.aim = -1;
+      for(let i=23;i<26;i++) MARKS_E[i].w = 0;
+      p.userData.want = true; CAT.inb.userData.want = false;
       p.position.copy(CAT.rest); p.rotation.set(0,0,0); refreshUI(); }
   } else {
     for(const t of CAT.trails) t.material.uniforms.uFade.value = 0;
     if(CAT.bomb) CAT.bomb.visible = false;
+    CAT.plane.userData.want = true; CAT.inb.userData.want = false;
   }
 
   /* a round in the air: out over her horizon, then down onto their plot */
@@ -4807,7 +4858,7 @@ function updateFX(dt){
       } else {
         /* a miss leaves its ring on their sea for good */
         let k = -1;
-        for(let i=0;i<15;i++) if(MARKS_E[i].w <= 0.004){ k = i; break; }
+        for(let i=0;i<22;i++) if(MARKS_E[i].w <= 0.004){ k = i; break; }
         if(k < 0) k = MISSM.length ? MISSM.shift() : 0;
         MARKS_E[k].set(T0.x, T0.z, 8.6 + Math.random()*2.2, 1);
         MISSM.push(k);
@@ -4818,9 +4869,9 @@ function updateFX(dt){
     }
     if(u >= SALVO_HIT){
       const a = Math.min(1, (u - SALVO_HIT)/(1 - SALVO_HIT));
-      MARKS_E[15].set(SALVO.tgt.x, SALVO.tgt.z, 8 + 46*a, (1-a)*(1-a));
+      MARKS_E[27].set(SALVO.tgt.x, SALVO.tgt.z, 8 + 46*a, (1-a)*(1-a));
     }
-    if(u >= 1){ ANIM.mis = -1; MARKS_E[15].w = 0; refreshUI(); }
+    if(u >= 1){ ANIM.mis = -1; MARKS_E[27].w = 0; refreshUI(); }
   } else {
     MIS.grp.userData.want = false; MIS.inb.userData.want = false; SALVO.aim = 0;
     for(const t of MIS.trails) t.material.uniforms.uFade.value = 0;
@@ -5353,7 +5404,7 @@ function refreshUI(){
   const SPAN = colLetter(cs[2] - 1) + (cs[1] + 1) + '\u2013' + colLetter(cs[0]) + cs[3];
   rSta.textContent = running && !ANIM.torHit ? 'torpedo running'
                    : running ? ('torpedo hit ' + colLetter(TORP.cell[0]) + (TORP.cell[1] + 1))
-                   : cating ? 'aircraft away'
+                   : cating ? (STRK.done[0] ? ('air strike ' + STRK.label) : 'aircraft away')
                    : flying && !ANIM.misHit ? 'salvo away'
                    /* the result is theirs: name the square it fell on */
                    : flying ? ((SALVO.hit ? 'hit ' : 'splash ') + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1))
@@ -5878,16 +5929,11 @@ function cineUpdate(dt){
   } else if(ANIM.cat >= 0){
     const u = ANIM.cat;
     age = u*CAT_DUR;
-    /* once the round is down and the hold is spent, the view goes back. The
-       camera must NOT reattach to the plane to do it: the plane is half a
-       circuit away by then, so the rig would lunge after it at the same
-       moment the blend is handing control to the orbit — two motions fighting,
-       which is the jolt. It keeps the frame it already has and only fades. */
-    const spent = CINE.done && CINE.hold <= 0;
-    want = (age > 1.4 && u < 0.965 && !spent) ? 1 : 0;
-    if(ANIM.bomb >= 0 && ANIM.bomb < 1){ obj = CAT.bomb; D = 24; H = 6.5; S = 5.2; L = 34; }
-    else if(CINE.hold > 0 || spent) look = CAT.tgtW;
-    else { obj = CAT.plane; D = 46; H = 13.0; S = 10.5; L = 80; }
+    /* off the stroke and into the climb, then the eye lets her go: the strike
+       is watched on the plot above, and following her over the horizon would
+       take the camera kilometres off her own board */
+    want = (age > 1.4 && age < CAT_FOLLOW) ? 1 : 0;
+    obj = CAT.plane; D = 46; H = 13.0; S = 10.5; L = 80;
   }
   /* start wide so the launch is not missed, then close in */
   if(obj){
@@ -6116,6 +6162,7 @@ function boardVis(enemy){
      is still the burning cruiser's */
   if(enemy && SALVO.aim > 0.002) waterUnis.uHitCell.value.set(SALVO.cell[0], SALVO.cell[1], SALVO.aim);
   else if(enemy && TORP.aim > 0.002) waterUnis.uHitCell.value.set(TORP.cell[0], TORP.cell[1], TORP.aim);
+  else if(enemy && STRK.aim >= 0) waterUnis.uHitCell.value.set(STRK.cells[STRK.aim][0], STRK.cells[STRK.aim][1], 0.55 + 0.45*Math.sin(tt*9.0));
   else waterUnis.uHitCell.value.set(OWN_HIT[0], OWN_HIT[1], enemy ? 0 : ANIM.fire);
 }
 /* dress the scene for one board or the other, then draw it */
