@@ -2686,7 +2686,7 @@ const CAT = { plane:null, rest:new T.Vector3(), world:new T.Vector3(),
                                 the catapult track to the spot she left */
 /* declared up here: the path is built at start-up, before the rest of the catapult code */
 const CAT_DUR = 25.0;
-const CAT_OUT_E = 0.30, CAT_ST_S = 0.34, CAT_ST_E = 0.56, CAT_RET_S = 0.62, CAT_END = 0.985, CAT_FOLLOW = 6.0;
+const CAT_OUT_E = 0.30, CAT_ST_S = 0.34, CAT_ST_E = 0.56, CAT_RET_S = 0.62, CAT_END = 0.985, CAT_FOLLOW = 4.9, CAT_HOME_S = 7.5;
 function buildCatPath(dirW){
   const z0 = CAT.rest.z, V = T.Vector3, UP = new V(0, 1, 0);
   const yaw = carrier.rotation.y;
@@ -2743,7 +2743,7 @@ function catPath(a, out){
   const rs = CAT.retS || CAT_RET_S;
   if(a < rs) return CAT.curveOut.getPointAt(1, out);
   /* and home decelerating all the way, to a stop on her spot */
-  const f = Math.min(1, (a - rs)/(CAT_END - rs));
+  const f = Math.min(1, (a - rs)/((CAT.endF || CAT_END) - rs));
   return CAT.curveRet.getPointAt(1 - Math.pow(1 - f, CAT.kRet || 1.6), out);
 }
 const _cb1 = new T.Vector3(), _cb2 = new T.Vector3(), _cb3 = new T.Vector3();
@@ -3040,7 +3040,7 @@ function pickSalvoCell(){
 }
 
 /* ---- 5c. a torpedo : out of the boat's forward tubes, running shallow ---- */
-const TOR_DUR = 8.4;
+const TOR_DUR = 9.2;
 const TOR = { grp:null, A:new T.Vector3(), B:new T.Vector3(), trails:[],
               tmp:new T.Vector3(), tmp2:new T.Vector3() };
 {
@@ -4160,7 +4160,12 @@ function launch(){
    finds is the first one in the lane, seen from the edge it comes in over. */
 const TORP = { cell:[0,0], group:-1, gcell:-1, aim:0, dirOut:new T.Vector3(),
                A:new T.Vector3(), B:new T.Vector3(), C:new T.Vector3(), D:new T.Vector3() };
-const TOR_OUT = 0.40, TOR_IN = 0.46, TOR_HIT = 0.78, TOR_FOLLOW = 2.8;
+/* hold 0.8 s at the tube while the eye settles behind her, run out 3.4 s,
+   half a second between the boards, 2.7 s in, then the splash */
+const TOR_HOLD = 0.087, TOR_OUT = 0.457, TOR_IN = 0.511, TOR_HIT = 0.804, TOR_FOLLOW = 2.9;
+const TOR_F0 = 0.38;
+/* distance run against the leg's clock: she gathers way, then holds her speed */
+function torRamp(f){ return (f < TOR_F0 ? f*f/(2*TOR_F0) : f - TOR_F0/2)/(1 - TOR_F0/2); }
 function pickTorpedoLane(){
   const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
   const o = cellW(5, 5), ex = cellW(6, 5).sub(o), ez = cellW(5, 6).sub(o);
@@ -4619,8 +4624,12 @@ function catapult(){
   STRK.e = Math.min(CAT_RET_S - 0.02, CAT_ST_S + STRK.len/CAT.vCruise/CAT_DUR);
   /* and she turns for home soon after the pass, not after a fixed wait —
      starting home at the same speed, then slowing to her spot */
-  CAT.retS = Math.min(CAT_RET_S, STRK.e + 0.06);
-  CAT.kRet = Math.max(1.1, Math.min(3.5, CAT.vCruise*(CAT_END - CAT.retS)*CAT_DUR/CAT.curveRet.getLength()));
+  CAT.retS = Math.min(CAT_RET_S, STRK.e + 0.03);
+  /* the flight home takes a fixed seven and a half seconds, and the
+     manoeuvre ends when she is on her spot — not at a clock set for a
+     longer trip */
+  CAT.endF = Math.min(CAT_END, CAT.retS + CAT_HOME_S/CAT_DUR);
+  CAT.kRet = Math.max(1.1, Math.min(3.5, CAT.vCruise*(CAT.endF - CAT.retS)*CAT_DUR/CAT.curveRet.getLength()));
   const pts = [];
   for(let i=0;i<=180;i++) pts.push(catPath(0.045 + (CAT_OUT_E - 0.045)*(i/180), new T.Vector3()));
   for(const t of CAT.trails) retrace(t, pts);
@@ -4761,8 +4770,10 @@ function updateFX(dt){
       grp.position.y = waterY(grp.position.x, grp.position.z, tt) - lift;
     };
     /* OUT */
-    const so = Math.min(1, u/TOR_OUT), po = so*(0.55 + 0.45*so);
-    const fo = u < TOR_OUT ? Math.min(1, u*11) : Math.max(0, 1 - (u - TOR_OUT)/0.34);
+    /* SHE GATHERS WAY. A beat at the tube with the eye already behind her,
+       then a slow start that builds to full speed — not a shot out of a gun */
+    const so = Math.max(0, Math.min(1, (u - TOR_HOLD)/(TOR_OUT - TOR_HOLD))), po = torRamp(so);
+    const fo = u < TOR_OUT ? Math.min(1, Math.max(0, u - TOR_HOLD)*14) : Math.max(0, 1 - (u - TOR_OUT)/0.34);
     for(const t of TOR.trails){ t.material.uniforms.uProg.value = po; t.material.uniforms.uFade.value = fo; }
     TOR.grp.userData.want = u < TOR_OUT;
     if(u < TOR_OUT) placeRun(TOR.grp, TORP.A, TORP.B, po, 0.45);
@@ -4774,7 +4785,9 @@ function updateFX(dt){
     if(TOR.inb.userData.want) placeRun(TOR.inb, TORP.C, TORP.D, si, 0.45*2.6);
     TORP.aim = (u >= TOR_IN && u < TOR_HIT) ? 0.55 + 0.45*Math.sin(tt*9.0) : 0;
     /* the water parting at her nose, on whichever board she is on */
-    TOR.bow.material.uniforms.uI.value = (u < TOR_OUT || (u >= TOR_IN && u < TOR_HIT)) ? (0.82 + 0.10*Math.sin(tt*11.0)) : 0;
+    /* the bow wave grows with her speed; at the tube there is only a stir */
+    const wake = u < TOR_HOLD ? 0.18 : u < TOR_OUT ? 0.25 + 0.75*Math.min(1, so/TOR_F0) : (u >= TOR_IN && u < TOR_HIT) ? 1 : 0;
+    TOR.bow.material.uniforms.uI.value = wake*(0.82 + 0.10*Math.sin(tt*11.0));
     if(u >= TOR_HIT && !ANIM.torHit){
       ANIM.torHit = true;
       const T0 = TORP.D;
@@ -4795,7 +4808,7 @@ function updateFX(dt){
   }
   /* the spray she throws: made at the nose while she runs, then left to
      fly out, fall and fade on its own after she has gone — on each board */
-  sprayTick(TOR.spray, TOR.grp, TOR.grp.userData.want, 1.0, dt);
+  sprayTick(TOR.spray, TOR.grp, TOR.grp.userData.want && ANIM.tor >= TOR_HOLD + 0.03, 1.0, dt);
   sprayTick(TOR.sprayE, TOR.inb, TOR.inb.userData.want, 2.6, dt);
 
   /* detonation */
@@ -4892,7 +4905,7 @@ function updateFX(dt){
       t.material.uniforms.uProg.value = tp;
       t.material.uniforms.uFade.value = Math.max(0, tf);
     }
-    if(u >= 1){ ANIM.cat = -1; ANIM.bomb = -1; CAT.bomb.visible = false; STRK.aim = -1;
+    if(u >= Math.min(1, (CAT.endF || CAT_END) + 0.01)){ ANIM.cat = -1; ANIM.bomb = -1; CAT.bomb.visible = false; STRK.aim = -1;
       for(let i=23;i<26;i++) MARKS_E[i].w = 0;
       p.userData.want = true; CAT.inb.userData.want = false;
       p.position.copy(CAT.rest); p.rotation.set(0,0,0); refreshUI(); }
@@ -5953,7 +5966,8 @@ const _c1 = new T.Vector3(), _c2 = new T.Vector3(), _c3 = new T.Vector3(),
 const _flrLook = new T.Vector3(), _flrDir = new T.Vector3(), _flrPair = new T.Vector3();
 function cineUpdate(dt){
   let want = 0, obj = null, D = 30, H = 8, S = 6, L = 45, look = null, age = 0,
-      LD = 118, LH = 58, lookDir = null, lookSway = null, lookLag = 2.6, blendIn = 0.95, camAt = null;
+      LD = 118, LH = 58, lookDir = null, lookSway = null, lookLag = 2.6, blendIn = 0.95, camAt = null,
+      zoomAmt = 2.8, zoomT0 = 1.1, zoomRate = 1.05;
   /* THE GUN KEEPS THE PLOT. It is the shot you fire every turn, and a camera
      that leaves the board for it would make the ordinary thing ceremonial —
      and would take the plot away four seconds out of five. The three specials
@@ -5964,9 +5978,16 @@ function cineUpdate(dt){
     /* low and close from the water, for as long as she is still near her
        own board; then the eye lets her go and she runs on over the horizon
        — following her there would take the camera half a mile off the plot */
-    want = (age > 0.05 && age < TOR_FOLLOW) ? 1 : 0;
-    blendIn = 2.4;
-    obj = TOR.grp; D = 26; H = 4.0; S = 5.0; L = 60;
+    /* in at once, while she is still at the tube, and let go a little
+       before she is small enough to lose */
+    want = (age < TOR_FOLLOW) ? 1 : 0;
+    blendIn = 3.2;
+    zoomAmt = 0.8; zoomT0 = 0.0; zoomRate = 2.2;
+    /* at the tube she is right under the boat's sail, and a camera straight
+       behind her sat inside it: so it starts wide on her beam and slides in
+       behind as she gathers way */
+    const kIn = Math.max(0, Math.min(1, (age - TOR_HOLD*TOR_DUR)/1.6)), eIn = kIn*kIn*(3 - 2*kIn);
+    obj = TOR.grp; D = 30 - 4*eIn; H = 10 - 6*eIn; S = 24 - 19*eIn; L = 60;
   } else if(ANIM.flrOut >= 0){
     /* THE LAUNCH IS THE SHOT NOW. The fall happens over their plot, seen from
        straight up; what her own board has is the shell going up. So the eye
@@ -6044,7 +6065,7 @@ function cineUpdate(dt){
   }
   /* start wide so the launch is not missed, then close in */
   if(obj){
-    const zoom = 1 + 2.8*Math.exp(-Math.max(0, age - 1.1)*1.05);
+    const zoom = 1 + zoomAmt*Math.exp(-Math.max(0, age - zoomT0)*zoomRate);
     D *= zoom; H *= 1 + (zoom - 1)*0.75; S *= zoom;
   }
   if(CINE.hold > 0) CINE.hold -= dt;
