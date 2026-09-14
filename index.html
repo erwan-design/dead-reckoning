@@ -685,6 +685,7 @@
      with a round in the air it names what is flying, in plain ink */
   #match .mo{margin:2px -.15em 0 0;color:rgba(240,232,238,.80)}
   #match .mo.you{color:rgba(180,246,230,.94)}
+  #match .mo.them{color:rgba(255,186,128,.94)}
   /* WHO IS AHEAD: the share of their fleet we have put down, against the
      share of ours they have — one track, ours from the left, theirs from the right */
   #match .mbal{margin:10px -.15em 0 0}
@@ -1093,6 +1094,9 @@
     </div>
     <h5>Manoeuvres</h5><div class="drow">
       <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="flare">Star shell</button><button class="danger" data-a="reset">Reset</button>
+    </div>
+    <h5>Riposte</h5><div class="drow">
+      <button data-a="emis">Enemy missile</button>
     </div>
   </div>
   <button class="dtog" id="dtog">Debug</button>
@@ -3072,6 +3076,24 @@ const MIS = { grp:null, trail:null, A:new T.Vector3(), B:new T.Vector3(), H:58, 
                  tint:0xffe8c8, tintI:1.35, order:9, add:true})
   ];
   for(const t of MIS.trailsIn) onBoard(BOARD_ENEMY, t, true);
+  /* THEIR ROUND, THE OTHER WAY ROUND. It lifts off their plot and leaves over
+     its near edge — towards us — then comes in off her own horizon and down
+     onto a square of her board. */
+  MIS.eOut = MIS.grp.clone(); MIS.eOut.scale.setScalar(1.6); scene.add(MIS.eOut);
+  onBoard(BOARD_ENEMY, MIS.eOut, false);
+  MIS.trailsEOut = [
+    ribbon(arc, {w:2.6, grow:12.0, life:0.70, seed:23.0, i:0.62, drift:[3.0, 1.6, -1.4], tint:0xe8e2dc, order:7}),
+    ribbon(arc, {w:0.9, grow:1.0, life:0.11, seed:19.7, i:0.85, drift:[0.4, 0.2, -0.2], tint:0xffd2b0, tintI:1.35, order:9, add:true})
+  ];
+  for(const t of MIS.trailsEOut) onBoard(BOARD_ENEMY, t, true);
+  MIS.eIn = MIS.grp.clone(); scene.add(MIS.eIn);
+  onBoard(BOARD_OWN, MIS.eIn, false);
+  MIS.trailsEIn = [
+    ribbon(arc, {w:1.05, grow:9.0, life:0.70, seed:31.0, i:0.62, drift:[3.0, 1.6, -1.4], tint:0xe8e2dc, order:7}),
+    ribbon(arc, {w:1.9, grow:14.0, life:0.52, seed:37.3, i:0.30, drift:[4.6, 2.4, -2.2], tint:0xd8d2cc, order:6}),
+    ribbon(arc, {w:0.34, grow:1.0, life:0.11, seed:41.7, i:0.85, drift:[0.4, 0.2, -0.2], tint:0xffd2b0, tintI:1.35, order:9, add:true})
+  ];
+  for(const t of MIS.trailsEIn) onBoard(BOARD_OWN, t, true);
 }
 /* A SALVO: our round, from her deck to their plot.
    out  0 → OUT   climbs off her own board and runs to the horizon
@@ -3086,6 +3108,52 @@ const SALVO_OUT = 0.32, SALVO_IN = 0.357, SALVO_HIT = 0.643;
 function bez(a, b, c, t, out){
   const u = 1 - t;
   return out.set(u*u*a.x + 2*u*t*b.x + t*t*c.x, u*u*a.y + 2*u*t*b.y + t*t*c.y, u*u*a.z + 2*u*t*b.z + t*t*c.z);
+}
+/* THEIR SALVO: off their plot, over our horizon, onto our board.
+   out  0 → ES_OUT   lifts off their plot and leaves over its near edge
+   gap  ES_OUT → ES_IN
+   in   ES_IN → ES_HIT   comes in off her horizon, steepening onto the square */
+const ESALVO = { u:-1, cell:[0,0], at:null, aim:0, hitDone:false, label:'',
+                 P0:new T.Vector3(), P1:new T.Vector3(), P2:new T.Vector3(),
+                 Q0:new T.Vector3(), Q1:new T.Vector3(), Q2:new T.Vector3(), tgt:new T.Vector3() };
+const ES_DUR = 5.6, ES_OUT = 0.28, ES_IN = 0.34, ES_HIT = 0.66;
+function pickOwnTarget(){
+  ownInit();
+  const ships = [], free = [];
+  for(let gx=0; gx<10; gx++) for(let gz=0; gz<10; gz++){
+    if(OWN_SHOT.has(gx + ',' + gz)) continue;
+    const at = ownShipAt(gx, gz);
+    (at ? ships : free).push([gx, gz]);
+  }
+  const pool = (ships.length && Math.random() < 0.45) ? ships : (free.length ? free : ships);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function enemyMissile(){
+  const c = pickOwnTarget(); if(!c) return;
+  ESALVO.cell[0] = c[0]; ESALVO.cell[1] = c[1];
+  ESALVO.at = ownShipAt(c[0], c[1]);
+  ESALVO.tgt.copy(cellW(c[0] + 0.5, c[1] + 0.5, 1.0));
+  /* on their plot: from beyond its far edge, across it and out over the near
+     edge, climbing as it goes */
+  const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
+  const side = new T.Vector3(back.z, 0, -back.x), lat = (Math.random() - 0.5)*360;
+  ESALVO.P0.copy(cellW(5, 5, 50)).addScaledVector(back, -380).addScaledVector(side, lat);
+  ESALVO.P1.copy(cellW(5, 5, 240)).addScaledVector(side, lat*0.6);
+  ESALVO.P2.copy(cellW(5, 5, 330)).addScaledVector(back, 620).addScaledVector(side, lat*0.2);
+  /* on her board: off the horizon the eye is facing, down onto the square */
+  const fwd = new T.Vector3(-Math.sin(CAM.az), 0, -Math.cos(CAM.az)).normalize();
+  ESALVO.Q0.copy(ESALVO.tgt).addScaledVector(fwd, 1800).setY(320);
+  ESALVO.Q1.copy(ESALVO.tgt).addScaledVector(fwd, 560).setY(230);
+  ESALVO.Q2.copy(ESALVO.tgt);
+  const po = [], pi = [];
+  for(let i=0;i<=240;i++){ po.push(bez(ESALVO.P0, ESALVO.P1, ESALVO.P2, i/240, new T.Vector3()));
+                           pi.push(bez(ESALVO.Q0, ESALVO.Q1, ESALVO.Q2, i/240, new T.Vector3())); }
+  for(const t of MIS.trailsEOut) retrace(t, po);
+  for(const t of MIS.trailsEIn) retrace(t, pi);
+  for(const t of MIS.trailsEOut.concat(MIS.trailsEIn)){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
+  ESALVO.u = 0; ESALVO.hitDone = false; ESALVO.aim = 0;
+  marks[26].w = 0;
+  refreshUI();
 }
 /* where the round goes: a square of theirs not already shot at — with a fair
    chance, while there is one left, of a square that has a hull under it */
@@ -3805,6 +3873,7 @@ function updateDebris(dt){
   onBoard(BOARD_ENEMY, FX.eSplash, true); onBoard(BOARD_ENEMY, FX.eHit, true);
   onBoard(BOARD_OWN, FX.launch, true);
   onBoard(BOARD_OWN, FX.torBlow, true);
+  onBoard(BOARD_OWN, FX.hitFlash, true); onBoard(BOARD_OWN, FX.misSplash, true);
   onBoard(BOARD_OWN, FX.catSteam, true);
   for(const t of CAT.trails) onBoard(BOARD_OWN, t, true);
   onBoard(BOARD_OWN, CAT.plane, true);
@@ -4175,6 +4244,7 @@ function matchReadout(){
   const mo = matchEl.querySelector('.mo');
   mo.textContent = MATCH.act || 'Your move';
   mo.classList.toggle('you', !MATCH.act);
+  mo.classList.toggle('them', !!MATCH.them);
   /* who is ahead */
   const us = ENEMY_TALLY.total ? ENEMY_TALLY.hit/ENEMY_TALLY.total : 0;
   const them = OWN_TALLY.total ? OWN_TALLY.lost/OWN_TALLY.total : 0;
@@ -5095,6 +5165,67 @@ function updateFX(dt){
     for(const t of MIS.trailsIn) t.material.uniforms.uFade.value = 0;
   }
 
+  /* THEIR ROUND */
+  if(ESALVO.u >= 0){
+    ESALVO.u = Math.min(1, ESALVO.u + dt/ES_DUR);
+    const u = ESALVO.u;
+    const so = Math.min(1, u/ES_OUT), po = Math.pow(so, 1.35);
+    const fo = u < ES_OUT ? Math.min(1, u*25) : Math.max(0, 1 - (u - ES_OUT)/0.30);
+    for(const t of MIS.trailsEOut){ t.material.uniforms.uProg.value = po; t.material.uniforms.uFade.value = fo; }
+    MIS.eOut.userData.want = u < ES_OUT;
+    if(u < ES_OUT){
+      bez(ESALVO.P0, ESALVO.P1, ESALVO.P2, po, MIS.tmp); MIS.eOut.position.copy(MIS.tmp);
+      MIS.eOut.lookAt(bez(ESALVO.P0, ESALVO.P1, ESALVO.P2, Math.min(1, po + 0.01), MIS.tmp2));
+    }
+    const si = Math.max(0, Math.min(1, (u - ES_IN)/(ES_HIT - ES_IN))), pin = Math.pow(si, 1.3);
+    const fi = u < ES_IN ? 0 : u < ES_HIT ? Math.min(1, (u - ES_IN)*25) : Math.max(0, 1 - (u - ES_HIT)/0.22);
+    for(const t of MIS.trailsEIn){ t.material.uniforms.uProg.value = pin; t.material.uniforms.uFade.value = fi; }
+    MIS.eIn.userData.want = u >= ES_IN && u < ES_HIT;
+    if(MIS.eIn.userData.want){
+      bez(ESALVO.Q0, ESALVO.Q1, ESALVO.Q2, pin, MIS.tmp); MIS.eIn.position.copy(MIS.tmp);
+      MIS.eIn.lookAt(bez(ESALVO.Q0, ESALVO.Q1, ESALVO.Q2, Math.min(1, pin + 0.01), MIS.tmp2));
+    }
+    /* the square they are aiming at is bracketed on her board while it falls */
+    ESALVO.aim = (u >= ES_IN && u < ES_HIT) ? 0.55 + 0.45*Math.sin(tt*9.0) : 0;
+    if(u >= ES_HIT && !ESALVO.hitDone){
+      ESALVO.hitDone = true;
+      const T0 = ESALVO.tgt, at = ESALVO.at, lab = colLetter(ESALVO.cell[0]) + (ESALVO.cell[1] + 1);
+      OWN_SHOT.add(ESALVO.cell[0] + ',' + ESALVO.cell[1]);
+      FX.misSplash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z);
+      FX.misSplash.material.uniforms.uT0.value = tt;
+      if(at){
+        FX.hitFlash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z);
+        FX.hitFlash.material.uniforms.uT0.value = tt;
+        const set = OWN_HITS[at.key] = OWN_HITS[at.key] || new Set();
+        set.add(at.idx);
+        const sh = shipNamed(at.key);
+        if(sh) scar(sh, T0, 14.0);
+        ANIM.shake = Math.max(ANIM.shake, 0.7);
+        boom(T0, 0.40);
+        const gone = set.size >= at.n;
+        if(gone && sh) setSink(true, sh);
+        ESALVO.label = 'Missile ' + lab + ' \u00b7 ' + (gone ? at.name.toLowerCase() + ' sunk' : 'hit');
+        LASTIN = { label: ESALVO.label, kind:'hit' };
+      } else {
+        let k = -1;
+        for(let j=16;j<26;j++) if(marks[j].w <= 0.004){ k = j; break; }
+        if(k < 0) k = 16 + Math.floor(Math.random()*10);
+        marks[k].set(T0.x, T0.z, 8.6 + Math.random()*2.2, 1);
+        hiss(T0, 0.28, 2400, 500, 0.9, 0.8);
+        ESALVO.label = 'Missile ' + lab + ' \u00b7 miss';
+        LASTIN = { label: ESALVO.label, kind:'miss' };
+      }
+      refreshUI();
+    }
+    if(u >= ES_HIT){
+      const a = Math.min(1, (u - ES_HIT)/(1 - ES_HIT));
+      marks[26].set(ESALVO.tgt.x, ESALVO.tgt.z, 8 + 46*a, (1-a)*(1-a));
+    }
+    if(u >= 1){ ESALVO.u = -1; ESALVO.aim = 0; marks[26].w = 0; refreshUI(); }
+  } else {
+    MIS.eOut.userData.want = false; MIS.eIn.userData.want = false;
+  }
+
   /* LIGHTNING. Two to four strokes in a couple of tenths, the first the
      hardest, then a gap of several seconds — a bolt is a burst and a wait,
      never a strobe. Only the storm carries it. */
@@ -5602,23 +5733,42 @@ const OWN_FLEET = [
   ['escort',    'Escort',    null],
   ['submarine', 'Submarine', null]
 ];
+/* WHAT THE ENEMY HAS PUT INTO HER: squares hit, per hull, and the last round
+   that came her way. The cruiser starts the match already burning on D3. */
+const OWN_HITS = {}, OWN_SHOT = new Set();
+var LASTIN = null;
+function ownCells(key, fixed){ if(fixed) return fixed; const sh = shipNamed(key); return sh ? sh.cells : null; }
+function ownShipAt(gx, gz){
+  for(const [key, name, fixed] of OWN_FLEET){
+    const c = ownCells(key, fixed); if(!c) continue;
+    if(gx >= c[0] && gx < c[2] && gz >= c[1] && gz < c[3]){
+      const horiz = (c[2] - c[0]) >= (c[3] - c[1]);
+      return { key, name, idx: horiz ? gx - c[0] : gz - c[1], n: horiz ? c[2] - c[0] : c[3] - c[1], cells:c };
+    }
+  }
+  return null;
+}
+function ownInit(){
+  if(OWN_HITS.__init) return;
+  OWN_HITS.__init = true;
+  const gx = Math.floor(POS.cruiser[0]), gz = Math.floor(POS.cruiser[1]);
+  const at = ownShipAt(gx, gz);
+  if(at){ (OWN_HITS[at.key] = OWN_HITS[at.key] || new Set()).add(at.idx); OWN_SHOT.add(gx + ',' + gz); }
+  LASTIN = { label: colLetter(gx) + (gz + 1) + ' \u00b7 hit', kind:'hit' };
+}
 function ownReadout(){
   if(!rOwn) return;
+  ownInit();
   const sinkShip = ANIM.sink >= 0 ? (ANIM.ship || shipNamed('escort')) : null;
   let rows = '', total = 0, lost = 0;
   for(const [key, name, fixed] of OWN_FLEET){
-    const sh = shipNamed(key);
-    const cells = fixed || (sh ? sh.cells : null);
+    const sh = shipNamed(key), cells = ownCells(key, fixed);
     if(!cells) continue;
     const horiz = (cells[2] - cells[0]) >= (cells[3] - cells[1]);
     const n = horiz ? cells[2] - cells[0] : cells[3] - cells[1];
     const hit = new Array(n).fill(false);
-    /* the cruiser burning on D3 */
-    if(key === 'cruiser' && ANIM.fireGoal > 0.5){
-      const k = Math.floor(POS.cruiser[0]) - cells[0];
-      if(k >= 0 && k < n) hit[k] = true;
-    }
-    const sunk = !!(sinkShip && sh && sinkShip === sh && ANIM.sink > 0.35);
+    if(OWN_HITS[key]) for(const k of OWN_HITS[key]) if(k >= 0 && k < n) hit[k] = true;
+    const sunk = hit.every(Boolean) || !!(sinkShip && sh && sinkShip === sh && ANIM.sink > 0.35);
     if(sunk) hit.fill(true);
     total += n; lost += hit.filter(Boolean).length;
     rows += hullSvg(n, hit, 15, 14, 'shp' + (sunk ? ' lost' : ''))
@@ -5626,13 +5776,9 @@ function ownReadout(){
   }
   rOwn.innerHTML = rows;
   OWN_TALLY.total = total; OWN_TALLY.lost = lost;
-  /* the last round that came our way */
-  const cs = (ANIM.ship || shipNamed('escort')).cells;
-  const SPAN = colLetter(cs[2] - 1) + (cs[1] + 1) + '\u2013' + colLetter(cs[0]) + cs[3];
-  const CELL = colLetter(POS.cruiser[0]) + (Math.floor(POS.cruiser[1]) + 1);
-  const inc = sinkShip ? [SPAN, 'sunk', true] : ANIM.fireGoal > 0.5 ? [CELL, 'hit', true] : null;
-  rInc.innerHTML = '<span class="k">Incoming </span><span class="v' + (inc && inc[2] ? ' hit' : '') + '">'
-                 + (inc ? inc[0] + ' \u00b7 ' + inc[1] : '\u2014') + '</span>';
+  const L = LASTIN;
+  rInc.innerHTML = '<span class="k">Incoming </span><span class="v' + (L && L.kind === 'hit' ? ' hit' : '') + '">'
+                 + (L ? L.label : '\u2014') + '</span>';
 }
 
 
@@ -5722,7 +5868,9 @@ function refreshUI(){
             : flying ? ((SALVO.hit ? 'Hit ' : 'Splash ') + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1))
             : (ANIM.flrOut >= 0 || FLR.gap > 0 || ANIM.flr >= 0 || ANIM.flrWet >= 0) ? ('Star shell ' + FLR.label + (ANIM.flrWet >= 0 ? ' \u00b7 ' + FLR.n + ' found' : ''))
             : null;
-  MATCH.act = act; MATCH.dirty = true;
+  /* their fire takes the line while it is in the air: it is what matters most */
+  const them = ESALVO.u >= 0 ? (ESALVO.hitDone ? ESALVO.label : 'Incoming missile') : null;
+  MATCH.act = them || act; MATCH.them = !!them; MATCH.dirty = true;
   setupUI();
   plotReadout();
   ownReadout();
@@ -5895,6 +6043,7 @@ function onCtl(e){
   if(a === 'tor' && ANIM.era === 0) torpedo();
   /* the star shell exists in both eras: a signal rocket is not a modern idea */
   if(a === 'flare') flare();
+  if(a === 'emis') enemyMissile();
   if(a === 'sink') setSink(ANIM.sink < 0);
   if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true);
     ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
@@ -6488,6 +6637,7 @@ function boardVis(enemy){
   if(enemy && SALVO.aim > 0.002) waterUnis.uHitCell.value.set(SALVO.cell[0], SALVO.cell[1], SALVO.aim);
   else if(enemy && TORP.aim > 0.002) waterUnis.uHitCell.value.set(TORP.cell[0], TORP.cell[1], TORP.aim);
   else if(enemy && STRK.aim >= 0) waterUnis.uHitCell.value.set(STRK.cells[STRK.aim][0], STRK.cells[STRK.aim][1], 0.55 + 0.45*Math.sin(tt*9.0));
+  else if(!enemy && ESALVO.aim > 0.002) waterUnis.uHitCell.value.set(ESALVO.cell[0], ESALVO.cell[1], ESALVO.aim);
   else waterUnis.uHitCell.value.set(OWN_HIT[0], OWN_HIT[1], enemy ? 0 : ANIM.fire);
   /* the star shell hangs over their plot: its pool of light and the nine
      squares it reads are drawn there and nowhere else */
