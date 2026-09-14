@@ -1092,11 +1092,14 @@
     <h5>Format</h5><div class="drow">
       <button data-ar="744/1133">iPad</button><button data-ar="1290/2796">iPhone</button>
     </div>
+    <!-- WHOSE MANOEUVRE. One row of weapons, and a switch that says which side
+         fires them: ours land on their plot, theirs on her board. A weapon the
+         enemy does not have yet is dimmed while the switch is on Enemy. -->
     <h5>Manoeuvres</h5><div class="drow">
-      <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="flare">Star shell</button><button class="danger" data-a="reset">Reset</button>
+      <button data-side="own">Own</button><button data-side="enemy">Enemy</button>
     </div>
-    <h5>Riposte</h5><div class="drow">
-      <button data-a="emis">Enemy missile</button>
+    <div class="drow">
+      <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="flare">Star shell</button><button class="danger" data-a="reset">Reset</button>
     </div>
   </div>
   <button class="dtog" id="dtog">Debug</button>
@@ -3133,13 +3136,17 @@ function enemyMissile(){
   ESALVO.cell[0] = c[0]; ESALVO.cell[1] = c[1];
   ESALVO.at = ownShipAt(c[0], c[1]);
   ESALVO.tgt.copy(cellW(c[0] + 0.5, c[1] + 0.5, 1.0));
-  /* on their plot: from beyond its far edge, across it and out over the near
-     edge, climbing as it goes */
+  /* ON THEIR PLOT IT RISES FROM THE GRID. Crossing the whole plot read as
+     something passing through, not as a launch; so it lifts off a square of
+     their grid, nearly straight up towards the eye, leaning only a little
+     towards our board. The square is drawn from all hundred, hull or water
+     alike, so where it rises gives away nothing about where they are. */
   const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
-  const side = new T.Vector3(back.z, 0, -back.x), lat = (Math.random() - 0.5)*360;
-  ESALVO.P0.copy(cellW(5, 5, 50)).addScaledVector(back, -380).addScaledVector(side, lat);
-  ESALVO.P1.copy(cellW(5, 5, 240)).addScaledVector(side, lat*0.6);
-  ESALVO.P2.copy(cellW(5, 5, 330)).addScaledVector(back, 620).addScaledVector(side, lat*0.2);
+  const lx = Math.floor(Math.random()*10), lz = Math.floor(Math.random()*10);
+  ESALVO.from = [lx, lz];
+  ESALVO.P0.copy(cellW(lx + 0.5, lz + 0.5, 3));
+  ESALVO.P1.copy(ESALVO.P0).setY(260);
+  ESALVO.P2.copy(ESALVO.P0).addScaledVector(back, 140).setY(560);
   /* on her board: off the horizon the eye is facing, down onto the square */
   const fwd = new T.Vector3(-Math.sin(CAM.az), 0, -Math.cos(CAM.az)).normalize();
   ESALVO.Q0.copy(ESALVO.tgt).addScaledVector(fwd, 1800).setY(320);
@@ -3151,6 +3158,8 @@ function enemyMissile(){
   for(const t of MIS.trailsEOut) retrace(t, po);
   for(const t of MIS.trailsEIn) retrace(t, pi);
   for(const t of MIS.trailsEOut.concat(MIS.trailsEIn)){ t.material.uniforms.uProg.value = 0; t.material.uniforms.uFade.value = 0; }
+  FX.eLaunch.material.uniforms.uOrigin.value.set(ESALVO.P0.x, 0, ESALVO.P0.z);
+  FX.eLaunch.material.uniforms.uT0.value = tt;
   ESALVO.u = 0; ESALVO.hitDone = false; ESALVO.aim = 0;
   marks[26].w = 0;
   refreshUI();
@@ -3871,6 +3880,11 @@ function updateDebris(dt){
     birth0:0.0, birthSpan:0.12, out:0.42, hold:0.18, rise:0.5,
     drift:[0.20,-0.10], n:60, i:0.62, add:true, dark:0x9a3c10, lit:0xffcf86, warm:0.7, order:15});
   onBoard(BOARD_ENEMY, FX.eSplash, true); onBoard(BOARD_ENEMY, FX.eHit, true);
+  /* the flash and smoke of a launch off their grid, seen from above */
+  FX.eLaunch = smokeColumn({pos:new T.Vector3(0, 2.0, 0), h:44, size:5.4, spread:9, speed:0.45, once:true,
+    birth0:0.0, birthSpan:0.14, out:0.34, hold:0.24, rise:0.55,
+    drift:[0.30,-0.14], n:60, i:0.40, add:true, dark:0x6a4a30, lit:0xffd9a8, warm:0.35, order:14});
+  onBoard(BOARD_ENEMY, FX.eLaunch, true);
   onBoard(BOARD_OWN, FX.launch, true);
   onBoard(BOARD_OWN, FX.torBlow, true);
   onBoard(BOARD_OWN, FX.hitFlash, true); onBoard(BOARD_OWN, FX.misSplash, true);
@@ -4192,6 +4206,9 @@ const CDN = { flare:'Star shell', cat:'Air strike', tor:'Torpedo' };
    The readout's turn number and the rings notch on the same frame, because
    they are the same clock. */
 const MATCH = { t:0, acc:-1, turn:6, sec:-1, dirty:true, act:null };
+/* the debug drawer's side switch, and which weapons the enemy has so far */
+var DBG_SIDE = 'own';
+const ENEMY_ARMS = ['fire'];
 /* the two fleets' squares, kept by the readouts and read by the balance bar */
 const ENEMY_TALLY = { total:0, hit:0 }, OWN_TALLY = { total:0, lost:0 };   /* acc < 0: no exchange */
 function matchReset(){
@@ -5892,11 +5909,15 @@ function refreshUI(){
       b.classList.toggle('on', d.ar === cur); continue;
     }
     if(d.e   !== undefined){ b.classList.toggle('on', +d.e   === ANIM.env);  continue; }
+    if(d.side !== undefined){ b.classList.toggle('on', d.side === DBG_SIDE); continue; }
     const a = d.a;
     /* she has no flight deck in 1680 */
     /* no flight deck and no boat in 1680 */
     b.classList.toggle('na', ((a === 'cat' || a === 'tor') && ANIM.era === 1)
-                          || (a === 'split' && SPLIT[SCREEN] === undefined));
+                          || (a === 'split' && SPLIT[SCREEN] === undefined)
+                          /* the enemy's arsenal is built one weapon at a time */
+                          || (DBG_SIDE === 'enemy' && b.closest('#dbg') && ENEMY_ARMS.indexOf(a) < 0
+                              && (a === 'cat' || a === 'tor' || a === 'flare')));
     b.classList.toggle('on', (a === 'sink' && sinking) || (a === 'fire' && flying)
                           || (a === 'cat' && cating) || (a === 'tor' && running)
                           || (a === 'snd' && ANIM.snd) || (a === 'hit' && burning)
@@ -6034,7 +6055,9 @@ function onCtl(e){
     document.body.classList.toggle('split', ANIM.split);
     if(!ANIM.split) fit();
   }
-  if(a === 'fire') launch();
+  if(b.dataset.side !== undefined){ DBG_SIDE = b.dataset.side; refreshUI(); hideHint(); return; }
+  const enemySide = DBG_SIDE === 'enemy' && !!b.closest('#dbg');
+  if(a === 'fire'){ if(enemySide) enemyMissile(); else launch(); }
   if(a === 'cat' && ANIM.era === 0) catapult();
   if(a === 'split'){
     if(SPLIT[SCREEN] !== undefined){ SPLIT[SCREEN] = SPLIT[SCREEN] ? 0 : 1; setScreen(SCREEN); }
@@ -6043,7 +6066,6 @@ function onCtl(e){
   if(a === 'tor' && ANIM.era === 0) torpedo();
   /* the star shell exists in both eras: a signal rocket is not a modern idea */
   if(a === 'flare') flare();
-  if(a === 'emis') enemyMissile();
   if(a === 'sink') setSink(ANIM.sink < 0);
   if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true);
     ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
