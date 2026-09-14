@@ -2732,6 +2732,25 @@ function buildCatPath(dirW){
   CAT.kRet = Math.max(1.1, Math.min(3.5, CAT.vCruise*Tret/CAT.curveRet.getLength()));
 }
 const CAT_F0 = 0.16;
+/* THE LANDING. Home at cruise; over the last stretch of the approach she
+   slows to landing speed, touches over the round-down, and brakes evenly to
+   a stop on her spot. Built as a speed for every metre of the way, then
+   integrated into a table of time against distance. */
+function buildHomeProfile(){
+  const cur = CAT.curveRet, Lr = cur.getLength(), q = new T.Vector3();
+  let dTD = Lr*0.98;
+  for(let i=600;i>=0;i--){ cur.getPointAt(i/600, q); if(q.z < -52){ dTD = Lr*(i + 1)/600; break; } }
+  const vC = CAT.vCruise, vL = 0.34*vC, dApp = Math.min(dTD*0.6, 520), dRoll = Math.max(1, Lr - dTD);
+  const vAt = d => d < dTD - dApp ? vC
+                : d < dTD ? vC + (vL - vC)*Math.sin(Math.PI*0.5*(d - (dTD - dApp))/dApp)
+                : vL*Math.sqrt(Math.max(0, (Lr - d)/dRoll));
+  const M = 480, tab = new Float32Array(M + 1);
+  for(let i=1;i<=M;i++){
+    const d0 = Lr*(i - 1)/M, d1 = Lr*i/M, dm = (d0 + d1)/2;
+    tab[i] = tab[i-1] + (d1 - d0)/Math.max(vL*0.12, vAt(dm));
+  }
+  CAT.homeTab = tab; CAT.homeT = tab[M];
+}
 /* distance flown against the leg's clock: a ramp up to cruise, then cruise */
 function catRamp(f){ return (f < CAT_F0 ? f*f/(2*CAT_F0) : f - CAT_F0/2)/(1 - CAT_F0/2); }
 function catPath(a, out){
@@ -2742,9 +2761,15 @@ function catPath(a, out){
   }
   const rs = CAT.retS || CAT_RET_S;
   if(a < rs) return CAT.curveOut.getPointAt(1, out);
-  /* and home decelerating all the way, to a stop on her spot */
-  const f = Math.min(1, (a - rs)/((CAT.endF || CAT_END) - rs));
-  return CAT.curveRet.getPointAt(1 - Math.pow(1 - f, CAT.kRet || 1.6), out);
+  /* and home on the landing profile: the time since she turned for home,
+     looked up as a distance along the way */
+  if(!CAT.homeTab) return CAT.curveRet.getPointAt(Math.min(1, (a - rs)/(CAT_END - rs)), out);
+  const t = (a - rs)*CAT_DUR, tab = CAT.homeTab, M = tab.length - 1;
+  if(t >= tab[M]) return CAT.curveRet.getPointAt(1, out);
+  let lo = 0, hi = M;
+  while(hi - lo > 1){ const mid = (lo + hi) >> 1; if(tab[mid] <= t) lo = mid; else hi = mid; }
+  const k = (t - tab[lo])/Math.max(1e-6, tab[hi] - tab[lo]);
+  return CAT.curveRet.getPointAt((lo + k)/M, out);
 }
 const _cb1 = new T.Vector3(), _cb2 = new T.Vector3(), _cb3 = new T.Vector3();
 function catBank(a){
@@ -4386,6 +4411,9 @@ const SPRAY = { mesh:null, k:0 };
 const FLR_DUR = 9.8;        /* the whole run, launch to touchdown */
 const FLR_WET = 2.6;        /* and after it: the chute lies on the water, then goes under */
 const FLR_FOOT = 1.25;      /* half the canister: the height its centre rides above the sea */
+/* THE WHOLE RIG, half as large again. It hangs over the enemy plot now, and
+   that plot is read from seven hundred units straight up */
+const FLR_RS = 1.5;
 const FLR_UP  = 0.15;
 /* the immersive view of the fall belonged to a flare over her own board. The
    fall now happens on the enemy plot, which is read from a fixed plan view;
@@ -4415,10 +4443,35 @@ const FLR = { grp:null, star:null, canopy:null, trails:[], fI:0, lI:0, gap:0, n:
   FLR.star.scale.setScalar(26); FLR.star.visible = false; scene.add(FLR.star);
 
   /* the canopy, lit from beneath by the thing it is carrying */
+  /* A PARACHUTE SEEN FROM ABOVE. A plain white dome over a bright star read,
+     from the plot's plan view, as a glowing ball coming down. So the canopy
+     is made of what a canopy is made of: twelve gores in two colours, a dark
+     seam between each, the vent at the crown and a hem at the skirt — and it
+     is opaque, so from above it hides the star under it and the light shows
+     only as a halo round its edge. */
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256;
+  const cx = cv.getContext('2d');
+  const GORES = 12, gw = cv.width/GORES;
+  for(let i=0;i<GORES;i++){
+    cx.fillStyle = i % 2 ? '#e0703a' : '#eceee8';
+    cx.fillRect(i*gw, 0, gw + 1, cv.height);
+  }
+  /* seams, and the radial tapes they sit on */
+  cx.fillStyle = 'rgba(40,34,30,0.55)';
+  for(let i=0;i<GORES;i++) cx.fillRect(i*gw - 1.5, 0, 3, cv.height);
+  /* the crown vent: a small dark ring at the pole */
+  cx.fillStyle = 'rgba(30,26,24,0.85)'; cx.fillRect(0, 0, cv.width, 14);
+  cx.fillStyle = 'rgba(240,236,228,0.9)'; cx.fillRect(0, 14, cv.width, 5);
+  /* a reinforcing band half-way down, and the hem at the skirt */
+  cx.fillStyle = 'rgba(40,34,30,0.35)'; cx.fillRect(0, 128, cv.width, 3);
+  cx.fillStyle = 'rgba(40,34,30,0.7)';  cx.fillRect(0, cv.height - 8, cv.width, 8);
+  const ctex = new T.CanvasTexture(cv);
+  ctex.colorSpace = T.SRGBColorSpace; ctex.anisotropy = 8;
   FLR.canopy = new T.Mesh(
-    new T.SphereGeometry(1, 16, 9, 0, Math.PI*2, 0, Math.PI*0.54),
-    new T.MeshBasicMaterial({ color:TC(0xe8eef5), transparent:true,
-                              opacity:0.90, side:T.DoubleSide, depthWrite:false }));
+    new T.SphereGeometry(1, 36, 12, 0, Math.PI*2, 0, Math.PI*0.54),
+    new T.MeshBasicMaterial({ map:ctex, color:TC(0xffffff), transparent:true,
+                              opacity:1.0, side:T.DoubleSide, depthWrite:true }));
+  FLR.spin = 0;
   FLR.canopy.visible = false;
   /* ONE RIG. Canopy, shroud lines and canister hang from a single pivot at
      the canopy, so the whole thing can heel in the wind as one body — lines
@@ -4438,7 +4491,7 @@ const FLR = { grp:null, star:null, canopy:null, trails:[], fI:0, lI:0, gap:0, n:
      vanished into the dusk — pale is what it should have been */
   FLR.can = new T.Mesh(new T.CylinderGeometry(0.52, 0.52, 2.5, 14, 1),
                        new T.MeshBasicMaterial({ color:TC(0xdcdfe4) }));
-  FLR.can.visible = false; FLR.rig.add(FLR.can);
+  FLR.can.visible = false; FLR.can.scale.setScalar(FLR_RS); FLR.rig.add(FLR.can);
   /* four shroud lines from the canister's head to the canopy rim. They are
      built at full size and scaled with the canopy as it opens, so the chute
      comes out of the canister instead of appearing above it. */
@@ -4628,8 +4681,8 @@ function catapult(){
   /* the flight home takes a fixed seven and a half seconds, and the
      manoeuvre ends when she is on her spot — not at a clock set for a
      longer trip */
-  CAT.endF = Math.min(CAT_END, CAT.retS + CAT_HOME_S/CAT_DUR);
-  CAT.kRet = Math.max(1.1, Math.min(3.5, CAT.vCruise*(CAT.endF - CAT.retS)*CAT_DUR/CAT.curveRet.getLength()));
+  buildHomeProfile();
+  CAT.endF = Math.min(0.992, CAT.retS + CAT.homeT/CAT_DUR);
   const pts = [];
   for(let i=0;i<=180;i++) pts.push(catPath(0.045 + (CAT_OUT_E - 0.045)*(i/180), new T.Vector3()));
   for(const t of CAT.trails) retrace(t, pts);
@@ -5066,7 +5119,7 @@ function updateFX(dt){
       /* IT COMES DOWN TO THE SEA, not to a height. The end of the fall is the
          surface under it, read every frame, so the foot of the canister meets
          the water on the swell it is actually falling onto. */
-      FLR.D.y = waterY(FLR.D.x, FLR.D.z, tt) + FLR_FOOT;
+      FLR.D.y = waterY(FLR.D.x, FLR.D.z, tt) + FLR_FOOT*FLR_RS;
       /* slow while the canopy holds, faster as it spills near the end */
       FLR.pos.lerpVectors(FLR.B, FLR.D, a*0.42 + a*a*0.58);
       /* the pendulum under the canopy, dying away as it descends */
@@ -5102,30 +5155,35 @@ function updateFX(dt){
       const hf = Math.min(1, (1 - a)/0.12)*open;
       FLR.hx = (Math.sin(a*11.0)*0.066*(1 - a) + Math.sin(a*5.3 + 2.0)*0.030)*hf;
       FLR.hz = (Math.cos(a*9.0)*0.042*(1 - a) + Math.sin(a*4.1 + 3.0)*0.021)*hf;
-      const L = 13*open;
+      const L = 13*open*FLR_RS;
       FLR.rig.rotation.set(-FLR.hz, 0, FLR.hx);
       /* the pivot is placed from the canister, not the other way round: the
          canister keeps the path the camera and the squares are built on */
       FLR.rig.position.set(0, L, 0).applyEuler(FLR.rig.rotation).add(FLR.pos);
       /* the burning end is the canister's foot, a little under its centre */
-      FLR.star.position.set(0, -L - FLR_FOOT, 0).applyEuler(FLR.rig.rotation).add(FLR.rig.position);
+      FLR.star.position.set(0, -L - FLR_FOOT*FLR_RS, 0).applyEuler(FLR.rig.rotation).add(FLR.rig.position);
       /* smaller in the burn than before: a glow the size of the whole rig
          swallowed the canister and left the light looking sourceless again */
       FLR.star.scale.setScalar(20 + 120*flash + 8*burn);
       FLR.star.material.opacity = Math.min(1, burn + flash);
       FLR.canopy.visible = burn > 0.02;
       FLR.canopy.position.set(0, 0, 0);
-      FLR.canopy.scale.setScalar(7.5*open);
-      FLR.canopy.material.opacity = 0.86*Math.min(1, a/0.04);
+      FLR.canopy.scale.setScalar(7.5*open*FLR_RS);
+      /* fading in only while it opens; once open it is solid, and writes
+         depth, so the star below it is hidden from above */
+      FLR.canopy.material.opacity = Math.min(1, a/0.04);
+      FLR.canopy.material.transparent = a < 0.04;
       FLR.canopy.material.color.copy(FLR.canCol);
       /* the dome itself never tilts on its own: it tilts with the rig, so the
          shroud lines keep meeting its rim */
       FLR.canopy.rotation.z = 0;
+      /* and it turns slowly as it comes down, the way a canopy does */
+      FLR.spin += dt*0.45; FLR.canopy.rotation.y = FLR.spin;
       FLR.can.visible = true; FLR.can.rotation.set(0, 0, 0);
       FLR.can.position.set(0, -L, 0);
       FLR.lines.visible = FLR.can.visible;
       FLR.lines.position.set(0, -L, 0);
-      FLR.lines.scale.set(open, open, open);
+      FLR.lines.scale.set(open*FLR_RS, open*FLR_RS, open*FLR_RS);
       FLR.lines.material.opacity = 0.62*Math.min(1, a/0.04)*(flash > 0.3 ? 0 : 1);
       const tf = Math.max(0, 1 - a/0.22);
       FLR.trails[0].material.uniforms.uFade.value = tf;
@@ -5171,18 +5229,18 @@ function updateFX(dt){
     const tip = Math.min(1, w/0.30), ts = tip*tip*(3 - 2*tip);
     const sink = Math.max(0, (w - 0.12)/0.88);
     FLR.can.visible = true;
-    FLR.can.position.set(P.x, sea + FLR_FOOT*(1 - ts) - 9.0*sink*sink, P.z);
+    FLR.can.position.set(P.x, sea + FLR_FOOT*FLR_RS*(1 - ts) - 9.0*sink*sink, P.z);
     FLR.can.rotation.set(0.35*ts, 0, 1.42*ts);
     /* the chute settles downwind of the canister, not on top of the count */
     const col = Math.min(1, w/0.28), cs = col*col;
     const spread = Math.min(1, w/0.45);
     const under = Math.max(0, (w - 0.45)/0.55);
     FLR.canopy.visible = true;
-    FLR.canopy.position.set(P.x + 8.5*col, 
+    FLR.canopy.position.set(P.x + 8.5*FLR_RS*col, 
                             FLR.wetH + (sea + 0.35 - FLR.wetH)*cs - 4.5*under*under,
-                            P.z + 3.4*col);
-    FLR.canopy.scale.set(7.5 + 1.4*spread, 7.5 - 6.3*spread, 7.5 + 1.4*spread);
-    FLR.canopy.material.opacity = 0.86;
+                            P.z + 3.4*FLR_RS*col);
+    FLR.canopy.scale.set((7.5 + 1.4*spread)*FLR_RS, (7.5 - 6.3*spread)*FLR_RS, (7.5 + 1.4*spread)*FLR_RS);
+    FLR.canopy.material.opacity = 1.0; FLR.canopy.material.transparent = false;
     FLR.canopy.material.color.copy(FLR.canCol).lerp(_wetCol, Math.min(1, w*1.6));
     /* the ring where it went in */
     MARKS_E[22].set(P.x, P.z, 3 + 26*Math.min(1, w/0.6), Math.pow(Math.max(0, 1 - w/0.6), 2));
