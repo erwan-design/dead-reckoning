@@ -4381,8 +4381,27 @@ function shotList(){
   ];
   return SHOTS;
 }
+/* CAM 02 IS A FOCUS, NOT A FIXED FRAMING. It goes to the last hull of her own
+   fleet that took a hit — low, a quarter off the beam that faces the eye,
+   near enough to say which ship it is — and follows the next one hit while
+   it is the framing in use. With nothing hit yet it keeps the grazing view
+   it used to be. */
+var LASTHIT_OWN = 'cruiser';
+function ownHitNote(key){ LASTHIT_OWN = key; if(ANIM.shot === 1) shot(1); }
+function focusShot(){
+  const key = LASTHIT_OWN; if(!key) return null;
+  const row = OWN_FLEET.find(f => f[0] === key);
+  const cells = row ? ownCells(key, row[2]) : null; if(!cells) return null;
+  const across = (cells[2] - cells[0]) >= (cells[3] - cells[1]);
+  const n = across ? cells[2] - cells[0] : cells[3] - cells[1];
+  const c = cellW((cells[0] + cells[2])/2, (cells[1] + cells[3])/2, 0);
+  /* the beam: the grid axis the hull does not lie along, on the eye's side */
+  const beam = (across ? cellW(5, 6) : cellW(6, 5)).sub(cellW(5, 5)); beam.y = 0; beam.normalize();
+  if(beam.x*Math.sin(CAM.az) + beam.z*Math.cos(CAM.az) < 0) beam.negate();
+  return { az:Math.atan2(beam.x, beam.z) + 0.38, el:0.20, dist:105 + 24*n, t:new T.Vector3(c.x, -4, c.z) };
+}
 function shot(i){
-  const S = shotList()[i];
+  const S = (i === 1 && focusShot()) || shotList()[i];
   GOAL.az = S.az; GOAL.el = S.el; GOAL.dist = S.dist; GOAL.tgt.copy(S.t);
   ANIM.glide = 3.4; ANIM.shot = i; engaged = true;
   clampGoal(); refreshUI();
@@ -5996,7 +6015,7 @@ function updateFX(dt){
           FX.oHit[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.oHit[i].material.uniforms.uT0.value = tt;
           const set = OWN_HITS[own.key] = OWN_HITS[own.key] || new Set();
           const was = set.size >= own.n;
-          set.add(own.idx);
+          set.add(own.idx); ownHitNote(own.key);
           const sh = shipNamed(own.key);
           if(sh) scar(sh, T0, 12.0);
           ANIM.shake = Math.max(ANIM.shake, 0.6);
@@ -6074,7 +6093,7 @@ function updateFX(dt){
       FX.hitFlash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z); FX.hitFlash.material.uniforms.uT0.value = tt;
       FX.misSplash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z); FX.misSplash.material.uniforms.uT0.value = tt;
       const set = OWN_HITS[at.key] = OWN_HITS[at.key] || new Set();
-      set.add(at.idx);
+      set.add(at.idx); ownHitNote(at.key);
       const sh = shipNamed(at.key);
       if(sh) scar(sh, T0, 16.0);
       ANIM.shake = Math.max(ANIM.shake, 1.0);
@@ -6127,7 +6146,7 @@ function updateFX(dt){
         FX.hitFlash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z);
         FX.hitFlash.material.uniforms.uT0.value = tt;
         const set = OWN_HITS[at.key] = OWN_HITS[at.key] || new Set();
-        set.add(at.idx);
+        set.add(at.idx); ownHitNote(at.key);
         const sh = shipNamed(at.key);
         if(sh) scar(sh, T0, 14.0);
         ANIM.shake = Math.max(ANIM.shake, 0.7);
@@ -7419,7 +7438,7 @@ function sandboxRestore(){
   if(Z.init) OWN_HITS.__init = true;
   OWN_SHOT.clear(); for(const k of Z.ownShot) OWN_SHOT.add(k);
   ENEMY_SHOT.clear(); for(const k of Z.enemyShot) ENEMY_SHOT.add(k);
-  LASTIN = Z.lastIn; LASTSHOT = Z.lastShot;
+  LASTIN = Z.lastIn; LASTSHOT = Z.lastShot; LASTHIT_OWN = 'cruiser';
   FLR.lI = Z.flr.lI; FLR.litR.fromArray(Z.flr.litR); FLR.lit.visible = Z.flr.vis; FLR.lit.material.uniforms.uI.value = Z.flr.uI;
   EFLR.lI = Z.eflr.lI; EFLR.lit.visible = Z.eflr.vis; EFLR.lit.material.uniforms.uI.value = Z.eflr.uI;
   CD.flare.t = Z.cd.flare; CD.cat.t = Z.cd.cat; CD.tor.t = Z.cd.tor;
@@ -7446,7 +7465,7 @@ function simNew(){
   for(const k in OWN_HITS) delete OWN_HITS[k];
   OWN_HITS.__init = true;
   OWN_SHOT.clear(); ENEMY_SHOT.clear();
-  LASTIN = null; LASTSHOT = null;
+  LASTIN = null; LASTSHOT = null; LASTHIT_OWN = null;
   FLR.lI = 0; FLR.lit.visible = false; EFLR.lI = 0; EFLR.lit.visible = false;
   matchReset();
   MATCH.turn = 1; MATCH.t = 0;
