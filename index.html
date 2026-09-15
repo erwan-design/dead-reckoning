@@ -5733,10 +5733,10 @@ const WRECKS = [];
    her own fleet with the same length, laid over the squares she lay on. */
 const EWRECKS = [];
 function wreckSource(n){
-  if(n >= 4) return { obj:carrier, cells:[4, 6, 8, 7], k:1.9 };
+  if(n >= 4){ const cv = shipNamed('carrier'); return { obj:carrier, body:cv && cv.body, cells:[4, 6, 8, 7], k:1.9 }; }
   const sh = shipNamed(n === 3 ? (EWRECKS.length % 2 ? 'destroyer' : 'cruiser') : (EWRECKS.length % 2 ? 'submarine' : 'escort'))
           || shipNamed(n === 3 ? 'cruiser' : 'escort');
-  return sh ? { obj:sh.grp, cells:sh.cells, k:sh.sinkK || 1 } : null;
+  return sh ? { obj:sh.grp, body:sh.body, cells:sh.cells, k:sh.sinkK || 1 } : null;
 }
 function wreckReveal(gi, pending){
   if(!SIM.on || gi < 0 || EWRECKS.some(w => w.gi === gi)) return;
@@ -5745,6 +5745,13 @@ function wreckReveal(gi, pending){
   const src = wreckSource(g.cells.length); if(!src) return;
   const inner = src.obj.clone();
   inner.position.set(0, 0, 0); inner.rotation.set(0, 0, 0);
+  /* A HULL OF HERS THAT IS ALREADY DOWN MUST NOT LEND ITS LIST. The clone
+     copies the body as it lies — and if the ship it is copied from has been
+     sunk, or is sinking, the enemy's hull was revealed already heeled over
+     and settling before the round that sinks it had even landed. The body is
+     put back upright. */
+  const bi = src.body ? src.obj.children.indexOf(src.body) : -1;
+  if(bi >= 0){ inner.children[bi].position.set(0, 0, 0); inner.children[bi].rotation.set(0, 0, 0); }
   const grp = new T.Group(); grp.add(inner);
   const xs = g.cells.map(c => c[0]), zs = g.cells.map(c => c[1]);
   const across = Math.max(...xs) - Math.min(...xs) > 0;
