@@ -696,6 +696,34 @@
   #match .mbal .bt .t{right:0;background:rgba(255,176,120,.80);box-shadow:0 0 6px rgba(255,150,70,.35)}
   #match .mbal .u2{color:rgba(180,246,230,.94)}
   #match .mbal .t2{color:rgba(255,186,128,.92)}
+  /* THE MATCH BAR: the only controls a simulated engagement needs — run or
+     hold it, one move at a time, how fast, and a fresh one. Bottom centre,
+     clear of the drawers on the left and the rail on the right. */
+  #simbar{position:absolute;left:50%;bottom:20px;z-index:8;transform:translateX(-50%);
+      display:none;align-items:center;gap:5px;padding:4px 5px 4px 12px;border-radius:999px;
+      background:rgba(9,13,22,.52);
+      -webkit-backdrop-filter:blur(18px) saturate(130%);backdrop-filter:blur(18px) saturate(130%);
+      border:1px solid rgba(206,224,236,.13);
+      box-shadow:0 12px 34px rgba(3,7,16,.38), inset 0 1px 0 rgba(255,255,255,.06);
+      font:400 8.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      letter-spacing:.12em;text-transform:uppercase;color:rgba(224,233,240,.62);white-space:nowrap}
+  body.sim #simbar{display:flex}
+  #simbar .sl{margin-right:4px}
+  #simbar .sl b{font-weight:400;color:rgba(170,242,224,.96)}
+  #simbar .sl b.them{color:rgba(255,186,128,.94)}
+  #simbar button{appearance:none;cursor:pointer;height:24px;min-width:24px;padding:0 8px;border-radius:999px;
+      display:flex;align-items:center;justify-content:center;gap:6px;
+      font:inherit;letter-spacing:inherit;text-transform:inherit;color:rgba(224,233,240,.66);
+      background:rgba(255,255,255,.04);border:1px solid rgba(206,224,236,.11);
+      transition:color 200ms ease,background 200ms ease}
+  #simbar button svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.35;
+      stroke-linecap:round;stroke-linejoin:round}
+  #simbar button.on{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.34);background:rgba(157,240,220,.10)}
+  #simbar button.go2{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.34)}
+  #simbar button[hidden]{display:none}
+  body:not(.ipad) #simbar button:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.08)}
+  /* the rail keeps showing our reloads, but in a match the match fires them */
+  body.sim #rail .chip{pointer-events:none}
   /* one shot a turn: while the exchange runs the rail takes no second one,
      and says so by dimming until the hand comes back */
   body.exch #rail .chip.rdy{opacity:.45}
@@ -877,6 +905,15 @@
   <div class="mo"></div>
   <span class="mb"><i></i></span>
   <div class="mbal"></div>
+</div>
+<!-- THE MATCH BAR, shown only on the match screen -->
+<div id="simbar">
+  <span class="sl"></span>
+  <button data-sim="run" aria-label="Pause"><svg viewBox="0 0 14 14" aria-hidden="true"><path class="pz" d="M5 3.2v7.6M9 3.2v7.6"/><path class="pl" d="M4.6 3 11 7l-6.4 4z"/></svg></button>
+  <button data-sim="step" aria-label="Next move"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.4 3 8.6 7l-5.2 4z"/><path d="M10.6 3v8"/></svg></button>
+  <button data-sim="speed">&times;1</button>
+  <button data-sim="new" aria-label="New match"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M10.2 1.6v2.4H7.8"/></svg></button>
+  <button class="go2" data-sim="report" hidden>After action</button>
 </div>
 <!-- TWO CHIPS BECOME ONE. Sound and the four framings are both settings,
      not manoeuvres: they belong behind one entry rather than taking two
@@ -1061,6 +1098,7 @@
       <button data-scr="attract"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.9 3.1h10.2v7.8H1.9z"/><path d="M4.2 8.4h5.6"/></svg>Title</button>
       <button data-scr="setup"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 2.6h9.2v8.8H2.4z"/><path d="M2.4 5.6h9.2"/><circle cx="4.7" cy="8.4" r="1.1"/></svg>Deployment</button>
       <button data-scr="play"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.3 2.5h9.4v3.6H2.3z"/><path d="M2.3 7.9h9.4v3.6H2.3z"/></svg>Battle</button>
+      <button data-scr="match"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.3 2.5h9.4v9H2.3z"/><path d="M5.6 5v4L8.9 7z"/></svg>Match</button>
       <button data-scr="over"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 2.4h8.8v6.2H2.6z"/><path d="M5.1 11.6h3.8"/><path d="M7 8.6v3"/><path d="M4.9 5.4 6.4 6.9l2.7-2.7"/></svg>After action</button>
       <button data-scr="shot"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 4.1h2.4l1-1.5h3.6l1 1.5h2.4v7.3H1.8z"/><circle cx="7" cy="7.6" r="2.1"/></svg>Capture</button>
     </div>
@@ -1160,7 +1198,7 @@ const SUN = new T.Vector3(
   Math.sin(AD.sunAz)*Math.cos(AD.sunEl), Math.sin(AD.sunEl), Math.cos(AD.sunAz)*Math.cos(AD.sunEl)
 );
 
-const NOCC = 12, NMARK = 32, NPOST = 16, NDMG = 3, NCON = 8;
+const NOCC = 12, NMARK = 32, NPOST = 16, NDMG = 3, NCON = 16;
 
 /* ---------- renderer ---------- */
 const canvas = document.getElementById('c');
@@ -1434,6 +1472,7 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
   uniform vec3  uConCol;
   uniform float uConI, uConTau;
   uniform vec3 uHitCell;
+  uniform sampler2D uCells; uniform float uCellsI;
   uniform vec4 uSunkR; uniform float uSunkI; uniform vec3 uSunkCol;
   varying vec3 vW; varying vec3 vN; varying float vD;
 
@@ -1599,6 +1638,37 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
       }
 
       float foam = 0.0, stain = 0.0;
+      /* A MATCH KEEPS ITS SCORE ON THE SQUARES. The marks above are a handful
+         of slots; a whole engagement leaves dozens of misses and every hit, so
+         in a match each square carries its own state in a 10×10 texture:
+         r a miss — a ring of foam in the square —, g a hit — the struck-cell
+         brackets —, b a hull that is gone. */
+      if(uCellsI > 0.003 && inside > 0.5){
+        vec2 cf4 = floor(gc);
+        vec4 cs4 = texture2D(uCells, (clamp(cf4, 0.0, 9.0) + 0.5)/10.0);
+        vec2 cq4 = gc - cf4;
+        if(cs4.r > 0.5){
+          vec2 dd4 = (cq4 - 0.5)*uCell;
+          float r4 = length(dd4);
+          float a4 = atan(dd4.y, dd4.x);
+          float wob4 = fbm(vec2(cos(a4), sin(a4))*2.3 + cf4*3.7) - 0.5;
+          float rr4 = uCell*0.31*(1.0 + wob4*0.26);
+          float ring4 = exp(-pow((r4 - rr4)/(uCell*0.105), 2.0));
+          float core4 = smoothstep(rr4, rr4*0.10, r4)*0.20;
+          float brk4 = 0.30 + 1.05*fbm(vW.xz*0.62 + cf4*9.0 + uTime*0.035);
+          foam += (ring4*brk4 + core4)*uCellsI;
+        }
+        if(cs4.g > 0.5 || cs4.b > 0.5){
+          vec2 e5 = abs(cq4 - 0.5)*2.0;
+          float m5 = max(e5.x, e5.y);
+          float fill5 = (1.0 - smoothstep(0.30, 1.0, m5))*0.13;
+          float bord5 = exp(-pow((1.0 - m5)/0.075, 2.0));
+          float cor5  = bord5*smoothstep(0.30, 0.78, min(e5.x, e5.y));
+          float pul5  = cs4.b > 0.5 ? 0.70 + 0.30*sin(uTime*2.4) : 0.86 + 0.14*sin(uTime*2.4 + cf4.x*1.3 + cf4.y*0.7);
+          vec3 c5 = cs4.b > 0.5 ? uSunkCol : uFireCol;
+          col += c5*(fill5 + cor5*1.9)*pul5*uCellsI*mix(0.4, 1.0, facing);
+        }
+      }
       for(int i=0;i<NMARK;i++){
         vec4 m = uMark[i];
         if(m.w <= 0.004) continue;
@@ -1692,6 +1762,15 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
     gl_FragColor = vec4(col, 1.0);
   }`;
 
+/* the match's squares, one texture per board (see the water shader) */
+const CELLS_O = new Uint8Array(400), CELLS_E = new Uint8Array(400);
+function cellTex(data){
+  const t = new T.DataTexture(data, 10, 10, T.RGBAFormat);
+  t.magFilter = T.NearestFilter; t.minFilter = T.NearestFilter; t.generateMipmaps = false;
+  t.needsUpdate = true;
+  return t;
+}
+const CELLTEX_O = cellTex(CELLS_O), CELLTEX_E = cellTex(CELLS_E);
 const waterUnis = U({
   uShoal  :{value:Cs(0x4f92da, 1.0)},
   uFoam   :{value:Cs(0xdaf0ea, 1.0)},
@@ -1712,6 +1791,8 @@ const waterUnis = U({
   uConI   :{value:0.0},
   uConTau :{value:1.05},
   uHitCell:{value:new T.Vector3(0, 0, 0)},
+  uCells  :{value:CELLTEX_O},
+  uCellsI :{value:0.0},
   uSunkR  :{value:new T.Vector4(0,0,1,1)},
   uSunkI  :{value:0.0},
   uSunkCol:{value:Cs(0xff7a35, 1.0)},   /* the struck-cell orange, exactly */
@@ -3133,6 +3214,7 @@ const _ea1 = new T.Vector3(), _ea2 = new T.Vector3();
 const EA_OUT = 2.4, EA_IN = 2.9, EA_V = 420, EA_VLO = 135, EA_FALL = 0.62, EA_LEAD = 40;
 function pickOwnTarget(){
   ownInit();
+  if(SIM.force) return SIM.force;
   const ships = [], free = [];
   for(let gx=0; gx<10; gx++) for(let gz=0; gz<10; gz++){
     if(OWN_SHOT.has(gx + ',' + gz)) continue;
@@ -3178,6 +3260,8 @@ function enemyMissile(){
 /* where the round goes: a square of theirs not already shot at — with a fair
    chance, while there is one left, of a square that has a hull under it */
 function pickSalvoCell(){
+  /* a match names the square; the sandbox draws one */
+  if(SIM.force){ const f = SIM.force, h = hullUnder(f[0], f[1]); return [f[0], f[1], h ? h[0] : -1, h ? h[1] : -1]; }
   const shot = new Set();
   for(const g of CON_GROUPS) g.cells.forEach((c, i) => { if(g.hit[i]) shot.add(c[0] + ',' + c[1]); });
   for(let i=0;i<NMARK;i++){ const m = MARKS_E[i]; if(m.w >= 0.99 && m.w <= 1.0){
@@ -4263,6 +4347,11 @@ const CDN = { flare:'Star shell', cat:'Air strike', tor:'Torpedo' };
 const MATCH = { t:0, acc:-1, turn:6, sec:-1, dirty:true, act:null };
 /* the debug drawer's side switch, and which weapons the enemy has so far */
 var DBG_SIDE = 'own';
+/* THE MATCH SCREEN's state (see SIM below); declared here, where the rest of
+   the engagement's globals are, so the weapons can ask whether one is on */
+var SIM = { on:false, force:null };
+/* every square of theirs a round of ours has landed on, hit or miss */
+const ENEMY_SHOT = new Set();
 const ENEMY_ARMS = ['fire', 'tor', 'cat', 'flare'];
 /* the two fleets' squares, kept by the readouts and read by the balance bar */
 const ENEMY_TALLY = { total:0, hit:0 }, OWN_TALLY = { total:0, lost:0 };   /* acc < 0: no exchange */
@@ -4290,8 +4379,9 @@ function cdStep(dt){
       /* the hand comes back: a turn has passed, and every battery that is not
          full takes its notch — the one just fired included, which is what
          makes a strike spent on nine come back on thirteen */
-      MATCH.acc = -1; MATCH.turn++;
-      for(const k in CD){ const c = CD[k]; if(c.t < c.n) c.t++; }
+      MATCH.acc = -1;
+      /* in a match the turn is both sides' moves, and the match counts it */
+      if(!SIM.on){ MATCH.turn++; for(const k in CD){ const c = CD[k]; if(c.t < c.n) c.t++; } }
       document.body.classList.remove('exch');
       MATCH.dirty = true; refreshUI();
     }
@@ -4391,14 +4481,35 @@ const TOR_V0 = 45, TOR_EJECT = 0.5, TOR_ACC_T = 1.7, TOR_VMAX = 720, TOR_RUN = 1
 const ETORP = { u:-1, hitDone:false, at:null, cell:[0,0], label:'', aim:0, travel:new T.Vector3(),
                 A:new T.Vector3(), B:new T.Vector3(), C:new T.Vector3(), D:new T.Vector3(), vant:new T.Vector3() };
 const ETORP_DUR = 8.0, ET_OUT = 0.28, ET_IN = 0.33, ET_HIT = 0.80;
-function pickOwnLane(){
-  ownInit();
+/* WHICH WAY THEIR ROUNDS CROSS HER BOARD: from the horizon the eye faces,
+   towards the eye. Step 0 is the first square they reach. */
+function ownAxis(){
   const fwd = new T.Vector3(-Math.sin(CAM.az), 0, -Math.cos(CAM.az));
   const o = cellW(5, 5), ex = cellW(6, 5).sub(o), ez = cellW(5, 6).sub(o);
   const dx = fwd.dot(ex), dz = fwd.dot(ez);
   const alongX = Math.abs(dx) > Math.abs(dz);
-  /* she travels from the far horizon towards the eye: against the camera's forward */
   const tsg = -Math.sign(alongX ? dx : dz);
+  const kOf = step => tsg > 0 ? step : 9 - step;
+  const sq = (lane, step) => alongX ? [kOf(step), lane] : [lane, kOf(step)];
+  return { alongX, tsg, kOf, sq };
+}
+function pickOwnLane(){
+  ownInit();
+  const { alongX, tsg } = ownAxis();
+  if(SIM.force){
+    const lane = SIM.force.lane;
+    let L = null;
+    for(let step=0; step<10 && !L; step++){
+      const k = tsg > 0 ? step : 9 - step, gx = alongX ? k : lane, gz = alongX ? lane : k, at = ownShipAt(gx, gz);
+      if(at) L = { gx, gz, at, lane };
+    }
+    const xk = tsg > 0 ? 11.5 : -2.5;
+    if(!L) L = { gx:-9, gz:-9, at:null, lane, exitW: alongX ? cellW(xk, lane + 0.5, 0.05) : cellW(lane + 0.5, xk, 0.05) };
+    L.lab = alongX ? 'row ' + (lane + 1) : 'column ' + colLetter(lane);
+    const far = tsg > 0 ? -44 : 53;
+    L.entry = alongX ? cellW(far, lane + 0.5, 0.05) : cellW(lane + 0.5, far, 0.05);
+    return L;
+  }
   const lanes = [];
   for(let lane=0; lane<10; lane++){
     for(let step=0; step<10; step++){
@@ -4425,7 +4536,8 @@ function enemyTorpedo(){
   ETORP.B.copy(ETORP.A).addScaledVector(back, 520).setY(0.05);
   /* on her board: down the lane, from the horizon to the square */
   ETORP.C.copy(L.entry);
-  ETORP.D.copy(cellW(L.gx + 0.5, L.gz + 0.5, 0.05));
+  ETORP.D.copy(L.at || !L.exitW ? cellW(L.gx + 0.5, L.gz + 0.5, 0.05) : L.exitW);
+  ETORP.laneLab = L.lab || '';
   ETORP.travel.subVectors(ETORP.D, ETORP.C).setY(0).normalize();
   /* the eye waits past the hull she is running at, low, looking back at her */
   const sd = new T.Vector3(ETORP.travel.z, 0, -ETORP.travel.x);
@@ -4463,9 +4575,11 @@ function pickOwnStick(){
     open.push(w);
     if(cells.some(c => !OWN_SHOT.has(c[0] + ',' + c[1]) && ownShipAt(c[0], c[1]))) withHull.push(w);
   }
-  if(!open.length) return null;
+  if(!open.length && !SIM.force) return null;
   const pool = (withHull.length && Math.random() < 0.55) ? withHull : open;
-  const W = pool[Math.floor(Math.random()*pool.length)];
+  const f = SIM.force;
+  const W = f ? { lane:f.lane, cells:[sq(f.lane, f.s0), sq(f.lane, f.s0 + 1), sq(f.lane, f.s0 + 2)] }
+              : pool[Math.floor(Math.random()*pool.length)];
   /* a point on her lane, a number of squares on from its far edge, at a height */
   W.at = (step, y) => alongX ? cellW(kOf(step) + 0.5, W.lane + 0.5, y) : cellW(W.lane + 0.5, kOf(step) + 0.5, y);
   return W;
@@ -4528,13 +4642,35 @@ function enemyAirStrike(){
 const TOR_F0 = 0.38;
 /* distance run against the leg's clock: she gathers way, then holds her speed */
 function torRamp(f){ return (f < TOR_F0 ? f*f/(2*TOR_F0) : f - TOR_F0/2)/(1 - TOR_F0/2); }
-function pickTorpedoLane(){
+/* WHICH WAY OUR ROUNDS CROSS THEIR PLOT: lanes run along the axis nearest the
+   plan view's own, from the edge nearest her board. Step 0 is the first square
+   a torpedo or a strike reaches. */
+function plotAxis(){
   const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
   const o = cellW(5, 5), ex = cellW(6, 5).sub(o), ez = cellW(5, 6).sub(o);
   const dx = back.dot(ex), dz = back.dot(ez);
   const alongX = Math.abs(dx) > Math.abs(dz), sgn = alongX ? Math.sign(dx) : Math.sign(dz);
+  const sq = (lane, step) => { const k = sgn > 0 ? 9 - step : step; return alongX ? [k, lane] : [lane, k]; };
+  return { alongX, sgn, sq };
+}
+function pickTorpedoLane(){
+  const { alongX, sgn } = plotAxis();
   const hullAt = (gx, gz) => { for(let gi=0; gi<CON_GROUPS.length; gi++){ const g = CON_GROUPS[gi];
     for(let ci=0; ci<g.cells.length; ci++) if(g.cells[ci][0] === gx && g.cells[ci][1] === gz) return [gi, ci]; } return null; };
+  if(SIM.force){
+    /* a named lane: the first hull in it, or nothing and out the far side */
+    const lane = SIM.force.lane;
+    let L = null;
+    for(let step=0; step<10 && !L; step++){
+      const k = sgn > 0 ? 9 - step : step, gx = alongX ? k : lane, gz = alongX ? lane : k, h = hullAt(gx, gz);
+      if(h) L = { gx, gz, gi:h[0], ci:h[1], lane };
+    }
+    const ek = sgn > 0 ? 11.5 : -2.5, xk = sgn > 0 ? -2.5 : 11.5;
+    if(!L) L = { gx:-9, gz:-9, gi:-1, ci:-1, lane,
+                 exitW: alongX ? cellW(xk, lane + 0.5, 0.05) : cellW(lane + 0.5, xk, 0.05) };
+    L.lab = alongX ? 'row ' + (lane + 1) : 'column ' + colLetter(lane);
+    return { L, entry: alongX ? cellW(ek, lane + 0.5, 0.05) : cellW(lane + 0.5, ek, 0.05) };
+  }
   const lanes = [];
   for(let lane=0; lane<10; lane++){
     for(let step=0; step<10; step++){
@@ -4561,7 +4697,8 @@ function torpedo(){
   TORP.B.copy(TOR.A).addScaledVector(TORP.dirOut, 1500).setY(0.05);
   /* in: along the lane, from outside the plot to the square */
   TORP.C.copy(entry);
-  TORP.D.copy(cellW(L.gx + 0.5, L.gz + 0.5, 0.05));
+  TORP.D.copy(L.gi >= 0 || !L.exitW ? cellW(L.gx + 0.5, L.gz + 0.5, 0.05) : L.exitW);
+  TORP.laneLab = L.lab || '';
   const po = [], pi = [];
   for(let i=0;i<=200;i++){ po.push(new T.Vector3().lerpVectors(TORP.A, TORP.B, i/200));
                            pi.push(new T.Vector3().lerpVectors(TORP.C, TORP.D, i/200)); }
@@ -4932,6 +5069,7 @@ EFLR.onTouch = () => {
 const EF_OUT_DUR = 2.6, EF_GAP = 0.35;
 function pickOwnBlock(){
   ownInit();
+  if(SIM.force) return SIM.force;
   const all = [], live = [];
   for(let cx=1; cx<=8; cx++) for(let cz=1; cz<=8; cz++){
     all.push([cx, cz]);
@@ -5165,6 +5303,7 @@ function litCount(x0, z0){
 }
 /* the block: a fair chance of one that still hides a hull we have not hit */
 function pickFlareBlock(){
+  if(SIM.force) return SIM.force;
   const all = [], live = [];
   for(let cx=1; cx<=8; cx++) for(let cz=1; cz<=8; cz++){
     all.push([cx, cz]);
@@ -5243,6 +5382,7 @@ function hullUnder(gx, gz){
 }
 function pickStrike(){
   const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
+  const forced = SIM.force;
   const o = cellW(5, 5), ex = cellW(6, 5).sub(o), ez = cellW(5, 6).sub(o);
   const dx = back.dot(ex), dz = back.dot(ez);
   const alongX = Math.abs(dx) > Math.abs(dz), sgn = alongX ? Math.sign(dx) : Math.sign(dz);
@@ -5256,7 +5396,8 @@ function pickStrike(){
     if(cells.some(c => { const h = hullUnder(c[0], c[1]); return h && !CON_GROUPS[h[0]].hit[h[1]]; })) withHull.push(w);
   }
   const pool = (withHull.length && Math.random() < 0.45) ? withHull : (open.length ? open : withHull);
-  const W = pool[Math.floor(Math.random()*pool.length)];
+  const W = forced ? { lane:forced.lane, s0:forced.s0, cells:[sq(forced.lane, forced.s0), sq(forced.lane, forced.s0 + 1), sq(forced.lane, forced.s0 + 2)] }
+                   : pool[Math.floor(Math.random()*pool.length)];
   const edge = (step, alt) => { const c = sq(W.lane, 0); const k = sgn > 0 ? 9 - step : step;
     return alongX ? cellW(k + 0.5, W.lane + 0.5, alt) : cellW(W.lane + 0.5, k + 0.5, alt); };
   STRK.cells = W.cells;
@@ -5325,10 +5466,12 @@ function restoreShip(sh){
   for(const o of sh.occ) o.op = o.i === 5 ? 0 : 0.95;
 }
 function setSink(on, ship){
-  if(!on){ restoreShip(ANIM.ship); ANIM.sink = -1; ANIM.ship = null; return; }
+  if(!on){ restoreShip(ANIM.ship); ANIM.sink = -1; ANIM.ship = null;
+    for(const w of WRECKS) restoreShip(w.sh); WRECKS.length = 0; return; }
   const sh = ship || shipNamed('escort');
   if(ANIM.sink >= 0 && ANIM.ship === sh) return;
-  restoreShip(ANIM.ship);
+  if(SIM.on && ANIM.ship && ANIM.sink >= 0) WRECKS.push({ sh:ANIM.ship, u:ANIM.sink });
+  else restoreShip(ANIM.ship);
   ANIM.ship = sh;
   scar(sh, sh.pos, 16.0);
   ANIM.sink = 0; ANIM.steamFired = false; ANIM.blast = 0;
@@ -5345,6 +5488,24 @@ function setSink(on, ship){
 }
 const _snkOff = new T.Vector3();
 function ease(a){ return a*a; }
+/* how a hull lies at a point in her sinking */
+function sinkPose(SH2, u){
+  let roll, pitch, y, slide;
+  if(u < 0.22){ const a=u/0.22;             roll=0.02+0.10*ease(a); pitch=0.01+0.03*ease(a); y=-0.8*ease(a);     slide=0; }
+  else if(u < 0.52){ const a=(u-0.22)/0.30; roll=0.12+0.18*a;       pitch=0.04+0.09*ease(a); y=-0.8-1.8*ease(a); slide=0.5*a; }
+  else if(u < 0.80){ const a=(u-0.52)/0.28; roll=0.30+0.40*a;       pitch=0.13+0.16*ease(a); y=-2.6-2.2*ease(a); slide=0.5+2.5*a; }
+  else if(u < 0.93){ const a=(u-0.80)/0.13; roll=0.70+0.52*a;       pitch=0.29+0.06*a;       y=-4.8-1.1*ease(a); slide=3.0+1.4*a; }
+  else { const a=(u-0.93)/0.07;             roll=1.22+0.06*a;       pitch=0.35;              y=-5.9-0.2*a;       slide=4.4+0.2*a; }
+  /* once she is down she still answers the swell, barely */
+  if(u > 0.93){ y += Math.sin(tt*0.70)*0.24; roll += Math.sin(tt*0.53)*0.022; }
+  SH2.body.position.set(0, y + 0.4, slide);
+  SH2.body.rotation.set(pitch, 0, roll);
+  for(const o of SH2.occ) if(o.i !== 5) o.op = 0.95;
+}
+/* WRECKS. The sandbox sinks one hull at a time and puts the last one back up
+   when it sinks the next; a match loses hulls one after another and every one
+   of them stays where she went down */
+const WRECKS = [];
 
 function updateFX(dt){
   /* fire */
@@ -5366,18 +5527,7 @@ function updateFX(dt){
        one that settles on her beam with the plating still breaking the surface
        stays on the plot for the rest of the engagement, which is the point —
        the loss is meant to be looked at. */
-    let roll, pitch, y, slide;
-    if(u < 0.22){ const a=u/0.22;             roll=0.02+0.10*ease(a); pitch=0.01+0.03*ease(a); y=-0.8*ease(a);     slide=0; }
-    else if(u < 0.52){ const a=(u-0.22)/0.30; roll=0.12+0.18*a;       pitch=0.04+0.09*ease(a); y=-0.8-1.8*ease(a); slide=0.5*a; }
-    else if(u < 0.80){ const a=(u-0.52)/0.28; roll=0.30+0.40*a;       pitch=0.13+0.16*ease(a); y=-2.6-2.2*ease(a); slide=0.5+2.5*a; }
-    else if(u < 0.93){ const a=(u-0.80)/0.13; roll=0.70+0.52*a;       pitch=0.29+0.06*a;       y=-4.8-1.1*ease(a); slide=3.0+1.4*a; }
-    else { const a=(u-0.93)/0.07;             roll=1.22+0.06*a;       pitch=0.35;              y=-5.9-0.2*a;       slide=4.4+0.2*a; }
-    const SH2 = ANIM.ship;
-    /* once she is down she still answers the swell, barely */
-    if(u > 0.93){ y += Math.sin(tt*0.70)*0.24; roll += Math.sin(tt*0.53)*0.022; }
-    SH2.body.position.set(0, y + 0.4, slide);
-    SH2.body.rotation.set(pitch, 0, roll);
-    for(const o of SH2.occ) if(o.i !== 5) o.op = 0.95;
+    sinkPose(ANIM.ship, u);
     /* a wreck that stays up keeps smoking, quietly */
     FX.sinkSmoke.material.uniforms.uI.value =
       0.34*Math.min(1, u*9)*(1 - 0.62*Math.max(0, Math.min(1, (u - 0.72)/0.18)));
@@ -5396,6 +5546,7 @@ function updateFX(dt){
     marks[8].w = marks[9].w = marks[10].w = 0;
   }
 
+  for(const w of WRECKS){ w.u = Math.min(1, w.u + dt/SINK_DUR); sinkPose(w.sh, w.u); }
   /* scars: soot on the plating, a list she never shakes off, a wisp */
   for(let i=0;i<NDMG;i++) SH.uDmgI.value[i] = 0;
   for(let i=0;i<DMG.length;i++){
@@ -5460,14 +5611,21 @@ function updateFX(dt){
     if(u >= TOR_HIT && !ANIM.torHit){
       ANIM.torHit = true;
       const T0 = TORP.D;
-      FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
-      FX.eSplash.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eSplash.material.uniforms.uT0.value = tt;
-      CON_GROUPS[TORP.group].hit[TORP.gcell] = true; pushContacts();
-      boom(T0, 0.44);
-      noteShot('Torpedo ' + colLetter(TORP.cell[0]) + (TORP.cell[1] + 1) + ' \u00b7 hit', 'hit');
+      if(TORP.group >= 0){
+        ENEMY_SHOT.add(TORP.cell[0] + ',' + TORP.cell[1]);
+        FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
+        FX.eSplash.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eSplash.material.uniforms.uT0.value = tt;
+        CON_GROUPS[TORP.group].hit[TORP.gcell] = true; pushContacts();
+        boom(T0, 0.44);
+        noteShot('Torpedo ' + colLetter(TORP.cell[0]) + (TORP.cell[1] + 1) + ' \u00b7 hit', 'hit');
+      } else {
+        /* A LANE WITH NOTHING IN IT: she runs the plot end to end and out the
+           far side. Nothing to hit — and now nothing to find in that lane. */
+        noteShot('Torpedo ' + TORP.laneLab + ' \u00b7 miss', 'miss');
+      }
       refreshUI();
     }
-    if(u >= TOR_HIT){
+    if(u >= TOR_HIT && TORP.group >= 0){
       const a = Math.min(1, (u - TOR_HIT)/(1 - TOR_HIT));
       MARKS_E[26].set(TORP.D.x, TORP.D.z, 9 + 42*a, (1-a)*(1-a));
     }
@@ -5548,11 +5706,12 @@ function updateFX(dt){
           STRK.done[i] = true;
           const c = STRK.cells[i], T0 = cellW(c[0] + 0.5, c[1] + 0.5);
           const h = hullUnder(c[0], c[1]);
+          ENEMY_SHOT.add(c[0] + ',' + c[1]);
           if(h){
             FX.sHit[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.sHit[i].material.uniforms.uT0.value = tt;
             CON_GROUPS[h[0]].hit[h[1]] = true; pushContacts();
             boom(T0, 0.26);
-          } else {
+          } else if(!SIM.on){
             let k = -1;
             for(let j=0;j<22;j++) if(MARKS_E[j].w <= 0.004){ k = j; break; }
             if(k < 0) k = MISSM.length ? MISSM.shift() : 0;
@@ -5616,6 +5775,7 @@ function updateFX(dt){
     SALVO.aim = (u >= SALVO_IN - 0.04 && u < SALVO_HIT) ? 0.55 + 0.45*Math.sin(tt*9.0) : 0;
     if(u >= SALVO_HIT && !ANIM.misHit){
       ANIM.misHit = true;
+      ENEMY_SHOT.add(SALVO.cell[0] + ',' + SALVO.cell[1]);
       const T0 = SALVO.tgt;
       if(SALVO.hit){
         FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
@@ -5624,11 +5784,14 @@ function updateFX(dt){
         noteShot('Missile ' + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1) + ' \u00b7 hit', 'hit');
       } else {
         /* a miss leaves its ring on their sea for good */
-        let k = -1;
-        for(let i=0;i<22;i++) if(MARKS_E[i].w <= 0.004){ k = i; break; }
-        if(k < 0) k = MISSM.length ? MISSM.shift() : 0;
-        MARKS_E[k].set(T0.x, T0.z, 8.6 + Math.random()*2.2, 1);
-        MISSM.push(k);
+        /* (in a match the square itself keeps it) */
+        if(!SIM.on){
+          let k = -1;
+          for(let i=0;i<22;i++) if(MARKS_E[i].w <= 0.004){ k = i; break; }
+          if(k < 0) k = MISSM.length ? MISSM.shift() : 0;
+          MARKS_E[k].set(T0.x, T0.z, 8.6 + Math.random()*2.2, 1);
+          MISSM.push(k);
+        }
         hiss(T0, 0.28, 2400, 500, 0.9, 0.8);
         noteShot('Missile ' + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1) + ' \u00b7 miss', 'miss');
       }
@@ -5709,10 +5872,12 @@ function updateFX(dt){
           if(!was && set.size >= own.n){ if(sh) setSink(true, sh); EAIR.sunk = own.name; }
           EAIR.hits++;
         } else {
-          let k = -1;
-          for(let j=16;j<26;j++) if(marks[j].w <= 0.004){ k = j; break; }
-          if(k < 0) k = 16 + Math.floor(Math.random()*10);
-          marks[k].set(T0.x, T0.z, 8.6 + Math.random()*2.2, 1);
+          if(!SIM.on){
+            let k = -1;
+            for(let j=16;j<26;j++) if(marks[j].w <= 0.004){ k = j; break; }
+            if(k < 0) k = 16 + Math.floor(Math.random()*10);
+            marks[k].set(T0.x, T0.z, 8.6 + Math.random()*2.2, 1);
+          }
           hiss(T0, 0.22, 2400, 500, 0.9, 0.8);
         }
         if(i === 2){
@@ -5768,6 +5933,11 @@ function updateFX(dt){
     if(u >= ET_HIT && !ETORP.hitDone){
       ETORP.hitDone = true;
       const T0 = ETORP.D, at = ETORP.at, lab = colLetter(ETORP.cell[0]) + (ETORP.cell[1] + 1);
+      if(!at){
+        ETORP.label = 'Torpedo ' + ETORP.laneLab + ' \u00b7 miss';
+        LASTIN = { label: ETORP.label, kind:'miss' };
+        refreshUI();
+      } else {
       OWN_SHOT.add(ETORP.cell[0] + ',' + ETORP.cell[1]);
       FX.hitFlash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z); FX.hitFlash.material.uniforms.uT0.value = tt;
       FX.misSplash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z); FX.misSplash.material.uniforms.uT0.value = tt;
@@ -5782,8 +5952,9 @@ function updateFX(dt){
       ETORP.label = 'Torpedo ' + lab + ' \u00b7 ' + (gone ? at.name.toLowerCase() + ' sunk' : 'hit');
       LASTIN = { label: ETORP.label, kind:'hit' };
       refreshUI();
+      }
     }
-    if(u >= ET_HIT){
+    if(u >= ET_HIT && ETORP.at){
       const a = Math.min(1, (u - ET_HIT)/(1 - ET_HIT));
       marks[27].set(ETORP.D.x, ETORP.D.z, 9 + 42*a, (1-a)*(1-a));
     }
@@ -5834,10 +6005,12 @@ function updateFX(dt){
         ESALVO.label = 'Missile ' + lab + ' \u00b7 ' + (gone ? at.name.toLowerCase() + ' sunk' : 'hit');
         LASTIN = { label: ESALVO.label, kind:'hit' };
       } else {
-        let k = -1;
-        for(let j=16;j<26;j++) if(marks[j].w <= 0.004){ k = j; break; }
-        if(k < 0) k = 16 + Math.floor(Math.random()*10);
-        marks[k].set(T0.x, T0.z, 8.6 + Math.random()*2.2, 1);
+        if(!SIM.on){
+          let k = -1;
+          for(let j=16;j<26;j++) if(marks[j].w <= 0.004){ k = j; break; }
+          if(k < 0) k = 16 + Math.floor(Math.random()*10);
+          marks[k].set(T0.x, T0.z, 8.6 + Math.random()*2.2, 1);
+        }
         hiss(T0, 0.28, 2400, 500, 0.9, 0.8);
         ESALVO.label = 'Missile ' + lab + ' \u00b7 miss';
         LASTIN = { label: ESALVO.label, kind:'miss' };
@@ -6276,7 +6449,7 @@ function plotReadout(){
   const sunk  = CON_GROUPS.filter(g => g.hit.every(Boolean)).length;
   const sqTot = CON_GROUPS.reduce((a, g) => a + g.cells.length, 0);
   const sqHit = CON_GROUPS.reduce((a, g) => a + g.hit.filter(Boolean).length, 0);
-  const miss  = MISSM.length, salvos = miss + sqHit;
+  const miss  = SIM.dirty ? Math.max(0, ENEMY_SHOT.size - sqHit) : MISSM.length, salvos = miss + sqHit;
 
   /* how much of her fleet is on the bottom, and how close the next one is */
   let segs = '';
@@ -6293,7 +6466,11 @@ function plotReadout(){
   /* ONE ROW PER CONTACT. The silhouette says how much of her is accounted
      for and where along the hull; the refs under it say where on the plot.
      Those were two panels saying the same thing in two ways. */
-  rHulls.innerHTML = '<h6>Contacts</h6>' + CON_GROUPS.map((g, i) => {
+  /* in a match a contact is a hull we have found, not one we are told about */
+  /* and one still afloat: the ones on the bottom are already counted above,
+     and five rows ran the panel down into the lower board */
+  const shown = SIM.dirty ? CON_GROUPS.filter(g => g.hit.some(Boolean) && !g.hit.every(Boolean)) : CON_GROUPS;
+  rHulls.innerHTML = '<h6>Contacts</h6>' + (shown.length ? '' : '<div class="cr">\u2014</div>') + shown.map((g, i) => {
     const n = g.cells.length, u = 22, w = n*u, h = 16, m = h/2;
     let d = 'M1 ' + m + ' Q1 1, 7 1 H' + (w - 8)
           + ' Q' + (w - 1) + ' 1, ' + (w - 1) + ' ' + m
@@ -6357,7 +6534,13 @@ function refreshUI(){
              : EAIR.t >= 0 ? (EAIR.done[2] ? EAIR.label : 'Incoming aircraft')
              : ETORP.u >= 0 ? (ETORP.hitDone ? ETORP.label : 'Incoming torpedo')
              : ESALVO.u >= 0 ? (ESALVO.hitDone ? ESALVO.label : 'Incoming missile') : null;
-  MATCH.act = them || act; MATCH.them = !!them; MATCH.dirty = true;
+  let simSay = null;
+  if(SIM.dirty && SIM.over) simSay = SIM.won ? 'Enemy fleet sunk' : 'Own fleet sunk';
+  else if(SIM.on && !them && !act && SIM.side === 'them') simSay = 'Their move';
+  MATCH.act = (SIM.over && SIM.dirty) ? simSay : (them || act || simSay);
+  MATCH.them = !!them || simSay === 'Their move' || (SIM.over && SIM.dirty && !SIM.won);
+  MATCH.dirty = true;
+  if(SIM.dirty) simCells();
   setupUI();
   plotReadout();
   ownReadout();
@@ -6493,6 +6676,9 @@ function onCtl(e){
   /* the plot chip decides whether her own hulls are on the board:
      own = the formation as she lies, enemy = an empty sea and what the beam finds */
   const a = b.dataset.a;
+  /* a match plays itself: its weapons are not ours to fire, and reset means a new one */
+  if(SIM.on && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare')){ hideHint(); return; }
+  if(SIM.on && a === 'reset'){ simNew(); hideHint(); return; }
   if(a === 'snd'){ ANIM.snd = !ANIM.snd; sndOn(ANIM.snd); }
   if(a === 'radar') ANIM.radar = !ANIM.radar;
   if(a === 'con')   ANIM.con   = !ANIM.con;
@@ -6628,7 +6814,7 @@ const OVER = {
 };
 const OVER_PANELS = ['scr-over', 'scr-over2'];
 function overUI(){
-  const O = ANIM.won ? OVER.win : OVER.lose;
+  const O = (SIM.dirty && SIM.overData) ? SIM.overData : ANIM.won ? OVER.win : OVER.lose;
   for(const id of OVER_PANELS){
     const root = document.getElementById(id); if(!root) continue;
     root.classList.toggle('lose', !ANIM.won);
@@ -6676,8 +6862,369 @@ function setupCtl(b){
   if(d.fake !== undefined){ fakeGo(b); return true; }
   return false;
 }
+/* ============================================================
+   THE MATCH — a real engagement, move by move, from empty plots.
+   Both fleets are laid out, theirs at random and out of sight; the two
+   sides take turns, each choosing a weapon and a target from nothing but
+   what its own fire has told it, until one fleet is on the bottom.
+   ============================================================ */
+const SIM_SIZES = [4, 3, 3, 2, 2];
+const SIM_CDN = { tor:5, cat:4, flare:3 };
+Object.assign(SIM, { auto:true, step:false, speed:1, side:'us', phase:'think', wait:0, act:null,
+                     turnN:1, over:false, won:false, us:null, them:null, snap:null, dirty:false, overData:null });
+/* what one side knows of the other's grid: 0 nothing, 1 water, 2 a hit on a
+   hull still afloat, 3 a hull that is gone — and which lengths are still out there */
+function simKnow(){
+  return { K:new Int8Array(100), left:SIM_SIZES.slice(), blocks:[], gone:new Set(),
+           moves:0, shots:0, hits:0, sunk:0, cd:{ tor:0, cat:0, flare:0 }, range:0, last:'' };
+}
+/* THEIR FLEET, laid out where nobody can see it: five hulls, none touching */
+function simFleet(){
+  for(let tries=0; tries<400; tries++){
+    const occ = new Int8Array(100), groups = [];
+    let ok = true;
+    for(const n of SIM_SIZES){
+      let placed = false;
+      for(let a=0; a<300 && !placed; a++){
+        const hz = Math.random() < 0.5;
+        const x0 = Math.floor(Math.random()*(hz ? 11 - n : 10)), z0 = Math.floor(Math.random()*(hz ? 10 : 11 - n));
+        const cells = [];
+        for(let k=0;k<n;k++) cells.push(hz ? [x0 + k, z0] : [x0, z0 + k]);
+        const near = cells.some(([x, z]) => {
+          for(let dx=-1; dx<=1; dx++) for(let dz=-1; dz<=1; dz++){
+            const X = x + dx, Z = z + dz;
+            if(X >= 0 && X < 10 && Z >= 0 && Z < 10 && occ[Z*10 + X]) return true;
+          }
+          return false;
+        });
+        if(near) continue;
+        for(const [x, z] of cells) occ[z*10 + x] = 1;
+        groups.push({ cells, hit:new Array(n).fill(false) });
+        placed = true;
+      }
+      if(!placed){ ok = false; break; }
+    }
+    if(ok) return groups;
+  }
+  return null;
+}
+/* the hulls a side is shooting at, as lists of squares, and whether each is gone */
+function simShips(side){
+  if(side === 'us') return CON_GROUPS.map((g, i) => ({ id:'e' + i, cells:g.cells, gone:g.hit.every(Boolean) }));
+  const out = [];
+  for(const [key, , fixed] of OWN_FLEET){
+    const c = ownCells(key, fixed); if(!c) continue;
+    const cells = [];
+    for(let x=c[0]; x<c[2]; x++) for(let z=c[1]; z<c[3]; z++) cells.push([x, z]);
+    const hs = OWN_HITS[key];
+    out.push({ id:key, cells, gone:!!hs && hs.size >= cells.length });
+  }
+  return out;
+}
+function simHull(side, x, z){
+  for(const sh of simShips(side)) for(const c of sh.cells) if(c[0] === x && c[1] === z) return sh;
+  return null;
+}
+/* WHERE THE HULLS PROBABLY ARE. Every way each length still afloat could lie
+   that does not cross water or a wreck already found is counted over the
+   squares it covers; a placement through a hit counts many times over, so
+   once something has been struck the search closes on it. */
+function simDensity(S){
+  const K = S.K, D = new Float32Array(100);
+  for(const n of S.left){
+    for(let hz=0; hz<2; hz++){
+      for(let x0=0; x0 < (hz ? 11 - n : 10); x0++) for(let z0=0; z0 < (hz ? 10 : 11 - n); z0++){
+        let ok = true, hits = 0;
+        for(let k=0;k<n;k++){
+          const v = K[hz ? z0*10 + x0 + k : (z0 + k)*10 + x0];
+          if(v === 1 || v === 3){ ok = false; break; }
+          if(v === 2) hits++;
+        }
+        if(!ok) continue;
+        const w = hits ? Math.pow(40, hits) : 1;
+        for(let k=0;k<n;k++){ const i = hz ? z0*10 + x0 + k : (z0 + k)*10 + x0; if(K[i] === 0) D[i] += w; }
+      }
+    }
+  }
+  /* a block a star shell found something in, and has not yet given up */
+  for(const b of S.blocks) for(const i of b.cells) if(K[i] === 0) D[i] *= 1.8;
+  return D;
+}
+/* THE CHOICE OF WEAPON. With a hull struck and still afloat the side finishes
+   it — a strike if a stick lies along it, otherwise one round at a time.
+   Searching, a ready torpedo or strike goes where the most hull is likely,
+   a ready star shell goes over a dark stretch of the plot, and otherwise it
+   is the missile, on the likeliest square. */
+function simChoose(side){
+  const S = side === 'us' ? SIM.us : SIM.them, K = S.K, D = simDensity(S);
+  const ax = side === 'us' ? plotAxis() : ownAxis();
+  const ready = k => side === 'us' ? CD[k].t >= CD[k].n : S.cd[k] >= SIM_CDN[k];
+  const hunting = !K.some(v => v === 2);
+  let best = -1, bi = -1;
+  for(let i=0;i<100;i++) if(K[i] === 0){ const d = D[i] + Math.random()*1e-3; if(d > best){ best = d; bi = i; } }
+  if(bi < 0) for(let i=0;i<100;i++) if(K[i] !== 3 && K[i] !== 1){ bi = i; break; }
+  const missile = { kind:'fire', force:[bi % 10, (bi/10) | 0] };
+  let sBest = -1, strike = null;
+  if(ready('cat')){
+    for(let lane=0; lane<10; lane++) for(let s0=0; s0<8; s0++){
+      let sc = 0, unk = 0;
+      for(let k=0;k<3;k++){ const [x, z] = ax.sq(lane, s0 + k), i = z*10 + x; if(K[i] === 0){ sc += D[i]; unk++; } }
+      if(unk >= 2 && sc + Math.random()*1e-3 > sBest){ sBest = sc; strike = { kind:'cat', force:{ lane, s0 } }; }
+    }
+  }
+  if(!hunting) return (strike && sBest >= best*1.7) ? strike : missile;
+  let tBest = -1, torp = null;
+  if(ready('tor')){
+    for(let lane=0; lane<10; lane++){
+      let sc = 0;
+      for(let step=0; step<10; step++){
+        const [x, z] = ax.sq(lane, step), v = K[z*10 + x];
+        if(v === 2 || v === 3) break;
+        if(v === 0) sc += D[z*10 + x];
+      }
+      if(sc + Math.random()*1e-3 > tBest){ tBest = sc; torp = { kind:'tor', force:{ lane } }; }
+    }
+  }
+  if(torp && tBest >= best*3.0) return torp;
+  if(strike && sBest >= best*2.2) return strike;
+  if(ready('flare')){
+    let fBest = -1, fl = null;
+    for(let cx=1; cx<=8; cx++) for(let cz=1; cz<=8; cz++){
+      let unk = 0, sc = 0;
+      for(let x=cx-1; x<=cx+1; x++) for(let z=cz-1; z<=cz+1; z++){ const i = z*10 + x; if(K[i] === 0){ unk++; sc += D[i]; } }
+      if(unk >= 8 && sc + Math.random()*1e-3 > fBest){ fBest = sc; fl = { kind:'flare', force:[cx, cz] }; }
+    }
+    if(fl) return fl;
+  }
+  return missile;
+}
+/* WHAT THE MOVE WILL FIND, worked out from the hidden truth as it is fired;
+   it is only learnt when the move lands */
+function simPlan(side, A){
+  const ax = side === 'us' ? plotAxis() : ownAxis(), P = { struck:[], water:[], block:null };
+  if(A.kind === 'fire') P.struck.push(A.force);
+  if(A.kind === 'cat') for(let k=0;k<3;k++) P.struck.push(ax.sq(A.force.lane, A.force.s0 + k));
+  if(A.kind === 'tor'){
+    for(let step=0; step<10; step++){
+      const c = ax.sq(A.force.lane, step);
+      if(simHull(side, c[0], c[1])){ P.struck.push(c); P.run = step + 1; break; }
+      P.water.push(c);
+    }
+    if(!P.struck.length) P.run = 10;
+  }
+  if(A.kind === 'flare'){
+    const [cx, cz] = A.force, cells = [];
+    let n = 0;
+    for(let x=cx-1; x<=cx+1; x++) for(let z=cz-1; z<=cz+1; z++){ cells.push(z*10 + x); if(simHull(side, x, z)) n++; }
+    P.block = { cells, n };
+  }
+  A.plan = P;
+}
+function simLearn(side, A){
+  const S = side === 'us' ? SIM.us : SIM.them, K = S.K, P = A.plan;
+  S.moves++;
+  for(const [x, z] of P.struck){
+    const i = z*10 + x;
+    S.shots++;
+    if(simHull(side, x, z)){ if(K[i] < 2) S.hits++; if(K[i] < 2) K[i] = 2; S.last = colLetter(x) + (z + 1); }
+    else K[i] = 1;
+  }
+  for(const [x, z] of P.water) if(K[z*10 + x] === 0) K[z*10 + x] = 1;
+  if(P.run) S.range = Math.max(S.range, P.run);
+  if(P.block){
+    /* the count is every hull square under the light, found or not */
+    const known = P.block.cells.filter(i => K[i] === 2 || K[i] === 3).length;
+    if(P.block.n <= known){ for(const i of P.block.cells) if(K[i] === 0) K[i] = 1; }
+    else S.blocks.push(P.block);
+  }
+  for(const sh of simShips(side)){
+    if(!sh.gone || S.gone.has(sh.id)) continue;
+    S.gone.add(sh.id); S.sunk++;
+    for(const [x, z] of sh.cells) K[z*10 + x] = 3;
+    const li = S.left.indexOf(sh.cells.length); if(li >= 0) S.left.splice(li, 1);
+  }
+  S.blocks = S.blocks.filter(b => b.cells.some(i => K[i] === 0));
+}
+function simResolved(side, kind){
+  if(side === 'us'){
+    if(kind === 'fire') return ANIM.mis < 0;
+    if(kind === 'tor') return ANIM.tor < 0;
+    if(kind === 'cat') return ANIM.cat < 0 || (STRK.done[2] && (ANIM.cat - (STRK.t2 || 0))*CAT_DUR > 2.4);
+    return ANIM.flrOut < 0 && FLR.gap <= 0 && ANIM.flr < 0 && ANIM.flrWet < 0;
+  }
+  if(kind === 'fire') return ESALVO.u < 0;
+  if(kind === 'tor') return ETORP.u < 0;
+  if(kind === 'cat') return EAIR.t < 0;
+  return EFLR.out < 0 && EFLR.gap <= 0 && EFLR.u < 0 && EFLR.wet < 0;
+}
+function simStep(dt){
+  if(!SIM.on || SIM.over) return;
+  if(SIM.phase === 'think'){
+    SIM.wait -= dt;
+    if(SIM.wait > 0 || (!SIM.auto && !SIM.step)) return;
+    SIM.step = false;
+    const side = SIM.side, A = simChoose(side);
+    simPlan(side, A);
+    SIM.force = A.force;
+    if(side === 'us'){
+      if(A.kind === 'fire') launch(); else if(A.kind === 'tor') torpedo();
+      else if(A.kind === 'cat') catapult(); else flare();
+    } else {
+      if(A.kind === 'fire') enemyMissile(); else if(A.kind === 'tor') enemyTorpedo();
+      else if(A.kind === 'cat') enemyAirStrike(); else enemyFlare();
+      if(A.kind !== 'fire') SIM.them.cd[A.kind] = 0;
+    }
+    SIM.force = null;
+    SIM.act = A; SIM.phase = 'fly'; SIM.flyT = 0;
+    simUI(); refreshUI();
+  } else if(SIM.phase === 'fly'){
+    SIM.flyT += dt;
+    if(!simResolved(SIM.side, SIM.act.kind) && SIM.flyT < 90) return;
+    simLearn(SIM.side, SIM.act);
+    const S = SIM.side === 'us' ? SIM.us : SIM.them;
+    if(!S.left.length){ simEnd(SIM.side === 'us'); return; }
+    if(SIM.side === 'them'){
+      /* both have moved: a turn has passed, and every battery takes its notch */
+      for(const k in SIM.them.cd) SIM.them.cd[k]++;
+      for(const k in CD){ const c = CD[k]; if(c.t < c.n) c.t++; }
+      SIM.turnN++; MATCH.turn = SIM.turnN; MATCH.dirty = true;
+    }
+    SIM.side = SIM.side === 'us' ? 'them' : 'us';
+    SIM.phase = 'think'; SIM.wait = 1.4;
+    simUI(); refreshUI();
+  }
+}
+function simEnd(won){
+  SIM.over = true; SIM.won = won; ANIM.won = won;
+  const U = SIM.us, E = SIM.them, pad = v => String(v).padStart(2, '0');
+  const sec = Math.floor(MATCH.t), mm = pad(Math.floor(sec/60)), ss = pad(sec % 60);
+  const base = won ? OVER.win : OVER.lose;
+  SIM.overData = { word:base.word, line:base.line,
+    sub:'Plot 7&#8209;North &middot; ' + mm + ' min ' + ss + ' s &middot; ' + pad(SIM.turnN) + ' turns'
+        + (won && U.last ? ' &middot; last hit ' + U.last.replace(/(\d+)$/, '&#8239;$1') : (!won && E.last ? ' &middot; last loss ' + E.last.replace(/(\d+)$/, '&#8239;$1') : '')),
+    s:{ salvos:pad(U.moves), hits:pad(U.hits), acc:(U.shots ? Math.round(100*U.hits/U.shots) : 0) + '%',
+        sunk:pad(U.sunk), lost:pad(E.sunk), range:U.range ? pad(U.range) : '—' } };
+  overUI();
+  simUI(); refreshUI();
+}
+const KIND_NAME = { fire:'Missile', tor:'Torpedo', cat:'Air strike', flare:'Star shell' };
+function simUI(){
+  const bar = document.getElementById('simbar'); if(!bar) return;
+  const pad = v => String(v).padStart(2, '0');
+  let say;
+  if(SIM.over) say = '<b class="' + (SIM.won ? '' : 'them') + '">' + (SIM.won ? 'Victory' : 'Defeat') + '</b> · ' + pad(SIM.turnN) + ' turns';
+  /* the short form: the bar sits between the drawers and the rail */
+  else {
+    const who = SIM.side === 'us' ? '<b>You</b>' : '<b class="them">Enemy</b>';
+    const what = SIM.phase === 'fly' && SIM.act ? ' · ' + KIND_NAME[SIM.act.kind] : (SIM.auto ? '' : ' · hold');
+    say = 'T' + pad(SIM.turnN) + ' · ' + who + what;
+  }
+  bar.querySelector('.sl').innerHTML = say;
+  const run = bar.querySelector('[data-sim="run"]');
+  run.classList.toggle('on', SIM.auto && !SIM.over);
+  run.querySelector('.pz').style.display = SIM.auto ? '' : 'none';
+  run.querySelector('.pl').style.display = SIM.auto ? 'none' : '';
+  run.setAttribute('aria-label', SIM.auto ? 'Pause' : 'Play');
+  run.hidden = SIM.over; bar.querySelector('[data-sim="step"]').hidden = SIM.over;
+  bar.querySelector('[data-sim="speed"]').innerHTML = '&times;' + SIM.speed;
+  bar.querySelector('[data-sim="report"]').hidden = !SIM.over;
+}
+/* the squares each board shows, from what has landed on it */
+function simCells(){
+  CELLS_O.fill(0); CELLS_E.fill(0);
+  for(const key of ENEMY_SHOT){
+    const [x, z] = key.split(',').map(Number); if(x < 0 || x > 9 || z < 0 || z > 9) continue;
+    const i = (z*10 + x)*4;
+    if(hullUnder(x, z)) CELLS_E[i + 1] = 255; else CELLS_E[i] = 255;
+  }
+  for(const key of OWN_SHOT){
+    const [x, z] = key.split(',').map(Number); if(x < 0 || x > 9 || z < 0 || z > 9) continue;
+    const i = (z*10 + x)*4, sh = simHull('them', x, z);
+    if(!sh) CELLS_O[i] = 255; else if(sh.gone) CELLS_O[i + 2] = 255; else CELLS_O[i + 1] = 255;
+  }
+  CELLTEX_O.needsUpdate = true; CELLTEX_E.needsUpdate = true;
+}
+/* everything in flight, put away */
+function simHalt(){
+  ANIM.mis = -1; ANIM.tor = -1; ANIM.bomb = -1; STRK.aim = -1;
+  if(ANIM.cat >= 0){ ANIM.cat = -1; CAT.plane.position.copy(CAT.rest); CAT.plane.rotation.set(0, 0, 0); }
+  if(CAT.bomb) CAT.bomb.visible = false;
+  ANIM.flrOut = -1; FLR.gap = 0; ANIM.flr = -1; ANIM.flrWet = -1;
+  ESALVO.u = -1; ETORP.u = -1; EAIR.t = -1; EAIR.aim = -1;
+  EFLR.out = -1; EFLR.gap = 0; EFLR.u = -1; EFLR.wet = -1;
+  if(FLR.os) FLR.os.userData.want = false; if(EFLR.os) EFLR.os.userData.want = false;
+}
+/* THE SANDBOX, kept: the battle screen's staged engagement, so a match can be
+   fought over it and the battle screen still opens on the same picture */
+function sandboxSnap(){
+  const hits = {};
+  for(const k in OWN_HITS) if(k !== '__init') hits[k] = [...OWN_HITS[k]];
+  return { groups:CON_GROUPS.map(g => ({ cells:g.cells.map(c => c.slice()), hit:g.hit.slice() })),
+           marks:marks.map(m => m.toArray()), marksE:MARKS_E.map(m => m.toArray()), missm:MISSM.slice(),
+           hits, init:!!OWN_HITS.__init, ownShot:[...OWN_SHOT], enemyShot:[...ENEMY_SHOT],
+           lastIn:LASTIN, lastShot:LASTSHOT,
+           flr:{ lI:FLR.lI, litR:FLR.litR.toArray(), vis:FLR.lit.visible, uI:FLR.lit.material.uniforms.uI.value },
+           eflr:{ lI:EFLR.lI, vis:EFLR.lit.visible, uI:EFLR.lit.material.uniforms.uI.value },
+           cd:{ flare:CD.flare.t, cat:CD.cat.t, tor:CD.tor.t } };
+}
+function sandboxRestore(){
+  const Z = SIM.snap;
+  SIM.on = false; SIM.dirty = false; SIM.overData = null;
+  simHalt();
+  setSink(false); clearDamage();
+  if(!Z) return;
+  CON_GROUPS.length = 0; for(const g of Z.groups) CON_GROUPS.push({ cells:g.cells.map(c => c.slice()), hit:g.hit.slice() });
+  Z.marks.forEach((a, i) => marks[i].fromArray(a)); Z.marksE.forEach((a, i) => MARKS_E[i].fromArray(a));
+  MISSM.length = 0; MISSM.push(...Z.missm);
+  for(const k in OWN_HITS) delete OWN_HITS[k];
+  for(const k in Z.hits) OWN_HITS[k] = new Set(Z.hits[k]);
+  if(Z.init) OWN_HITS.__init = true;
+  OWN_SHOT.clear(); for(const k of Z.ownShot) OWN_SHOT.add(k);
+  ENEMY_SHOT.clear(); for(const k of Z.enemyShot) ENEMY_SHOT.add(k);
+  LASTIN = Z.lastIn; LASTSHOT = Z.lastShot;
+  FLR.lI = Z.flr.lI; FLR.litR.fromArray(Z.flr.litR); FLR.lit.visible = Z.flr.vis; FLR.lit.material.uniforms.uI.value = Z.flr.uI;
+  EFLR.lI = Z.eflr.lI; EFLR.lit.visible = Z.eflr.vis; EFLR.lit.material.uniforms.uI.value = Z.eflr.uI;
+  CD.flare.t = Z.cd.flare; CD.cat.t = Z.cd.cat; CD.tor.t = Z.cd.tor;
+  /* the cruiser was already burning when the sandbox opened */
+  scar(shipNamed('cruiser'), FIRE, 15.0);
+  pushContacts();
+}
+function simStart(){
+  if(!SIM.dirty) SIM.snap = sandboxSnap();
+  simNew();
+}
+function simNew(){
+  SIM.dirty = true; SIM.on = true;
+  simHalt();
+  setSink(false); clearDamage();
+  ANIM.fire = 0; ANIM.fireGoal = 0;
+  for(const m of marks) m.w = 0;
+  for(const m of MARKS_E) m.w = 0;
+  MISSM.length = 0;
+  const G = simFleet();
+  CON_GROUPS.length = 0; for(const g of G) CON_GROUPS.push(g);
+  pushContacts();
+  for(const k in OWN_HITS) delete OWN_HITS[k];
+  OWN_HITS.__init = true;
+  OWN_SHOT.clear(); ENEMY_SHOT.clear();
+  LASTIN = null; LASTSHOT = null;
+  FLR.lI = 0; FLR.lit.visible = false; EFLR.lI = 0; EFLR.lit.visible = false;
+  matchReset();
+  MATCH.turn = 1; MATCH.t = 0;
+  for(const k in CD) CD[k].t = 0;
+  SIM.us = simKnow(); SIM.them = simKnow();
+  SIM.side = 'us'; SIM.phase = 'think'; SIM.wait = 2.2; SIM.act = null;
+  SIM.turnN = 1; SIM.over = false; SIM.won = false; SIM.overData = null; SIM.step = false;
+  simUI(); refreshUI();
+}
+/* leaving the match holds it where it stands; the sandbox screens undo it */
+function simLeave(){
+  SIM.on = false;
+  simHalt();
+}
+
 let SCREEN = 'attract';
-const SCREENS = ['attract', 'setup', 'play', 'over', 'shot'];
+const SCREENS = ['attract', 'setup', 'play', 'match', 'over', 'shot'];
 /* SPLIT IS A MODE, NOT A SCREEN. Deployment and after-action each have a
    split view of themselves; making them separate destinations meant the same
    screen had two addresses and the nav listed the same thing twice. The panel
@@ -6688,9 +7235,17 @@ function setScreen(name, quiet){
   if(SCREENS.indexOf(name) < 0) name = 'attract';
   const prevScreen = SCREEN;
   SCREEN = name;
+  /* THE MATCH IS THE BATTLE SCREEN PLAYED FOR REAL. It borrows the battle's
+     panels and boards; what it does to them is undone the moment the sandbox
+     is opened again — and kept for the after-action and the capture, which
+     are views of the engagement that was just fought */
+  const sim = name === 'match';
+  if(!sim && prevScreen === 'match') simLeave();
+  if(SIM.dirty && (name === 'play' || name === 'attract' || name === 'setup')) sandboxRestore();
   if(name === 'play' && prevScreen !== 'play') matchReset();
   /* the address is the screen; the split is a way of looking at it */
-  const v = (name === 'setup' && SPLIT.setup) ? 'setup2'
+  const v = sim ? 'play'
+          : (name === 'setup' && SPLIT.setup) ? 'setup2'
           : (name === 'over'  && SPLIT.over)  ? 'over2' : name;
   VIEW = v;
   if(!quiet && location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
@@ -6698,7 +7253,8 @@ function setScreen(name, quiet){
   document.body.classList.remove('s-attract', 's-setup', 's-setup2', 's-play',
                                 's-over', 's-over2', 's-shot');
   document.body.classList.add('s-' + v);
-  document.body.classList.toggle('s-halved', v !== name);
+  document.body.classList.toggle('s-halved', v !== name && !sim);
+  document.body.classList.toggle('sim', sim);
   const play = v === 'play';
   /* the split deployment shows one board, not two: the lower half is a panel,
      so the second pass would render straight under something opaque */
@@ -6752,8 +7308,19 @@ function setScreen(name, quiet){
     GOAL.az = AD.gridRot + Math.PI; GOAL.el = 1.545; GOAL.dist = 645;
     GOAL.tgt.set(0, -21, 27); ANIM.glide = 3.4; ANIM.shot = -1;
   } else shot(0);
+  if(sim && prevScreen !== 'match') simStart();
   refreshUI();
 }
+document.getElementById('simbar').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b || !SIM.on) return;
+  const k = b.dataset.sim;
+  if(k === 'run'){ SIM.auto = !SIM.auto; }
+  if(k === 'step'){ SIM.auto = false; SIM.step = true; }
+  if(k === 'speed'){ SIM.speed = SIM.speed === 1 ? 2 : SIM.speed === 2 ? 4 : 1; }
+  if(k === 'new') simNew();
+  if(k === 'report'){ ANIM.won = SIM.won; setScreen('over'); return; }
+  simUI(); hideHint();
+});
 for(const k in SCR) SCR[k].addEventListener('click', e => {
   const b = e.target.closest('button'); if(!b) return;
   if(b.dataset.scr !== undefined){ setScreen(b.dataset.scr); return; }
@@ -7146,6 +7713,8 @@ function boardVis(enemy){
   for(let i=0;i<BOARD_OWN.length;i++)   BOARD_OWN[i].visible   = BOARD_OWN[i].userData.want && !enemy;
   for(let i=0;i<BOARD_ENEMY.length;i++) BOARD_ENEMY[i].visible = BOARD_ENEMY[i].userData.want && enemy;
   waterUnis.uMark.value = enemy ? MARKS_E : marks;
+  waterUnis.uCells.value = enemy ? CELLTEX_E : CELLTEX_O;
+  waterUnis.uCellsI.value = SIM.dirty ? 1 : 0;
   /* the square being aimed at is bracketed on the plot; below, the bracket
      is still the burning cruiser's */
   if(enemy && SALVO.aim > 0.002) waterUnis.uHitCell.value.set(SALVO.cell[0], SALVO.cell[1], SALVO.aim);
@@ -7225,7 +7794,11 @@ let last = performance.now()*0.001, tt = 0, shown = false, guard = 0.0166;
 function frame(now){
   requestAnimationFrame(frame);
   now *= 0.001;
-  let dt = Math.min(now - last, 0.066); last = now; tt += dt;
+  let dt = Math.min(now - last, 0.066); last = now;
+  /* a match can be run fast: the whole world's clock, so nothing drifts apart */
+  if(SIM.on) dt *= SIM.speed;
+  tt += dt;
+  simStep(dt);
 
   if(ANIM.glide > 0) ANIM.glide -= dt;
   const kd = 1 - Math.exp(-dt*(ANIM.glide > 0 ? 1.25 : 9.5));
