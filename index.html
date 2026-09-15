@@ -4551,6 +4551,38 @@ function pushEnv(){ applyEnv(CUR); }
 const NIGHT = {};
 for(const f of ENV_V) NIGHT[f] = ENVS[2]['_'+f];
 for(const f of ENV_S) NIGHT[f] = ENVS[2][f];
+/* IN A MATCH THE PLOT HAS THE SAME WEATHER. Both boards are the same sea, so
+   when the theatre turns — morning to squall to storm — their plot turns with
+   it. It is the theatre seen through the plot's own dusk: the weather's colour
+   and sky, held dark enough that the grid, the misses and the beam still read. */
+const PLOT = {};
+for(const f of ENV_V) PLOT[f] = NIGHT[f].clone();
+for(const f of ENV_S) PLOT[f] = NIGHT[f];
+var PLOT_K = 0;
+/* A WEATHER TURN IS A FADE, NOT A CHASE. Picked on the card, a theatre is
+   chased quickly (fast at first, settling); turning on its own during a match
+   it runs from where the light was to the new theatre on an eased 24-second
+   curve, so the change creeps in rather than lurching at the start. */
+var ENV_FADE = null;
+function envFade(dur){
+  const from = {};
+  for(const f of ENV_V) from[f] = CUR[f].clone();
+  for(const f of ENV_S) from[f] = CUR[f];
+  ENV_FADE = { from, t:0, e:0, dur, rain0: RAIN.k };
+}
+function plotEnv(){
+  const k = PLOT_K;
+  if(k <= 0.001) return NIGHT;
+  for(const f of ENV_V) PLOT[f].copy(NIGHT[f]).lerp(CUR[f], k);
+  for(const f of ENV_S) PLOT[f] = NIGHT[f] + (CUR[f] - NIGHT[f])*k;
+  /* the grid never gets fainter than the night plot's */
+  PLOT.gridI = Math.max(NIGHT.gridI, CUR.gridI);
+  PLOT.night = NIGHT.night;
+  /* and shadows cast from high up: a low morning sun laid every post across
+     the plot as a long dark streak */
+  PLOT.shEl = Math.max(PLOT.shEl, 0.95);
+  return PLOT;
+}
 /* THE HOUR IS CONTINUOUS. The three theatres are three times of day with
    their own sun, so running between them is a clock: dawn at 0, afternoon at
    the middle, dark at 1. Nothing here is new light — it is the light that was
@@ -4579,9 +4611,19 @@ function hourLabel(m){
   return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(Math.round(m)%60).padStart(2,'0');
 }
 function stepEnv(dt){
-  const T = ANIM.hour >= 0 ? envAt(ANIM.hour) : ENVS[ANIM.env], k = 1 - Math.exp(-dt*0.80);
-  for(const f of ENV_V) CUR[f].lerp(T['_'+f], k);
-  for(const f of ENV_S) CUR[f] += (T[f] - CUR[f])*k;
+  PLOT_K += ((SIM.dirty ? 0.58 : 0) - PLOT_K)*(1 - Math.exp(-dt*1.5));
+  const T = ANIM.hour >= 0 ? envAt(ANIM.hour) : ENVS[ANIM.env];
+  if(ENV_FADE){
+    const F = ENV_FADE;
+    F.t = Math.min(1, F.t + dt/F.dur); F.e = F.t*F.t*(3 - 2*F.t);
+    for(const f of ENV_V) CUR[f].copy(F.from[f]).lerp(T['_'+f], F.e);
+    for(const f of ENV_S) CUR[f] = F.from[f] + (T[f] - F.from[f])*F.e;
+    if(F.t >= 1) ENV_FADE = null;
+  } else {
+    const k = 1 - Math.exp(-dt*0.80);
+    for(const f of ENV_V) CUR[f].lerp(T['_'+f], k);
+    for(const f of ENV_S) CUR[f] += (T[f] - CUR[f])*k;
+  }
   pushEnv();
 }
 
@@ -6493,7 +6535,9 @@ function updateFX(dt){
     /* the theatre owns its own weather: one thing to set, nothing to keep
        in step with it */
     const want = ENVS[ANIM.env].rain ? 1 : 0;
-    RAIN.k += (want - RAIN.k)*(1 - Math.exp(-dt*(want ? 1.1 : 1.9)));
+    /* the rain comes on and goes off at the pace of the weather around it */
+    if(ENV_FADE) RAIN.k = ENV_FADE.rain0 + (want - ENV_FADE.rain0)*ENV_FADE.e;
+    else RAIN.k += (want - RAIN.k)*(1 - Math.exp(-dt*(want ? 1.1 : 1.9)));
     RAIN.mesh.visible = RAIN.k > 0.004;
     waterUnis.uRainI.value = RAIN.k;
     if(RAIN.mesh.visible){
@@ -7114,7 +7158,7 @@ function onCtl(e){
   if(b.dataset.era !== undefined){ setEra(+b.dataset.era); refreshUI(); hideHint(); return; }
   if(b.dataset.e !== undefined){
     closePops();
-    ANIM.env = +b.dataset.e; SETUP.th = ANIM.env;
+    ANIM.env = +b.dataset.e; SETUP.th = ANIM.env; ENV_FADE = null;
     /* picking a theatre picks its hour too; the slider takes over again the
        moment it is touched */
     ANIM.hour = -1;
@@ -7702,7 +7746,7 @@ const WX_POOL = [0, 1, 3];
 function simWeather(){
   const pool = WX_POOL.filter(e => e !== ANIM.env);
   ANIM.env = pool[Math.floor(Math.random()*pool.length)];
-  ANIM.hour = -1;
+  ANIM.hour = -1; envFade(24);
   SIM.nextWx = SIM.turnN + 2 + Math.floor(Math.random()*3);
   refreshUI();
 }
@@ -7805,6 +7849,7 @@ function sandboxRestore(){
   const Z = SIM.snap;
   /* back to the theatre the orders chose, if the weather wandered off it */
   if(SETUP.th !== undefined && ANIM.env !== SETUP.th){ ANIM.env = SETUP.th; ANIM.hour = -1; }
+  ENV_FADE = null;
   SIM.on = false; SIM.dirty = false; SIM.overData = null;
   simHalt();
   wreckClear(); firesOut();
@@ -7834,6 +7879,7 @@ function simNew(){
   /* every match starts in the theatre the orders chose, wherever the weather
      of the last one had wandered to */
   if(SETUP.th !== undefined && ANIM.env !== SETUP.th){ ANIM.env = SETUP.th; ANIM.hour = -1; }
+  ENV_FADE = null;
   SIM.nextWx = 3 + Math.floor(Math.random()*2);
   SIM.dirty = true; SIM.on = true;
   simHalt();
@@ -8454,7 +8500,7 @@ function boardVis(enemy){
 }
 /* dress the scene for one board or the other, then draw it */
 function board(enemy){
-  applyEnv(enemy ? NIGHT : CUR);
+  applyEnv(enemy ? plotEnv() : CUR);
   /* painted letters are stretched along the deck to read at a grazing angle;
      seen from straight above they must not be stretched at all */
   const st = (enemy || ANIM.half) ? 1.0 : 1/Math.max(0.28, Math.sin(shotList()[0].el));
