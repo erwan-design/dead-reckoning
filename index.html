@@ -1682,29 +1682,20 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
         }
       }
 
-      /* THE SQUARE A ROUND IS ON ITS WAY TO. It used to take the struck
-         orange — but orange means a hull has been hit, and nothing has been
-         hit yet. So it wears the beam's own mark instead: the cold bracket and
-         the ping a contact gets when the sweep finds it, pinging on its own
-         clock while the round is in the air. */
+      /* THE SQUARE A ROUND IS ON ITS WAY TO wears the aim's own mark — the
+         cold white brackets a square gets under the pointer before it is
+         chosen. Orange is a hull hit and sunk, and the beam's cyan is a hit it
+         has found; a round still in the air has found nothing yet, so it must
+         look like neither. */
       if(uAimCell.z > 0.002){
         vec2 ca = gc - uAimCell.xy;
         if(ca.x > -0.06 && ca.x < 1.06 && ca.y > -0.06 && ca.y < 1.06){
-          /* the same bracket as every other marked square — the same wash, the
-             same corner weight, the same beat — in the beam's colour. The cyan
-             is more than twice as bright as the orange, so it is drawn at a
-             little over half the strength to sit at the same weight; the
-             ping is a hairline inside the square, not a disc */
           vec2 ea = abs(ca - 0.5)*2.0;
           float ma = max(ea.x, ea.y);
-          float filla = (1.0 - smoothstep(0.30, 1.0, ma))*0.13;
-          float borda = exp(-pow((1.0 - ma)/0.075, 2.0));
+          float filla = (1.0 - smoothstep(0.30, 1.0, ma))*0.028;
+          float borda = exp(-pow((1.0 - ma)/0.052, 2.0));
           float cora  = borda*smoothstep(0.30, 0.78, min(ea.x, ea.y));
-          float pula  = 0.70 + 0.30*sin(uTime*2.4);
-          float pha = fract(uTime*0.9);
-          float ra = length(ca - 0.5)*2.0;
-          float pinga = exp(-pow((ra - 0.15 - pha*0.75)/0.045, 2.0))*(1.0 - pha)*0.55;
-          col += uConCol*(filla + cora*1.9 + pinga)*pula*uAimCell.z*0.58*mix(0.4, 1.0, facing);
+          col += uLitCol*(filla + cora*0.56)*uAimCell.z*2.0*mix(0.4, 1.0, facing);
         }
       }
       float foam = 0.0, stain = 0.0;
@@ -5579,6 +5570,62 @@ function sinkPose(SH2, u){
    when it sinks the next; a match loses hulls one after another and every one
    of them stays where she went down */
 const WRECKS = [];
+/* THEIR HULLS, SHOWN ONLY TO GO DOWN. In a match their fleet is never drawn —
+   until the round that will sink one is on its way. Then the hull is revealed
+   on their plot, rising into view as the round comes down, takes the hit, and
+   sinks the way hers do: on her beam, plating still breaking the surface,
+   and it stays there for the rest of the engagement. The hull is the one of
+   her own fleet with the same length, laid over the squares she lay on. */
+const EWRECKS = [];
+function wreckSource(n){
+  if(n >= 4) return { obj:carrier, cells:[4, 6, 8, 7] };
+  const sh = shipNamed(n === 3 ? (EWRECKS.length % 2 ? 'destroyer' : 'cruiser') : (EWRECKS.length % 2 ? 'submarine' : 'escort'))
+          || shipNamed(n === 3 ? 'cruiser' : 'escort');
+  return sh ? { obj:sh.grp, cells:sh.cells } : null;
+}
+function wreckReveal(gi, pending){
+  if(!SIM.on || gi < 0 || EWRECKS.some(w => w.gi === gi)) return;
+  const g = CON_GROUPS[gi]; if(!g) return;
+  if(!g.cells.every((c, i) => g.hit[i] || pending.indexOf(i) >= 0)) return;
+  const src = wreckSource(g.cells.length); if(!src) return;
+  const inner = src.obj.clone();
+  inner.position.set(0, 0, 0); inner.rotation.set(0, 0, 0);
+  const grp = new T.Group(); grp.add(inner);
+  const xs = g.cells.map(c => c[0]), zs = g.cells.map(c => c[1]);
+  const across = Math.max(...xs) - Math.min(...xs) > 0;
+  const srcAcross = (src.cells[2] - src.cells[0]) > (src.cells[3] - src.cells[1]);
+  const mid = cellW((Math.min(...xs) + Math.max(...xs))/2 + 0.5, (Math.min(...zs) + Math.max(...zs))/2 + 0.5, 0);
+  grp.position.copy(mid);
+  grp.rotation.y = src.obj.rotation.y + (across === srcAcross ? 0 : Math.PI/2);
+  inner.position.y = -9;
+  scene.add(grp);
+  onBoard(BOARD_ENEMY, grp, true);
+  bob(grp, 0.9, 0.7, 4.2);
+  EWRECKS.push({ gi, grp, body:inner, occ:[], rise:0, wait:-1, u:-1 });
+}
+function wreckSink(gi){
+  const w = EWRECKS.find(v => v.gi === gi);
+  if(w && w.u < 0 && w.wait < 0) w.wait = 0.5;
+}
+function wreckTick(dt){
+  for(const w of EWRECKS){
+    if(w.rise < 1){
+      w.rise = Math.min(1, w.rise + dt/0.7);
+      const e = w.rise*w.rise*(3 - 2*w.rise);
+      if(w.u < 0) w.body.position.y = -9*(1 - e);
+    }
+    if(w.wait >= 0){ w.wait -= dt; if(w.wait < 0){ w.wait = -1; w.u = 0; } }
+    if(w.u >= 0){ w.u = Math.min(1, w.u + dt/7.5); sinkPose(w, w.u); }
+  }
+}
+function wreckClear(){
+  for(const w of EWRECKS){
+    scene.remove(w.grp);
+    const bi = BOARD_ENEMY.indexOf(w.grp); if(bi >= 0) BOARD_ENEMY.splice(bi, 1);
+    const ki = BOBBERS.findIndex(b => b.obj === w.grp); if(ki >= 0) BOBBERS.splice(ki, 1);
+  }
+  EWRECKS.length = 0;
+}
 
 function updateFX(dt){
   /* fire */
@@ -5620,6 +5667,7 @@ function updateFX(dt){
   }
 
   for(const w of WRECKS){ w.u = Math.min(1, w.u + dt/SINK_DUR); sinkPose(w.sh, w.u); }
+  wreckTick(dt);
   /* scars: soot on the plating, a list she never shakes off, a wisp */
   for(let i=0;i<NDMG;i++) SH.uDmgI.value[i] = 0;
   for(let i=0;i<DMG.length;i++){
@@ -5681,6 +5729,7 @@ function updateFX(dt){
     const ks = Math.min(1, (TORP.v || 0)/TOR_VMAX)*rise;
     const wake = u < TOR_OUT ? ks : (u >= TOR_IN && u < TOR_HIT) ? 1 : 0;
     TOR.bow.material.uniforms.uI.value = wake*(0.82 + 0.10*Math.sin(tt*11.0));
+    if(u >= TOR_IN && u < TOR_HIT && TORP.group >= 0) wreckReveal(TORP.group, [TORP.gcell]);
     if(u >= TOR_HIT && !ANIM.torHit){
       ANIM.torHit = true;
       const T0 = TORP.D;
@@ -5689,6 +5738,7 @@ function updateFX(dt){
         FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
         FX.eSplash.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eSplash.material.uniforms.uT0.value = tt;
         CON_GROUPS[TORP.group].hit[TORP.gcell] = true; pushContacts();
+        if(CON_GROUPS[TORP.group].hit.every(Boolean)) wreckSink(TORP.group);
         boom(T0, 0.44);
         noteShot('Torpedo ' + colLetter(TORP.cell[0]) + (TORP.cell[1] + 1) + ' \u00b7 hit', 'hit');
       } else {
@@ -5772,6 +5822,12 @@ function updateFX(dt){
       CAT.inb.lookAt(_tn);
     }
     STRK.aim = -1;
+    /* a stick that will finish a hull shows her as the aircraft runs in */
+    if(sf >= 0 && sf < 1){
+      const pend = {};
+      STRK.cells.forEach((c, i) => { if(STRK.done[i]) return; const h = hullUnder(c[0], c[1]); if(h) (pend[h[0]] = pend[h[0]] || []).push(h[1]); });
+      for(const gi in pend) wreckReveal(+gi, pend[gi]);
+    }
     if(sf >= 0 && sf < 1.2){
       for(let i=0;i<3;i++){
         if(!STRK.done[i] && STRK.aim < 0) STRK.aim = i;
@@ -5783,6 +5839,7 @@ function updateFX(dt){
           if(h){
             FX.sHit[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.sHit[i].material.uniforms.uT0.value = tt;
             CON_GROUPS[h[0]].hit[h[1]] = true; pushContacts();
+            if(CON_GROUPS[h[0]].hit.every(Boolean)) wreckSink(h[0]);
             boom(T0, 0.26);
           } else if(!SIM.on){
             let k = -1;
@@ -5846,6 +5903,7 @@ function updateFX(dt){
     }
     /* the square is bracketed while the round is on its way down to it */
     SALVO.aim = (u >= SALVO_IN - 0.04 && u < SALVO_HIT) ? 0.55 + 0.45*Math.sin(tt*9.0) : 0;
+    if(u >= SALVO_IN - 0.04 && u < SALVO_HIT && SALVO.hit) wreckReveal(SALVO.group, [SALVO.gcell]);
     if(u >= SALVO_HIT && !ANIM.misHit){
       ANIM.misHit = true;
       ENEMY_SHOT.add(SALVO.cell[0] + ',' + SALVO.cell[1]);
@@ -5853,6 +5911,7 @@ function updateFX(dt){
       if(SALVO.hit){
         FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
         CON_GROUPS[SALVO.group].hit[SALVO.gcell] = true; pushContacts();
+        if(CON_GROUPS[SALVO.group].hit.every(Boolean)) wreckSink(SALVO.group);
         boom(T0, 0.30);
         noteShot('Missile ' + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1) + ' \u00b7 hit', 'hit');
       } else {
@@ -7349,6 +7408,7 @@ function sandboxRestore(){
   const Z = SIM.snap;
   SIM.on = false; SIM.dirty = false; SIM.overData = null;
   simHalt();
+  wreckClear();
   setSink(false); clearDamage();
   if(!Z) return;
   CON_GROUPS.length = 0; for(const g of Z.groups) CON_GROUPS.push({ cells:g.cells.map(c => c.slice()), hit:g.hit.slice() });
@@ -7374,6 +7434,7 @@ function simStart(){
 function simNew(){
   SIM.dirty = true; SIM.on = true;
   simHalt();
+  wreckClear();
   setSink(false); clearDamage();
   ANIM.fire = 0; ANIM.fireGoal = 0;
   for(const m of marks) m.w = 0;
@@ -7930,7 +7991,14 @@ function boardVis(enemy){
   waterUnis.uLitI.value   = FR.lI;
   /* her aim on their plot, in the reading's cold white: steady and bright
      once tapped, faint while only hovered */
-  const aimT = enemy && simYourMove() ? (SIM.aim || SIM.hover) : null;
+  /* and what she has fired at keeps that mark until it lands: the square, the
+     column, the stick or the block */
+  const flying = enemy && SIM.on && SIM.phase === 'fly' && SIM.side === 'us' && SIM.act && SIM.act.rect
+    && ((SIM.act.kind === 'fire' && ANIM.mis >= 0 && !ANIM.misHit)
+     || (SIM.act.kind === 'tor' && ANIM.tor >= 0 && !ANIM.torHit)
+     || (SIM.act.kind === 'cat' && ANIM.cat >= 0 && !STRK.done[2])
+     || (SIM.act.kind === 'flare' && (ANIM.flrOut >= 0 || FLR.gap > 0)));
+  const aimT = enemy && simYourMove() ? (SIM.aim || SIM.hover) : flying ? SIM.act : null;
   if(aimT){
     const r = aimT.rect;
     waterUnis.uLitR.value.set(r[0], r[1], r[2], r[3]);
