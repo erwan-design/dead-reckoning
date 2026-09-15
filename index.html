@@ -3991,14 +3991,18 @@ function debrisFire(at){
    rhythm: sometimes a few heavy pieces lobbed high, sometimes a spray of
    small ones blown flat to one side, the pieces leaving over a beat instead
    of all on the same frame. */
-function debrisPlot(at, pool){
+/* A HIT IS SMALLER THAN A SINKING. A struck square throws a handful of small
+   pieces not far; the blow that sinks a hull throws twice as many, larger,
+   higher and wider — the size of the burst says which it was before the
+   readout does. */
+function debrisPlot(at, pool, big){
   const P = pool || DEB_E, k = P.k, R = Math.random;
-  const count = 7 + Math.floor(R()*10);
-  const power = 0.65 + R()*0.75;
-  const lift = 0.6 + R()*0.8;
-  const la = R()*Math.PI*2, lean = R()*0.75;
+  const count = big ? 20 + Math.floor(R()*8) : 6 + Math.floor(R()*6);
+  const power = big ? 1.15 + R()*0.5 : 0.5 + R()*0.45;
+  const lift = big ? 1.1 + R()*0.5 : 0.45 + R()*0.5;
+  const la = R()*Math.PI*2, lean = R()*(big ? 0.4 : 0.75);
   const lx = Math.cos(la)*lean, lz = Math.sin(la)*lean;
-  const size = 0.7 + R()*0.6;
+  const size = big ? 1.05 + R()*0.35 : 0.5 + R()*0.3;
   for(let n=0; n<count; n++){
     const d = P.items[P.next]; P.next = (P.next + 1) % P.items.length;
     d.m.position.set(at.x + (R()-0.5)*7*k, (6 + R()*5)*k, at.z + (R()-0.5)*7*k);
@@ -4153,6 +4157,17 @@ function updateDebris(dt){
     birth0:0.0, birthSpan:0.16, out:0.42, hold:0.24, rise:0.45,
     drift:[0.30,-0.14], n:70, i:0.34, add:true, dark:0x93b3c0, lit:0xeaf7fb, order:13});
   onBoard(BOARD_ENEMY, FX.eSteam, true);
+  /* the sinking blast over their plot: the same three columns as hers, larger */
+  FX.eBlastCore = smokeColumn({pos:new T.Vector3(0, 10, 0), h:16, size:5.6, spread:6, speed:1.7, once:true, burst:19,
+    birth0:0.0, birthSpan:0.05, out:0.55, hold:0.14, rise:0.40,
+    drift:[0.10,-0.05], n:90, i:0.46, add:true, dark:0xffdcac, lit:0xffffff, warm:0.95, order:16});
+  FX.eBlastBall = smokeColumn({pos:new T.Vector3(0, 10, 0), h:40, size:7.0, spread:8, speed:0.85, once:true, burst:31,
+    birth0:0.0, birthSpan:0.16, out:0.80, hold:0.20, rise:0.52,
+    drift:[0.22,-0.10], n:160, i:0.30, add:true, dark:0xb63407, lit:0xffb457, warm:0.55, order:15});
+  FX.eBlastSmoke = smokeColumn({pos:new T.Vector3(0, 10, 0), h:120, size:8.0, spread:9, speed:0.22, once:true, burst:20,
+    birth0:0.0, birthSpan:0.34, out:0.90, hold:0.24, rise:0.72,
+    drift:[0.34,-0.16], n:150, i:0.32, dark:0x14151f, lit:0xa08e8e, order:12});
+  for(const k of ['eBlastCore', 'eBlastBall', 'eBlastSmoke']) onBoard(BOARD_ENEMY, FX[k], true);
   FX.oHit = [], FX.oSpl = [], EAIR.bombs = [];
   for(let i=0;i<3;i++){
     FX.oSpl.push(smokeColumn({pos:new T.Vector3(0, 1.5, 0), h:50, size:3.4, spread:7, speed:0.30, once:true,
@@ -5732,6 +5747,15 @@ const WRECKS = [];
    and it stays there for the rest of the engagement. The hull is the one of
    her own fleet with the same length, laid over the squares she lay on. */
 const EWRECKS = [];
+/* the blast that sinks one of theirs, at plot scale */
+function plotBlast(at){
+  for(const k of ['eBlastCore', 'eBlastBall', 'eBlastSmoke']){
+    FX[k].material.uniforms.uOrigin.value.set(at.x, 0, at.z);
+    FX[k].material.uniforms.uT0.value = tt;
+  }
+  debrisPlot(at, DEB_E, true);
+  boom(at, 0.30);
+}
 function wreckSource(n){
   if(n >= 4){ const cv = shipNamed('carrier'); return { obj:carrier, body:cv && cv.body, cells:[4, 6, 8, 7], k:1.9 }; }
   const sh = shipNamed(n === 3 ? (EWRECKS.length % 2 ? 'destroyer' : 'cruiser') : (EWRECKS.length % 2 ? 'submarine' : 'escort'))
@@ -5767,7 +5791,7 @@ function wreckReveal(gi, pending){
 }
 function wreckSink(gi){
   const w = EWRECKS.find(v => v.gi === gi);
-  if(w && w.u < 0 && w.wait < 0) w.wait = 0.5;
+  if(w && w.u < 0 && w.wait < 0){ w.wait = 0.5; plotBlast(w.grp.position); }
 }
 function wreckTick(dt){
   for(const w of EWRECKS){
