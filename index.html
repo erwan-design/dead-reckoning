@@ -3932,7 +3932,7 @@ function smokeColumn(o){
 }
 const FX = {};
 let DMGW = [];
-const DEB = { items: [] }, DEB_E = { items: [], next: 0, k: 2.0 };
+const DEB = { items: [] }, DEB_E = { items: [], next: 0, k: 2.0 }, DEB_O = { items: [], next: 0, k: 1.0 };
 {
   const dm = shipMat({kind:'accent', lift:1.1});
   const chunk = r => {
@@ -3958,6 +3958,14 @@ const DEB = { items: [] }, DEB_E = { items: [], next: 0, k: 2.0 };
      plot is read from seven hundred units up, so the pieces are larger and
      thrown further and faster, and they belong to that board alone. Three
      sticks' worth, so a stick of three throws three bursts. */
+  /* AND ON HER OWN BOARD, for a hit that does not sink her: the wreckage of
+     the sinking at its own size, drawn on her board alone, three bursts deep */
+  for(let i=0;i<36;i++){
+    const sc = (0.45 + Math.random()*1.15)*1.15;
+    const m = new T.Mesh(chunk(sc), dm);
+    scene.add(m); onBoard(BOARD_OWN, m, false);
+    DEB_O.items.push({ m, v:new T.Vector3(), w:new T.Vector3(), alive:false });
+  }
   /* lighter plating than her own wreckage: under the plot's night the dark
      pieces were specks against the water */
   const dmE = shipMat({kind:'deck', lift:1.45});
@@ -3978,11 +3986,11 @@ function debrisFire(at){
     d.m.visible = true; d.alive = true;
   }
 }
-/* a burst of a dozen pieces over their plot, at the square that was hit */
-function debrisPlot(at){
-  const k = DEB_E.k;
+/* a burst of a dozen pieces at the square that was hit, over their plot or on her board */
+function debrisPlot(at, pool){
+  const P = pool || DEB_E, k = P.k;
   for(let n=0; n<12; n++){
-    const d = DEB_E.items[DEB_E.next]; DEB_E.next = (DEB_E.next + 1) % DEB_E.items.length;
+    const d = P.items[P.next]; P.next = (P.next + 1) % P.items.length;
     d.m.position.set(at.x + (Math.random()-0.5)*7*k, (7 + Math.random()*4)*k, at.z + (Math.random()-0.5)*7*k);
     d.v.set((Math.random()-0.5)*36*k, (15 + Math.random()*28)*k, (Math.random()-0.5)*36*k);
     d.w.set(Math.random()*9-4.5, Math.random()*9-4.5, Math.random()*9-4.5);
@@ -3998,12 +4006,12 @@ function updateDebris(dt){
     d.m.rotation.x += d.w.x*dt; d.m.rotation.y += d.w.y*dt; d.m.rotation.z += d.w.z*dt;
     if(d.m.position.y < 0.3){ d.alive = false; d.m.visible = false; }
   }
-  for(const d of DEB_E.items){
+  for(const P of [DEB_E, DEB_O]) for(const d of P.items){
     if(!d.alive) continue;
-    d.v.y -= 27.0*DEB_E.k*dt;
+    d.v.y -= 27.0*P.k*dt;
     d.m.position.addScaledVector(d.v, dt);
     d.m.rotation.x += d.w.x*dt; d.m.rotation.y += d.w.y*dt; d.m.rotation.z += d.w.z*dt;
-    if(d.m.position.y < 0.6){ d.alive = false; d.m.userData.want = false; }
+    if(d.m.position.y < 0.6*P.k){ d.alive = false; d.m.userData.want = false; }
   }
 }
 {
@@ -6082,7 +6090,7 @@ function updateFX(dt){
           if(sh) scar(sh, T0, 12.0);
           ANIM.shake = Math.max(ANIM.shake, 0.6);
           boom(T0, 0.34);
-          if(!was && set.size >= own.n){ if(sh) setSink(true, sh); EAIR.sunk = own.name; }
+          if(!was && set.size >= own.n){ if(sh) setSink(true, sh); EAIR.sunk = own.name; } else debrisPlot(T0, DEB_O);
           EAIR.hits++;
         } else {
           if(!SIM.on){
@@ -6161,7 +6169,7 @@ function updateFX(dt){
       ANIM.shake = Math.max(ANIM.shake, 1.0);
       boom(T0, 0.46);
       const gone = set.size >= at.n;
-      if(gone && sh) setSink(true, sh);
+      if(gone && sh) setSink(true, sh); else debrisPlot(T0, DEB_O);
       ETORP.label = 'Torpedo ' + lab + ' \u00b7 ' + (gone ? at.name.toLowerCase() + ' sunk' : 'hit');
       LASTIN = { label: ETORP.label, kind:'hit' };
       refreshUI();
@@ -6214,7 +6222,7 @@ function updateFX(dt){
         ANIM.shake = Math.max(ANIM.shake, 0.7);
         boom(T0, 0.40);
         const gone = set.size >= at.n;
-        if(gone && sh) setSink(true, sh);
+        if(gone && sh) setSink(true, sh); else debrisPlot(T0, DEB_O);
         ESALVO.label = 'Missile ' + lab + ' \u00b7 ' + (gone ? at.name.toLowerCase() + ' sunk' : 'hit');
         LASTIN = { label: ESALVO.label, kind:'hit' };
       } else {
