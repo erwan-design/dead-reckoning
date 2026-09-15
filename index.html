@@ -1602,7 +1602,7 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
           float st = uConS[i];
           float bh = mod(uRadarA - uCon[i].z, 6.2831853);
           float hot = exp(-bh*7.0);
-          float beam = max(hot, exp(-bh/uConTau)*0.72)*uCon[i].w*uRadarI*5.0;
+          float beam = max(hot, exp(-bh/uConTau)*0.80)*uCon[i].w*uRadarI*5.0;
           float k = mix(beam, 0.80 + 0.20*sin(uTime*1.9), st)*uConI*inside;
           vec2 cq = fract(gc), eq = abs(cq - 0.5)*2.0;
           float mq = max(eq.x, eq.y);
@@ -1850,9 +1850,10 @@ const waterUnis = U({
   uConS   :{value:new Array(NCON).fill(0)},
   uConCol :{value:Cs(0xa6ffe6, 1.0)},
   uConI   :{value:0.0},
-  /* how long a struck square lingers after the sweep has passed it: about
-     half a turn of the beam, so it can be read, not just glimpsed */
-  uConTau :{value:2.6},
+  /* how long a struck square lingers after the sweep has passed it: most of
+     a turn of the beam — it fades slowly and is all but gone by the time the
+     sweep comes round to it again */
+  uConTau :{value:4.4},
   uHitCell:{value:new T.Vector3(0, 0, 0)},
   uAimCell:{value:new T.Vector3(0, 0, 0)},
   uCells  :{value:CELLTEX_O},
