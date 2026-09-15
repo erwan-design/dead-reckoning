@@ -4106,7 +4106,7 @@ function debrisFire(at){
    readout does. */
 function debrisPlot(at, pool, big){
   const P = pool || DEB_E, k = P.k, R = Math.random;
-  if(P === DEB_E) ANIM.plotShake = Math.max(ANIM.plotShake, big ? 1.7 : 0.45);
+  if(P === DEB_E) shakeHit(big);
   const count = big ? 20 + Math.floor(R()*8) : 6 + Math.floor(R()*6);
   const power = big ? 1.15 + R()*0.5 : 0.5 + R()*0.45;
   const lift = big ? 1.1 + R()*0.5 : 0.45 + R()*0.5;
@@ -4775,7 +4775,15 @@ function matchReadout(){
 }
 const SINK_DUR = 11.0;
 const SALVO_DUR = 5.6;
-const ANIM = { plotShake:0, flrOut:-1, fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, flrWet:-1, swap:0, env:1, envK:0 };
+/* ONE BLOW SHAKES BOTH SCREENS, AND BY THE SAME MEASURE. A hit up there used to
+   shake only the plot and a hit down here only her board, with two different
+   formulas — a sinking on their plot jumped half the screen while the same
+   sinking on hers barely stirred. Now any hit, on either board, jolts both
+   eyes, each by the same share of its distance to what it is looking at; and
+   a sinking is a heavier, longer version of the same jolt. */
+const SHAKE_HIT = 1.0, SHAKE_SINK = 1.5, SHAKE_K = 0.011;
+function shakeHit(big){ ANIM.shake = Math.max(ANIM.shake, big ? SHAKE_SINK : SHAKE_HIT); }
+const ANIM = { flrOut:-1, fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, flrWet:-1, swap:0, env:1, envK:0 };
 
 function setStrike(on){
   if(on && ANIM.fireGoal < 0.5){ FX.splash.material.uniforms.uT0.value = tt; boom(FIRE, 0.30);
@@ -5868,7 +5876,7 @@ function setSink(on, ship){
   waterUnis.uBlastP.value.set(sh.pos.x, 4, sh.pos.z);
   waterUnis.uSunkR.value.set(sh.cells[0], sh.cells[1], sh.cells[2], sh.cells[3]);
   /* the blow that sinks her shakes the eye far harder than a hit */
-  ANIM.shake = Math.max(ANIM.shake, 1.8);
+  shakeHit(true);
   boom(sh.pos, 0.50); hiss(sh.pos, 0.24, 1900, 380, 1.5, 0.7);
   debrisFire(sh.pos);
 }
@@ -6342,7 +6350,7 @@ function updateFX(dt){
           set.add(own.idx); ownHitNote(own.key);
           const sh = shipNamed(own.key);
           if(sh) scar(sh, T0, 12.0);
-          ANIM.shake = Math.max(ANIM.shake, 0.42);
+          shakeHit(false);
           boom(T0, 0.34);
           if(!was && set.size >= own.n){ if(sh) setSink(true, sh); EAIR.sunk = own.name; } else { debrisPlot(T0, DEB_O); ownFire(T0, own.key); }
           EAIR.hits++;
@@ -6420,7 +6428,7 @@ function updateFX(dt){
       set.add(at.idx); ownHitNote(at.key);
       const sh = shipNamed(at.key);
       if(sh) scar(sh, T0, 16.0);
-      ANIM.shake = Math.max(ANIM.shake, 0.5);
+      shakeHit(false);
       boom(T0, 0.46);
       const gone = set.size >= at.n;
       if(gone && sh) setSink(true, sh); else { debrisPlot(T0, DEB_O); ownFire(T0, at.key); }
@@ -6473,7 +6481,7 @@ function updateFX(dt){
         set.add(at.idx); ownHitNote(at.key);
         const sh = shipNamed(at.key);
         if(sh) scar(sh, T0, 14.0);
-        ANIM.shake = Math.max(ANIM.shake, 0.45);
+        shakeHit(false);
         boom(T0, 0.40);
         const gone = set.size >= at.n;
         if(gone && sh) setSink(true, sh); else { debrisPlot(T0, DEB_O); ownFire(T0, at.key); }
@@ -8423,8 +8431,8 @@ function boardCam(S){
                       _bt.z + Math.cos(S.az)*ce*ds);
   /* THE PLOT TAKES THE BLOW TOO: its fixed eye jolts on a hit up there and
      shakes on a sinking, with the same beat as the eye below */
-  if(ANIM.plotShake > 0.0015){
-    const sk = ANIM.plotShake*ANIM.plotShake, f = tt*41.0, amp = ds*0.012*sk;
+  if(ANIM.shake > 0.0015){
+    const sk = ANIM.shake*ANIM.shake, f = tt*41.0, amp = ds*SHAKE_K*sk;
     camera.position.x += Math.sin(f)*Math.sin(f*0.37)*amp;
     camera.position.z += Math.sin(f*0.87 + 3.1)*Math.sin(f*0.43)*amp;
     _bt.x += Math.sin(f*1.13 + 0.7)*amp*0.75;
@@ -8612,11 +8620,13 @@ function frame(now){
     camera.position.lerpVectors(_orbP, CINE.pos, w);
     tmpT.lerp(CINE.look, w);
   } else camera.position.copy(_orbP);
-  if(ANIM.plotShake > 0.0015) ANIM.plotShake *= Math.exp(-dt*3.6); else ANIM.plotShake = 0;
   if(ANIM.shake > 0.0015){
-    ANIM.shake *= Math.exp(-dt*3.6);
+    ANIM.shake *= Math.exp(-dt*2.6);
+    /* the same share of the eye's distance as the plot's: the orbit's range,
+       or, in the immersive view, how far the eye stands from what it watches */
+    const dRef = ds + (CINE.pos.distanceTo(CINE.look) - ds)*(CINE.w*CINE.w*(3 - 2*CINE.w));
     const sk = ANIM.shake*ANIM.shake, f = tt*41.0,
-          amp = (CINE.w > 0.5 ? 7 : ds*0.016)*sk;
+          amp = dRef*SHAKE_K*sk;
     camera.position.x += Math.sin(f)*Math.sin(f*0.37)*amp;
     camera.position.y += Math.sin(f*1.29 + 1.7)*Math.sin(f*0.31)*amp*0.8;
     camera.position.z += Math.sin(f*0.87 + 3.1)*Math.sin(f*0.43)*amp;
