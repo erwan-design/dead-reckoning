@@ -88,7 +88,7 @@
       background:rgba(236,241,246,.16);box-shadow:0 1px 2px rgba(4,7,13,.7)}
   /* the bar is held at one fixed reading: these screens are shown, not played,
      so the loading state has to survive being looked at */
-  .lbar i{display:block;width:68%;height:100%;border-radius:2px;
+  .lbar i{display:block;width:0;height:100%;border-radius:2px;
       background:linear-gradient(90deg, rgba(157,240,220,.55), rgba(202,249,236,.96));
       box-shadow:0 0 12px rgba(157,240,220,.55)}
   /* THE TITLE IS ONE OBJECT. It belongs to no screen: it stands in front of
@@ -201,7 +201,9 @@
      thing the title screen is for: going in. */
   .load{transition:opacity 600ms ease}
   .load.done{opacity:0;pointer-events:none}
-  .lbar i.fill{transition:width 1700ms cubic-bezier(.3,.6,.2,1)}
+  /* no CSS transition on the fill: it is stepped every frame, and a transition
+     on top made it lag — the bar shrank back from 68% while the figure rose */
+  .lbar i.fill{transition:none}
   #scr-attract .tgo{position:absolute;left:50%;bottom:64px;transform:translate(-50%, 10px);margin:0;
       opacity:0;pointer-events:none;transition:opacity 700ms ease, transform 700ms cubic-bezier(.2,.7,.2,1)}
   #scr-attract .tgo.on{opacity:1;pointer-events:auto;transform:translate(-50%, 0)}
