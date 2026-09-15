@@ -27,11 +27,39 @@ puis http://localhost:4747
 
 | | |
 |---|---|
-| `index.html` | Le jeu. Un seul fichier, three.js depuis un CDN, six écrans accessibles depuis le menu *Screens*. |
+| `index.html` | Le jeu. Un seul fichier, three.js depuis un CDN. Publié, c'est le jeu seul ; en local, c'est l'atelier avec tous les écrans (menu *Screens*). |
 | `design-system.html` | Le langage de l'app — surfaces, encres, les deux camps, contrôles, mouvement. Toute valeur qui y figure est celle qui tourne. |
 | `rules-of-engagement.html` | La logique de jeu v1 : chaque coque est une batterie, un tour en une touche, expliqué sur une partie jouée coup par coup. |
 
 Les trois s'ouvrent directement dans un navigateur, sans build.
+
+## Deux modes, un fichier
+
+**Le jeu publié** — sur `battleship.erwanguillou.me` (ou en local avec `?prod`) :
+Title → Deployment (contre la machine : difficulté, règles, théâtre) → Match → After action.
+Pas de menu *Screens*, pas de *Debug*, pas de bouton de cadrage, pas de split sur
+Deployment et After action. Les écrans Battle (bac à sable) et Capture ne sont pas
+accessibles. En cas de panne (three.js qui ne charge pas, WebGL absent, erreur,
+perte du contexte graphique), un message propose de recharger.
+
+**L'atelier** — partout ailleurs, ou avec `?dev` sur le site publié : tous les écrans,
+le bac à sable Battle, le tiroir Debug.
+
+## Mise en ligne
+
+Le site est servi par **GitHub Pages** depuis la racine de la branche `main`.
+Le fichier `CNAME` porte le domaine, `.nojekyll` sert les fichiers tels quels.
+
+À faire une fois :
+
+1. **DNS** (chez le registrar de `erwanguillou.me`) : un enregistrement `CNAME`
+   `battleship` → `erwan-design.github.io`
+2. **GitHub** → dépôt `dead-reckoning` → *Settings* → *Pages* :
+   *Source* = *Deploy from a branch*, branche `main`, dossier `/ (root)` ;
+   *Custom domain* = `battleship.erwanguillou.me` ; cocher *Enforce HTTPS*
+   (disponible quelques minutes après la vérification du DNS)
+
+Ensuite, chaque push sur `main` met le jeu à jour.
 
 ## Ce qu'il y a dedans
 
