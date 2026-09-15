@@ -7227,10 +7227,11 @@ function simPlan(side, A){
 function simLearn(side, A){
   const S = side === 'us' ? SIM.us : SIM.them, K = S.K, P = A.plan;
   S.moves++;
+  A.newHits = 0;
   for(const [x, z] of P.struck){
     const i = z*10 + x;
     S.shots++;
-    if(simHull(side, x, z)){ if(K[i] < 2) S.hits++; if(K[i] < 2) K[i] = 2; S.last = colLetter(x) + (z + 1); }
+    if(simHull(side, x, z)){ if(K[i] < 2){ S.hits++; A.newHits++; K[i] = 2; } S.last = colLetter(x) + (z + 1); }
     else K[i] = 1;
   }
   for(const [x, z] of P.water) if(K[z*10 + x] === 0) K[z*10 + x] = 1;
@@ -7273,7 +7274,7 @@ function simExec(side, A){
     if(A.kind !== 'fire') SIM.them.cd[A.kind] = 0;
   }
   SIM.force = null;
-  SIM.aim = null; SIM.hover = null; SIM.note = null;
+  SIM.aim = null; SIM.hover = null; SIM.note = null; SIM.replay = false;
   SIM.act = A; SIM.phase = 'fly'; SIM.flyT = 0;
   simUI(); refreshUI();
 }
@@ -7379,14 +7380,21 @@ function simStep(dt){
     simLearn(SIM.side, SIM.act);
     const S = SIM.side === 'us' ? SIM.us : SIM.them;
     if(!S.left.length){ simEnd(SIM.side === 'us'); return; }
-    if(SIM.side === 'them'){
-      /* both have moved: a turn has passed, and every battery takes its notch */
-      for(const k in SIM.them.cd) SIM.them.cd[k]++;
-      for(const k in CD){ const c = CD[k]; if(c.t < c.n) c.t++; }
-      SIM.turnN++; MATCH.turn = SIM.turnN; MATCH.dirty = true;
+    /* A HIT PLAYS AGAIN. Whoever finds a hull — a new square of one, by any
+       weapon — keeps the move, and keeps it for as long as the hits keep
+       coming; a move that finds only water, or a star shell that finds
+       nothing to strike, hands it over. */
+    SIM.replay = SIM.act.newHits > 0;
+    if(!SIM.replay){
+      if(SIM.side === 'them'){
+        /* both have moved: a turn has passed, and every battery takes its notch */
+        for(const k in SIM.them.cd) SIM.them.cd[k]++;
+        for(const k in CD){ const c = CD[k]; if(c.t < c.n) c.t++; }
+        SIM.turnN++; MATCH.turn = SIM.turnN; MATCH.dirty = true;
+      }
+      SIM.side = SIM.side === 'us' ? 'them' : 'us';
     }
-    SIM.side = SIM.side === 'us' ? 'them' : 'us';
-    SIM.phase = 'think'; SIM.wait = 1.4;
+    SIM.phase = 'think'; SIM.wait = SIM.replay ? 1.0 : 1.4;
     simUI(); refreshUI();
   }
 }
@@ -7428,14 +7436,14 @@ function simUI(){
   /* the short form: the bar sits between the drawers and the rail */
   else if(simYourMove()){
     const w = KIND_NAME[SIM.weapon];
-    say = 'T' + pad(SIM.turnN) + ' · <b>Your move</b> · '
+    say = 'T' + pad(SIM.turnN) + ' · <b>' + (SIM.replay ? 'Hit · again' : 'Your move') + '</b> · '
         + (SIM.note ? SIM.note
            : SIM.weapon === 'cat' ? w + ' ' + (SIM.catCross ? 'across' : 'down') + ' · tap a square · press again to turn'
            : SIM.weapon === 'tor' ? w + ' · tap the column to fire'
            : SIM.weapon === 'flare' ? w + ' · tap the centre square'
            : w + ' · tap a square to fire');
   } else {
-    const who = SIM.side === 'us' ? '<b>You</b>' : '<b class="them">Enemy</b>';
+    const who = SIM.side === 'us' ? '<b>You</b>' : '<b class="them">Enemy' + (SIM.replay && SIM.phase === 'think' ? ' · hit · again' : '') + '</b>';
     const what = SIM.phase === 'fly' && SIM.act ? ' · ' + KIND_NAME[SIM.act.kind] : '';
     say = 'T' + pad(SIM.turnN) + ' · ' + who + what;
   }
@@ -7533,7 +7541,7 @@ function simNew(){
   for(const k in CD) CD[k].t = 0;
   SIM.us = simKnow(); SIM.them = simKnow();
   SIM.side = 'us'; SIM.phase = 'think'; SIM.wait = 2.2; SIM.act = null;
-  SIM.turnN = 1; SIM.over = false; SIM.won = false; SIM.overData = null; SIM.step = false;
+  SIM.turnN = 1; SIM.over = false; SIM.won = false; SIM.overData = null; SIM.step = false; SIM.replay = false;
   simUI(); refreshUI();
 }
 /* leaving the match holds it where it stands; the sandbox screens undo it */
