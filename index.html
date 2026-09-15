@@ -155,8 +155,10 @@
   .go i{font-style:normal;opacity:.7}
 
   /* setup: one decision, made on a card */
-  #scr-setup{display:flex;flex-direction:column;align-items:center;justify-content:center;
-      padding:208px 26px 0}
+  /* the card hangs from a fixed line under the title rather than being centred:
+     centred, every row added to it pushed its top up into the title */
+  #scr-setup{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+      padding:398px 26px 0;box-sizing:border-box}
   .card{width:min(520px,calc(100vw - 48px));box-sizing:border-box;
       padding:30px 30px 28px;border-radius:24px;
       background:rgba(9,13,22,.56);
@@ -1138,6 +1140,11 @@
 
     <div class="cond" data-g="cond"></div>
 
+    <div class="ghd"><h6>Theatre evolution</h6><span data-g="evo"></span></div>
+    <div class="opts c2" data-g="evos">
+      <button data-evo="0"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 7h9.2"/><circle cx="7" cy="7" r="1.6"/></svg>Fixed</button>
+      <button data-evo="1"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.3 5.2A4.6 4.6 0 0 0 2.8 5.6"/><path d="M2.4 3.4v2.4h2.4"/><path d="M2.7 8.8a4.6 4.6 0 0 0 8.5.4"/><path d="M11.6 10.6V8.2H9.2"/></svg>Evolving</button>
+    </div>
   </div>
   <button class="go prim" data-scr="match">Begin engagement <i>&#8594;</i></button>
   <div class="note" id="gonote">Prototype &middot; the three screens stand alone</div>
@@ -4097,6 +4104,7 @@ function debrisFire(at){
    readout does. */
 function debrisPlot(at, pool, big){
   const P = pool || DEB_E, k = P.k, R = Math.random;
+  if(P === DEB_E) ANIM.plotShake = Math.max(ANIM.plotShake, big ? 1.35 : 0.45);
   const count = big ? 20 + Math.floor(R()*8) : 6 + Math.floor(R()*6);
   const power = big ? 1.15 + R()*0.5 : 0.5 + R()*0.45;
   const lift = big ? 1.1 + R()*0.5 : 0.45 + R()*0.5;
@@ -4723,7 +4731,7 @@ function matchReadout(){
 }
 const SINK_DUR = 11.0;
 const SALVO_DUR = 5.6;
-const ANIM = { flrOut:-1, fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, flrWet:-1, swap:0, env:1, envK:0 };
+const ANIM = { plotShake:0, flrOut:-1, fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, flrWet:-1, swap:0, env:1, envK:0 };
 
 function setStrike(on){
   if(on && ANIM.fireGoal < 0.5){ FX.splash.material.uniforms.uT0.value = tt; boom(FIRE, 0.30);
@@ -4951,7 +4959,9 @@ function enemyAirStrike(){
   if(sd.dot(_ea1.subVectors(EAIR.mid, ctr)) < 0) sd.negate();
   /* high enough to see over the hulls between it and the stick */
   EAIR.vant.copy(EAIR.cellP[2]).addScaledVector(EAIR.travel, 150).addScaledVector(sd, 75).setY(68);
-  EAIR.camOn = EAIR.tRel[0] - 1.9;
+  /* the eye goes in as the aircraft comes onto her board, not a moment before
+     the bombs: watched from the start, the run in is the shot */
+  EAIR.camOn = EA_IN - 0.25;
   EAIR.camOff = EAIR.tLand[2] + 1.8;
   EAIR.done = [false, false, false]; EAIR.hits = 0; EAIR.sunk = null; EAIR.aim = -1; EAIR.label = '';
   for(const b of EAIR.bombs) b.userData.want = false;
@@ -5813,7 +5823,8 @@ function setSink(on, ship){
     FX[k].material.uniforms.uT0.value = tt;
   waterUnis.uBlastP.value.set(sh.pos.x, 4, sh.pos.z);
   waterUnis.uSunkR.value.set(sh.cells[0], sh.cells[1], sh.cells[2], sh.cells[3]);
-  ANIM.shake = 1.0;
+  /* the blow that sinks her shakes the eye far harder than a hit */
+  ANIM.shake = Math.max(ANIM.shake, 1.45);
   boom(sh.pos, 0.50); hiss(sh.pos, 0.24, 1900, 380, 1.5, 0.7);
   debrisFire(sh.pos);
 }
@@ -6287,7 +6298,7 @@ function updateFX(dt){
           set.add(own.idx); ownHitNote(own.key);
           const sh = shipNamed(own.key);
           if(sh) scar(sh, T0, 12.0);
-          ANIM.shake = Math.max(ANIM.shake, 0.6);
+          ANIM.shake = Math.max(ANIM.shake, 0.42);
           boom(T0, 0.34);
           if(!was && set.size >= own.n){ if(sh) setSink(true, sh); EAIR.sunk = own.name; } else { debrisPlot(T0, DEB_O); ownFire(T0, own.key); }
           EAIR.hits++;
@@ -6365,7 +6376,7 @@ function updateFX(dt){
       set.add(at.idx); ownHitNote(at.key);
       const sh = shipNamed(at.key);
       if(sh) scar(sh, T0, 16.0);
-      ANIM.shake = Math.max(ANIM.shake, 1.0);
+      ANIM.shake = Math.max(ANIM.shake, 0.5);
       boom(T0, 0.46);
       const gone = set.size >= at.n;
       if(gone && sh) setSink(true, sh); else { debrisPlot(T0, DEB_O); ownFire(T0, at.key); }
@@ -6418,7 +6429,7 @@ function updateFX(dt){
         set.add(at.idx); ownHitNote(at.key);
         const sh = shipNamed(at.key);
         if(sh) scar(sh, T0, 14.0);
-        ANIM.shake = Math.max(ANIM.shake, 0.7);
+        ANIM.shake = Math.max(ANIM.shake, 0.45);
         boom(T0, 0.40);
         const gone = set.size >= at.n;
         if(gone && sh) setSink(true, sh); else { debrisPlot(T0, DEB_O); ownFire(T0, at.key); }
@@ -7103,7 +7114,7 @@ function onCtl(e){
   if(b.dataset.era !== undefined){ setEra(+b.dataset.era); refreshUI(); hideHint(); return; }
   if(b.dataset.e !== undefined){
     closePops();
-    ANIM.env = +b.dataset.e;
+    ANIM.env = +b.dataset.e; SETUP.th = ANIM.env;
     /* picking a theatre picks its hour too; the slider takes over again the
        moment it is touched */
     ANIM.hour = -1;
@@ -7193,7 +7204,8 @@ const SCR = { attract: document.getElementById('scr-attract'),
 /* Only the machine exists. The other two are drawn and marked unavailable
    rather than left out: the choice is part of the design, and a control that
    pretends to work is the thing this card just stopped doing with the weather. */
-const SETUP = { md:1, op:0, lv:1 };
+const SETUP = { md:1, op:0, lv:1, evo:0, th:1 };
+const EVON = ['Fixed &middot; one theatre', 'Evolving &middot; morning, squall, storm'];
 const LVN = ['Cadet &middot; fires blind', 'Officer &middot; plays the odds', 'Admiral &middot; reads the plot'];
 const OPPN = ['Machine &middot; it works the plot itself',
               'Friend &middot; one tablet, turn about',
@@ -7222,6 +7234,8 @@ function setupUI(){
       b.classList.toggle('on', +b.dataset.md === SETUP.md);
     for(const b of root.querySelectorAll('[data-lv]'))
       b.classList.toggle('on', +b.dataset.lv === SETUP.lv);
+    for(const b of root.querySelectorAll('[data-evo]'))
+      b.classList.toggle('on', +b.dataset.evo === SETUP.evo);
     for(const b of root.querySelectorAll('[data-op]')){
       const i = +b.dataset.op;
       b.classList.toggle('on', i === SETUP.op);
@@ -7233,6 +7247,7 @@ function setupUI(){
     if(g('th'))  g('th').innerHTML  = THN[ANIM.env];
     if(g('md'))  g('md').innerHTML  = MODEN[SETUP.md];
     if(g('lv'))  g('lv').innerHTML  = LVN[SETUP.lv];
+    if(g('evo')) g('evo').innerHTML = EVON[SETUP.evo];
     for(const el of document.querySelectorAll('[data-g="cond"]'))
       el.innerHTML = (ENVS[ANIM.env].cells || [])
         .map(c => '<div><b>' + c[0] + '</b><span>' + c[1] + '</span></div>').join('');
@@ -7304,6 +7319,7 @@ function setupCtl(b){
   if(d.op   !== undefined){ if(!OPP_OK[+d.op]) return true;
     SETUP.op = +d.op; setupUI(); return true; }
   if(d.lv   !== undefined){ SETUP.lv = +d.lv; setupUI(); return true; }
+  if(d.evo  !== undefined){ SETUP.evo = +d.evo; setupUI(); return true; }
   if(d.fake !== undefined){ fakeGo(b); return true; }
   return false;
 }
@@ -7672,12 +7688,23 @@ function simStep(dt){
         for(const k in SIM.them.cd) SIM.them.cd[k]++;
         for(const k in CD){ const c = CD[k]; if(c.t < c.n) c.t++; }
         SIM.turnN++; MATCH.turn = SIM.turnN; MATCH.dirty = true;
+      /* THE THEATRE EVOLVES: every few turns the weather turns to another of
+         morning, squall and storm, cross-fading as it does */
+      if(SETUP.evo && SIM.turnN >= SIM.nextWx) simWeather();
       }
       SIM.side = SIM.side === 'us' ? 'them' : 'us';
     }
     SIM.phase = 'think'; SIM.wait = SIM.replay ? 1.0 : 1.4;
     simUI(); refreshUI();
   }
+}
+const WX_POOL = [0, 1, 3];
+function simWeather(){
+  const pool = WX_POOL.filter(e => e !== ANIM.env);
+  ANIM.env = pool[Math.floor(Math.random()*pool.length)];
+  ANIM.hour = -1;
+  SIM.nextWx = SIM.turnN + 2 + Math.floor(Math.random()*3);
+  refreshUI();
 }
 function simEnd(won, now){
   SIM.over = true; SIM.won = won; ANIM.won = won;
@@ -7776,6 +7803,8 @@ function sandboxSnap(){
 }
 function sandboxRestore(){
   const Z = SIM.snap;
+  /* back to the theatre the orders chose, if the weather wandered off it */
+  if(SETUP.th !== undefined && ANIM.env !== SETUP.th){ ANIM.env = SETUP.th; ANIM.hour = -1; }
   SIM.on = false; SIM.dirty = false; SIM.overData = null;
   simHalt();
   wreckClear(); firesOut();
@@ -7802,6 +7831,10 @@ function simStart(){
   simNew();
 }
 function simNew(){
+  /* every match starts in the theatre the orders chose, wherever the weather
+     of the last one had wandered to */
+  if(SETUP.th !== undefined && ANIM.env !== SETUP.th){ ANIM.env = SETUP.th; ANIM.hour = -1; }
+  SIM.nextWx = 3 + Math.floor(Math.random()*2);
   SIM.dirty = true; SIM.on = true;
   simHalt();
   wreckClear(); firesOut();
@@ -8340,6 +8373,15 @@ function boardCam(S){
   camera.position.set(_bt.x + Math.sin(S.az)*ce*ds,
                       _bt.y + Math.sin(S.el)*ds,
                       _bt.z + Math.cos(S.az)*ce*ds);
+  /* THE PLOT TAKES THE BLOW TOO: its fixed eye jolts on a hit up there and
+     shakes on a sinking, with the same beat as the eye below */
+  if(ANIM.plotShake > 0.0015){
+    const sk = ANIM.plotShake*ANIM.plotShake, f = tt*41.0, amp = ds*0.012*sk;
+    camera.position.x += Math.sin(f)*Math.sin(f*0.37)*amp;
+    camera.position.z += Math.sin(f*0.87 + 3.1)*Math.sin(f*0.43)*amp;
+    _bt.x += Math.sin(f*1.13 + 0.7)*amp*0.75;
+    _bt.z += Math.sin(f*0.97 + 2.4)*amp*0.75;
+  }
   camera.position.y = Math.max(camera.position.y, 7.5);
   _bt.y += 26*Math.min(ds/AD.camDist, 1.15);
   camera.lookAt(_bt);
@@ -8522,6 +8564,7 @@ function frame(now){
     camera.position.lerpVectors(_orbP, CINE.pos, w);
     tmpT.lerp(CINE.look, w);
   } else camera.position.copy(_orbP);
+  if(ANIM.plotShake > 0.0015) ANIM.plotShake *= Math.exp(-dt*3.6); else ANIM.plotShake = 0;
   if(ANIM.shake > 0.0015){
     ANIM.shake *= Math.exp(-dt*3.6);
     const sk = ANIM.shake*ANIM.shake, f = tt*41.0,
