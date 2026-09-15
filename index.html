@@ -3932,7 +3932,7 @@ function smokeColumn(o){
 }
 const FX = {};
 let DMGW = [];
-const DEB = { items: [] };
+const DEB = { items: [] }, DEB_E = { items: [], next: 0, k: 2.0 };
 {
   const dm = shipMat({kind:'accent', lift:1.1});
   const chunk = r => {
@@ -3954,6 +3954,19 @@ const DEB = { items: [] };
     m.visible = false; scene.add(m);
     DEB.items.push({ m, v:new T.Vector3(), w:new T.Vector3(), alive:false });
   }
+  /* THE SAME WRECKAGE OVER THEIR PLOT, for a hit that does not sink her: the
+     plot is read from seven hundred units up, so the pieces are larger and
+     thrown further and faster, and they belong to that board alone. Three
+     sticks' worth, so a stick of three throws three bursts. */
+  /* lighter plating than her own wreckage: under the plot's night the dark
+     pieces were specks against the water */
+  const dmE = shipMat({kind:'deck', lift:1.45});
+  for(let i=0;i<36;i++){
+    const sc = (0.45 + Math.random()*1.15)*3.4;
+    const m = new T.Mesh(chunk(sc), dmE);
+    scene.add(m); onBoard(BOARD_ENEMY, m, false);
+    DEB_E.items.push({ m, v:new T.Vector3(), w:new T.Vector3(), alive:false });
+  }
 }
 function debrisFire(at){
   const c = at || ESC.pos;
@@ -3965,6 +3978,18 @@ function debrisFire(at){
     d.m.visible = true; d.alive = true;
   }
 }
+/* a burst of a dozen pieces over their plot, at the square that was hit */
+function debrisPlot(at){
+  const k = DEB_E.k;
+  for(let n=0; n<12; n++){
+    const d = DEB_E.items[DEB_E.next]; DEB_E.next = (DEB_E.next + 1) % DEB_E.items.length;
+    d.m.position.set(at.x + (Math.random()-0.5)*7*k, (7 + Math.random()*4)*k, at.z + (Math.random()-0.5)*7*k);
+    d.v.set((Math.random()-0.5)*36*k, (15 + Math.random()*28)*k, (Math.random()-0.5)*36*k);
+    d.w.set(Math.random()*9-4.5, Math.random()*9-4.5, Math.random()*9-4.5);
+    d.m.rotation.set(Math.random()*6.3, Math.random()*6.3, Math.random()*6.3);
+    d.m.userData.want = true; d.alive = true;
+  }
+}
 function updateDebris(dt){
   for(const d of DEB.items){
     if(!d.alive) continue;
@@ -3972,6 +3997,13 @@ function updateDebris(dt){
     d.m.position.addScaledVector(d.v, dt);
     d.m.rotation.x += d.w.x*dt; d.m.rotation.y += d.w.y*dt; d.m.rotation.z += d.w.z*dt;
     if(d.m.position.y < 0.3){ d.alive = false; d.m.visible = false; }
+  }
+  for(const d of DEB_E.items){
+    if(!d.alive) continue;
+    d.v.y -= 27.0*DEB_E.k*dt;
+    d.m.position.addScaledVector(d.v, dt);
+    d.m.rotation.x += d.w.x*dt; d.m.rotation.y += d.w.y*dt; d.m.rotation.z += d.w.z*dt;
+    if(d.m.position.y < 0.6){ d.alive = false; d.m.userData.want = false; }
   }
 }
 {
@@ -5787,7 +5819,7 @@ function updateFX(dt){
         FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
         FX.eSplash.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eSplash.material.uniforms.uT0.value = tt;
         CON_GROUPS[TORP.group].hit[TORP.gcell] = true; pushContacts();
-        if(CON_GROUPS[TORP.group].hit.every(Boolean)) wreckSink(TORP.group);
+        if(CON_GROUPS[TORP.group].hit.every(Boolean)) wreckSink(TORP.group); else debrisPlot(T0);
         boom(T0, 0.44);
         noteShot('Torpedo ' + colLetter(TORP.cell[0]) + (TORP.cell[1] + 1) + ' \u00b7 hit', 'hit');
       } else {
@@ -5888,7 +5920,7 @@ function updateFX(dt){
           if(h){
             FX.sHit[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.sHit[i].material.uniforms.uT0.value = tt;
             CON_GROUPS[h[0]].hit[h[1]] = true; pushContacts();
-            if(CON_GROUPS[h[0]].hit.every(Boolean)) wreckSink(h[0]);
+            if(CON_GROUPS[h[0]].hit.every(Boolean)) wreckSink(h[0]); else debrisPlot(T0);
             boom(T0, 0.26);
           } else if(!SIM.on){
             let k = -1;
@@ -5960,7 +5992,7 @@ function updateFX(dt){
       if(SALVO.hit){
         FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
         CON_GROUPS[SALVO.group].hit[SALVO.gcell] = true; pushContacts();
-        if(CON_GROUPS[SALVO.group].hit.every(Boolean)) wreckSink(SALVO.group);
+        if(CON_GROUPS[SALVO.group].hit.every(Boolean)) wreckSink(SALVO.group); else debrisPlot(T0);
         boom(T0, 0.30);
         noteShot('Missile ' + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1) + ' \u00b7 hit', 'hit');
       } else {
