@@ -7082,9 +7082,9 @@ function simExec(side, A){
 }
 /* ------------------------------------------------------------
    PLAYING IT. A weapon is armed on the rail — the missile unless another
-   is chosen and loaded — and the target is picked on their plot: the first
-   tap lays the aim on it (a square, a lane, a stick of three, a block of
-   nine), a second tap on the same aim fires. On a pointer that hovers, the
+   is chosen and loaded — and the target is picked on their plot. The
+   missile fires on the tap; the others lay the aim first (a lane, a stick
+   of three, a block of nine) and fire on a second tap on the same aim. On a pointer that hovers, the
    aim follows it before any tap.
    ------------------------------------------------------------ */
 function simYourMove(){
@@ -7118,14 +7118,17 @@ function simArm(a){
   if(!simYourMove()) return;
   if(a !== 'fire' && CD[a].t < CD[a].n){ SIM.note = KIND_NAME[a] + ' reloading'; simUI(); return; }
   SIM.weapon = a; SIM.note = null;
-  if(SIM.aim){ const T0 = simTarget(a, SIM.aim.gx, SIM.aim.gz); SIM.aim = T0.bad ? null : T0; }
+  if(SIM.aim){ const T0 = simTarget(a, SIM.aim.gx, SIM.aim.gz); SIM.aim = (T0.bad || a === 'fire') ? null : T0; }
   simUI(); refreshUI();
 }
 function simTap(gx, gz){
   if(!simYourMove()) return;
   const T0 = simTarget(SIM.weapon, gx, gz);
   if(T0.bad){ SIM.aim = null; SIM.note = 'Already fired on ' + T0.label; simUI(); return; }
-  if(SIM.aim && SIM.aim.key === T0.key){ simExec('us', SIM.aim); return; }
+  /* THE MISSILE GOES ON ONE TAP. It is the shot of every turn and covers one
+     square, so there is nothing to check before it leaves; the weapons that
+     cover a lane, a stick or a block keep the aim-then-fire */
+  if(SIM.weapon === 'fire' || (SIM.aim && SIM.aim.key === T0.key)){ simExec('us', SIM.weapon === 'fire' ? T0 : SIM.aim); return; }
   SIM.aim = T0; SIM.note = null;
   simUI(); refreshUI();
 }
@@ -7211,7 +7214,7 @@ function simUI(){
     say = 'T' + pad(SIM.turnN) + ' · <b>Your move</b> · '
         + (SIM.note ? SIM.note
            : SIM.aim ? w + ' ' + SIM.aim.label + ' · tap again to fire'
-           : w + ' · tap their plot');
+           : SIM.weapon === 'fire' ? w + ' · tap a square to fire' : w + ' · tap their plot');
   } else {
     const who = SIM.side === 'us' ? '<b>You</b>' : '<b class="them">Enemy</b>';
     const what = SIM.phase === 'fly' && SIM.act ? ' · ' + KIND_NAME[SIM.act.kind] : '';
