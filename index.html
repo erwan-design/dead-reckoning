@@ -4162,6 +4162,39 @@ for(const k of ['blastCore', 'blastBall', 'blastSmoke', 'sinkSmoke', 'sinkSplash
   onBoard(BOARD_OWN, FX[k], true);
 for(const w of DMGW) onBoard(BOARD_OWN, w, true);
 for(const d of DEB.items) onBoard(BOARD_OWN, d.m, false);
+/* HER HITS BURN. A square of hers that is struck and still afloat catches
+   fire the way the cruiser does in the staged battle — a column of smoke and a
+   glow at its foot — and burns until the hull is sunk. A pool, because a
+   match leaves several burning at once; lighter columns than the cruiser's. */
+const FIRES = [];
+for(let i=0;i<10;i++){
+  const smoke = smokeColumn({pos:new T.Vector3(0, 3, 0), h:128, size:5.2, spread:2.6, speed:0.022,
+    drift:[0.34,-0.14], n:84, i:0.0, dark:0x171827, lit:0xcaa7a6, order:12});
+  const glow = smokeColumn({pos:new T.Vector3(1, 2.5, -2), h:20, size:3.4, spread:3, speed:0.13,
+    drift:[0.26,-0.14], n:26, i:0.0, add:true, dark:0x50210c, lit:0xff7a2e, warm:0.55, order:13});
+  onBoard(BOARD_OWN, smoke, true); onBoard(BOARD_OWN, glow, true);
+  FIRES.push({ smoke, glow, key:null, ship:null, k:0, goal:0 });
+}
+function ownFire(at, shipKey){
+  const key = Math.round(at.x) + ',' + Math.round(at.z);
+  if(FIRES.some(f => f.key === key && f.goal > 0)) return;
+  const f = FIRES.find(v => v.goal === 0 && v.k < 0.01) || FIRES.reduce((a, b) => a.k < b.k ? a : b);
+  f.key = key; f.ship = shipKey; f.goal = 1; f.k = Math.max(f.k, 0.25);
+  f.smoke.material.uniforms.uOrigin.value.set(at.x, 0, at.z);
+  f.glow.material.uniforms.uOrigin.value.set(at.x, 0, at.z);
+}
+function firesTick(dt){
+  for(const f of FIRES){
+    /* the fire goes out when she goes down: the sinking has its own smoke */
+    if(f.goal > 0 && f.ship && ownGone(f.ship)) f.goal = 0;
+    f.k += (f.goal - f.k)*(1 - Math.exp(-dt*(f.goal > f.k ? 0.9 : 1.6)));
+    f.smoke.material.uniforms.uI.value = 0.46*f.k;
+    f.glow.material.uniforms.uI.value = 0.52*f.k;
+    if(f.goal === 0 && f.k < 0.01){ f.k = 0; f.key = null; f.ship = null; }
+  }
+}
+function firesOut(){ for(const f of FIRES){ f.goal = 0; f.k = 0; f.key = null; f.ship = null;
+  f.smoke.material.uniforms.uI.value = 0; f.glow.material.uniforms.uI.value = 0; } }
 
 /* ============================================================
    POST — bloom, filmic tonemap, split grade, vignette, grain
@@ -5736,6 +5769,7 @@ function wreckClear(){
 }
 
 function updateFX(dt){
+  firesTick(dt);
   /* fire */
   const kf = 1 - Math.exp(-dt*(ANIM.fireGoal > ANIM.fire ? 0.42 : 0.9));
   ANIM.fire += (ANIM.fireGoal - ANIM.fire)*kf;
@@ -6110,7 +6144,7 @@ function updateFX(dt){
           if(sh) scar(sh, T0, 12.0);
           ANIM.shake = Math.max(ANIM.shake, 0.6);
           boom(T0, 0.34);
-          if(!was && set.size >= own.n){ if(sh) setSink(true, sh); EAIR.sunk = own.name; } else debrisPlot(T0, DEB_O);
+          if(!was && set.size >= own.n){ if(sh) setSink(true, sh); EAIR.sunk = own.name; } else { debrisPlot(T0, DEB_O); ownFire(T0, own.key); }
           EAIR.hits++;
         } else {
           if(!SIM.on){
@@ -6189,7 +6223,7 @@ function updateFX(dt){
       ANIM.shake = Math.max(ANIM.shake, 1.0);
       boom(T0, 0.46);
       const gone = set.size >= at.n;
-      if(gone && sh) setSink(true, sh); else debrisPlot(T0, DEB_O);
+      if(gone && sh) setSink(true, sh); else { debrisPlot(T0, DEB_O); ownFire(T0, at.key); }
       ETORP.label = 'Torpedo ' + lab + ' \u00b7 ' + (gone ? at.name.toLowerCase() + ' sunk' : 'hit');
       LASTIN = { label: ETORP.label, kind:'hit' };
       refreshUI();
@@ -6242,7 +6276,7 @@ function updateFX(dt){
         ANIM.shake = Math.max(ANIM.shake, 0.7);
         boom(T0, 0.40);
         const gone = set.size >= at.n;
-        if(gone && sh) setSink(true, sh); else debrisPlot(T0, DEB_O);
+        if(gone && sh) setSink(true, sh); else { debrisPlot(T0, DEB_O); ownFire(T0, at.key); }
         ESALVO.label = 'Missile ' + lab + ' \u00b7 ' + (gone ? at.name.toLowerCase() + ' sunk' : 'hit');
         LASTIN = { label: ESALVO.label, kind:'hit' };
       } else {
@@ -6982,7 +7016,7 @@ function onCtl(e){
   /* the star shell exists in both eras: a signal rocket is not a modern idea */
   if(a === 'flare'){ if(enemySide) enemyFlare(); else flare(); }
   if(a === 'sink') setSink(ANIM.sink < 0);
-  if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true);
+  if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true); firesOut();
     ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
     EAIR.t = -1; EAIR.aim = -1; for(let i=28;i<31;i++) marks[i].w = 0;
     ANIM.flr = -1; ANIM.flrWet = -1; ANIM.flrOut = -1; FLR.gap = 0; MARKS_E[22].w = 0; FLR.lI = 0; matchReset();
@@ -7556,7 +7590,7 @@ function sandboxRestore(){
   const Z = SIM.snap;
   SIM.on = false; SIM.dirty = false; SIM.overData = null;
   simHalt();
-  wreckClear();
+  wreckClear(); firesOut();
   setSink(false); clearDamage();
   if(!Z) return;
   CON_GROUPS.length = 0; for(const g of Z.groups) CON_GROUPS.push({ cells:g.cells.map(c => c.slice()), hit:g.hit.slice() });
@@ -7582,7 +7616,7 @@ function simStart(){
 function simNew(){
   SIM.dirty = true; SIM.on = true;
   simHalt();
-  wreckClear();
+  wreckClear(); firesOut();
   setSink(false); clearDamage();
   ANIM.fire = 0; ANIM.fireGoal = 0;
   for(const m of marks) m.w = 0;
