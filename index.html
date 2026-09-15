@@ -3983,7 +3983,7 @@ function debrisFire(at){
     d.v.set((Math.random()-0.5)*36, 15 + Math.random()*28, (Math.random()-0.5)*36);
     d.w.set(Math.random()*9-4.5, Math.random()*9-4.5, Math.random()*9-4.5);
     d.m.rotation.set(Math.random()*6.3, Math.random()*6.3, Math.random()*6.3);
-    d.m.visible = true; d.alive = true;
+    d.m.userData.want = true; d.alive = true;
   }
 }
 /* a burst of a dozen pieces at the square that was hit, over their plot or on her board */
@@ -4004,7 +4004,7 @@ function updateDebris(dt){
     d.v.y -= 27.0*dt;
     d.m.position.addScaledVector(d.v, dt);
     d.m.rotation.x += d.w.x*dt; d.m.rotation.y += d.w.y*dt; d.m.rotation.z += d.w.z*dt;
-    if(d.m.position.y < 0.3){ d.alive = false; d.m.visible = false; }
+    if(d.m.position.y < 0.3){ d.alive = false; d.m.userData.want = false; }
   }
   for(const P of [DEB_E, DEB_O]) for(const d of P.items){
     if(!d.alive) continue;
@@ -4154,6 +4154,14 @@ function updateDebris(dt){
 }
 FX.farSmoke = smokeColumn({pos:new T.Vector3(1186, 6, 1432), h:150, size:13, spread:12, speed:0.022,
              drift:[0.34,-0.18], n:26, i:0.30, dark:0x2e2f42, lit:0xc9b0b0, order:9});
+/* HER LOSSES STAY ON HER BOARD. The sinking's blast, splash, steam and smoke,
+   the scars' wisps and the wreckage were drawn on both boards — so a hull of
+   hers going down also burned and smoked on their plot, where nothing of hers
+   has any business being. */
+for(const k of ['blastCore', 'blastBall', 'blastSmoke', 'sinkSmoke', 'sinkSplash', 'sinkSteam', 'splash'])
+  onBoard(BOARD_OWN, FX[k], true);
+for(const w of DMGW) onBoard(BOARD_OWN, w, true);
+for(const d of DEB.items) onBoard(BOARD_OWN, d.m, false);
 
 /* ============================================================
    POST — bloom, filmic tonemap, split grade, vignette, grain
@@ -4443,11 +4451,23 @@ function focusShot(){
   if(beam.x*Math.sin(CAM.az) + beam.z*Math.cos(CAM.az) < 0) beam.negate();
   return { az:Math.atan2(beam.x, beam.z) + 0.38, el:0.20, dist:105 + 24*n, t:new T.Vector3(c.x, -4, c.z) };
 }
+/* CAM 04 IS HER BOARD AS A PLAN. The preset asked for straight down, but the
+   game's elevation limit held it at 66°, so it was never a top view; and it
+   was framed tighter than the plot above. It now looks straight down, pulled
+   back by the same factor as the plot's own plan view, so the two boards read
+   at one scale. The preset itself stays as it is: the plot's camera and every
+   lane on it are built on it. */
+function planShot(){
+  const S4 = shotList()[3];
+  return { az:S4.az, el:1.545, dist:S4.dist*PLOT_BACK, t:S4.t, plan:true };
+}
 function shot(i){
-  const S = (i === 1 && focusShot()) || shotList()[i];
+  const S = (i === 1 && focusShot()) || (i === 3 ? planShot() : shotList()[i]);
   GOAL.az = S.az; GOAL.el = S.el; GOAL.dist = S.dist; GOAL.tgt.copy(S.t);
   ANIM.glide = 3.4; ANIM.shot = i; engaged = true;
-  clampGoal(); refreshUI();
+  clampGoal();
+  if(S.plan) GOAL.el = S.el;
+  refreshUI();
 }
 
 /* ============================================================
@@ -8089,11 +8109,22 @@ function boardCam(S){
    because both were the same sea. A thing now belongs to one: its want says
    whether it is showing at all, and each pass only lets its own board's
    things through. A screen with a single view is her own board. */
+var _ownWater = { held:false, sunk:0, blast:0 };
+function ownWaterBack(){
+  if(!_ownWater.held) return;
+  waterUnis.uSunkI.value = _ownWater.sunk; waterUnis.uBlastI.value = _ownWater.blast; _ownWater.held = false;
+}
 function onBoard(list, o, want){ list.push(o); o.userData.want = !!want; return o; }
 function boardVis(enemy){
   for(let i=0;i<BOARD_OWN.length;i++)   BOARD_OWN[i].visible   = BOARD_OWN[i].userData.want && !enemy;
   for(let i=0;i<BOARD_ENEMY.length;i++) BOARD_ENEMY[i].visible = BOARD_ENEMY[i].userData.want && enemy;
   waterUnis.uMark.value = enemy ? MARKS_E : marks;
+  /* the sunk footprint and the blast ring on the water are her board's too:
+     stood down for the plot's pass, put back once the passes are drawn */
+  if(enemy && !_ownWater.held){
+    _ownWater.held = true; _ownWater.sunk = waterUnis.uSunkI.value; _ownWater.blast = waterUnis.uBlastI.value;
+    waterUnis.uSunkI.value = 0; waterUnis.uBlastI.value = 0;
+  } else if(!enemy && _ownWater.held) ownWaterBack();
   waterUnis.uCells.value = enemy ? CELLTEX_E : CELLTEX_O;
   waterUnis.uCellsI.value = SIM.dirty ? 1 : 0;
   /* the square being aimed at is bracketed on the plot; below, the bracket
@@ -8346,6 +8377,7 @@ function frame(now){
       renderer.render(scene, camera);
     }
     renderer.setScissorTest(false);
+    ownWaterBack();
     renderer.setViewport(0, 0, W, H);
     renderer.setScissor(0, 0, W, H);
     camera.aspect = stage.clientWidth/stage.clientHeight; camera.updateProjectionMatrix();
