@@ -1516,6 +1516,7 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
   uniform vec3  uConCol;
   uniform float uConI, uConTau;
   uniform vec3 uHitCell;
+  uniform vec3 uAimCell;
   uniform sampler2D uCells; uniform float uCellsI;
   uniform vec4 uSunkR; uniform float uSunkI; uniform vec3 uSunkCol;
   varying vec3 vW; varying vec3 vN; varying float vD;
@@ -1681,6 +1682,26 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
         }
       }
 
+      /* THE SQUARE A ROUND IS ON ITS WAY TO. It used to take the struck
+         orange — but orange means a hull has been hit, and nothing has been
+         hit yet. So it wears the beam's own mark instead: the cold bracket and
+         the ping a contact gets when the sweep finds it, pinging on its own
+         clock while the round is in the air. */
+      if(uAimCell.z > 0.002){
+        vec2 ca = gc - uAimCell.xy;
+        if(ca.x > -0.06 && ca.x < 1.06 && ca.y > -0.06 && ca.y < 1.06){
+          vec2 ea = abs(ca - 0.5)*2.0;
+          float ma = max(ea.x, ea.y);
+          float filla = (1.0 - smoothstep(0.26, 1.0, ma))*0.17;
+          float borda = exp(-pow((1.0 - ma)/0.080, 2.0));
+          float cora  = borda*smoothstep(0.28, 0.76, min(ea.x, ea.y));
+          float pha = fract(uTime*1.3), hota = 1.0 - pha;
+          float ra = length(ca - 0.5)*2.0;
+          float pinga = exp(-pow((ra - pha*1.05)/0.17, 2.0))*hota;
+          float ka = uAimCell.z*(0.78 + 0.22*hota);
+          col += uConCol*(filla + cora*2.2 + pinga*1.1)*ka*mix(0.4, 1.0, facing);
+        }
+      }
       float foam = 0.0, stain = 0.0;
       /* A MATCH KEEPS ITS SCORE ON THE SQUARES. The marks above are a handful
          of slots; a whole engagement leaves dozens of misses and every hit, so
@@ -1835,6 +1856,7 @@ const waterUnis = U({
   uConI   :{value:0.0},
   uConTau :{value:1.05},
   uHitCell:{value:new T.Vector3(0, 0, 0)},
+  uAimCell:{value:new T.Vector3(0, 0, 0)},
   uCells  :{value:CELLTEX_O},
   uCellsI :{value:0.0},
   uSunkR  :{value:new T.Vector4(0,0,1,1)},
@@ -4689,11 +4711,15 @@ function torRamp(f){ return (f < TOR_F0 ? f*f/(2*TOR_F0) : f - TOR_F0/2)/(1 - TO
 /* WHICH WAY OUR ROUNDS CROSS THEIR PLOT: lanes run along the axis nearest the
    plan view's own, from the edge nearest her board. Step 0 is the first square
    a torpedo or a strike reaches. */
-function plotAxis(){
+function plotAxis(cross){
   const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
   const o = cellW(5, 5), ex = cellW(6, 5).sub(o), ez = cellW(5, 6).sub(o);
   const dx = back.dot(ex), dz = back.dot(ez);
-  const alongX = Math.abs(dx) > Math.abs(dz), sgn = alongX ? Math.sign(dx) : Math.sign(dz);
+  let alongX = Math.abs(dx) > Math.abs(dz), sgn = alongX ? Math.sign(dx) : Math.sign(dz);
+  /* ACROSS: the other axis of the plot — up the screen becomes across it.
+     The side she comes in from is whichever the plan view leans to, however
+     slightly; never a sign of zero */
+  if(cross){ alongX = !alongX; sgn = (alongX ? dx : dz) >= 0 ? 1 : -1; }
   const sq = (lane, step) => { const k = sgn > 0 ? 9 - step : step; return alongX ? [k, lane] : [lane, k]; };
   return { alongX, sgn, sq };
 }
@@ -5427,10 +5453,8 @@ function hullUnder(gx, gz){
 function pickStrike(){
   const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
   const forced = SIM.force;
-  const o = cellW(5, 5), ex = cellW(6, 5).sub(o), ez = cellW(5, 6).sub(o);
-  const dx = back.dot(ex), dz = back.dot(ez);
-  const alongX = Math.abs(dx) > Math.abs(dz), sgn = alongX ? Math.sign(dx) : Math.sign(dz);
-  const sq = (lane, step) => { const k = sgn > 0 ? 9 - step : step; return alongX ? [k, lane] : [lane, k]; };
+  /* a stick can be laid along the plot or across it */
+  const { alongX, sgn, sq } = plotAxis(!!(forced && forced.cross));
   const shot = shotSquares(), withHull = [], open = [];
   for(let lane=0; lane<10; lane++) for(let s0=0; s0<8; s0++){
     const cells = [sq(lane, s0), sq(lane, s0 + 1), sq(lane, s0 + 2)];
@@ -6920,7 +6944,7 @@ function setupCtl(b){
    ============================================================ */
 const SIM_SIZES = [4, 3, 3, 2, 2];
 const SIM_CDN = { tor:5, cat:4, flare:3 };
-Object.assign(SIM, { human:true, weapon:'fire', aim:null, hover:null, note:null, auto:true, step:false, speed:1, side:'us', phase:'think', wait:0, act:null,
+Object.assign(SIM, { human:true, weapon:'fire', catCross:false, aim:null, hover:null, note:null, auto:true, step:false, speed:1, side:'us', phase:'think', wait:0, act:null,
                      turnN:1, over:false, won:false, us:null, them:null, snap:null, dirty:false, overData:null });
 /* what one side knows of the other's grid: 0 nothing, 1 water, 2 a hit on a
    hull still afloat, 3 a hull that is gone — and which lengths are still out there */
@@ -7053,7 +7077,10 @@ function simChoose(side){
 function simPlan(side, A){
   const ax = side === 'us' ? plotAxis() : ownAxis(), P = { struck:[], water:[], block:null };
   if(A.kind === 'fire') P.struck.push(A.force);
-  if(A.kind === 'cat') for(let k=0;k<3;k++) P.struck.push(ax.sq(A.force.lane, A.force.s0 + k));
+  if(A.kind === 'cat'){
+    const cax = side === 'us' && A.force.cross ? plotAxis(true) : ax;
+    for(let k=0;k<3;k++) P.struck.push(cax.sq(A.force.lane, A.force.s0 + k));
+  }
   if(A.kind === 'tor'){
     for(let step=0; step<10; step++){
       const c = ax.sq(A.force.lane, step);
@@ -7125,9 +7152,10 @@ function simExec(side, A){
 }
 /* ------------------------------------------------------------
    PLAYING IT. A weapon is armed on the rail — the missile unless another
-   is chosen and loaded — and the target is picked on their plot. The
-   missile fires on the tap; the others lay the aim first (a lane, a stick
-   of three, a block of nine) and fire on a second tap on the same aim. On a pointer that hovers, the
+   is chosen and loaded — and one tap on their plot fires it: at the square,
+   down its column, along a stick of three centred on it (pressing the strike
+   again turns the stick), or over the nine around it. A pointer that hovers
+   sees the footprint before it taps. On a pointer that hovers, the
    aim follows it before any tap.
    ------------------------------------------------------------ */
 function simYourMove(){
@@ -7144,12 +7172,13 @@ function simTarget(kind, gx, gz){
     Object.assign(T0, { force:{ lane }, rect: ax.alongX ? [0, gz, 10, gz + 1] : [gx, 0, gx + 1, 10],
                         key:'t' + lane, label: ax.alongX ? 'row ' + (lane + 1) : 'column ' + colLetter(lane) });
   } else if(kind === 'cat'){
-    const lane = ax.alongX ? gz : gx, k = ax.alongX ? gx : gz, step = ax.sgn > 0 ? 9 - k : k;
+    const cross = SIM.catCross, cax = plotAxis(cross);
+    const lane = cax.alongX ? gz : gx, k = cax.alongX ? gx : gz, step = cax.sgn > 0 ? 9 - k : k;
     const s0 = Math.max(0, Math.min(7, step - 1));
-    const cells = [0, 1, 2].map(i => ax.sq(lane, s0 + i));
+    const cells = [0, 1, 2].map(i => cax.sq(lane, s0 + i));
     const xs = cells.map(c => c[0]), zs = cells.map(c => c[1]);
-    Object.assign(T0, { force:{ lane, s0 }, rect:[Math.min(...xs), Math.min(...zs), Math.max(...xs) + 1, Math.max(...zs) + 1],
-                        key:'c' + lane + ',' + s0, label:lab(cells[0][0], cells[0][1]) + '\u2013' + lab(cells[2][0], cells[2][1]) });
+    Object.assign(T0, { force:{ lane, s0, cross }, rect:[Math.min(...xs), Math.min(...zs), Math.max(...xs) + 1, Math.max(...zs) + 1],
+                        key:'c' + lane + ',' + s0 + (cross ? 'x' : ''), label:lab(cells[0][0], cells[0][1]) + '\u2013' + lab(cells[2][0], cells[2][1]) });
   } else {
     const cx = Math.max(1, Math.min(8, gx)), cz = Math.max(1, Math.min(8, gz));
     Object.assign(T0, { force:[cx, cz], rect:[cx - 1, cz - 1, cx + 2, cz + 2], key:'l' + cx + ',' + cz,
@@ -7160,20 +7189,21 @@ function simTarget(kind, gx, gz){
 function simArm(a){
   if(!simYourMove()) return;
   if(a !== 'fire' && CD[a].t < CD[a].n){ SIM.note = KIND_NAME[a] + ' reloading'; simUI(); return; }
+  /* THE STICK TURNS. Pressing the strike again while it is armed lays the
+     three squares the other way: down the screen, then across it */
+  if(a === 'cat' && SIM.weapon === 'cat') SIM.catCross = !SIM.catCross;
   SIM.weapon = a; SIM.note = null;
-  if(SIM.aim){ const T0 = simTarget(a, SIM.aim.gx, SIM.aim.gz); SIM.aim = (T0.bad || a === 'fire') ? null : T0; }
+  SIM.aim = null;
+  if(SIM.hover){ const T0 = simTarget(a, SIM.hover.gx, SIM.hover.gz); SIM.hover = T0.bad ? null : T0; }
   simUI(); refreshUI();
 }
 function simTap(gx, gz){
   if(!simYourMove()) return;
   const T0 = simTarget(SIM.weapon, gx, gz);
   if(T0.bad){ SIM.aim = null; SIM.note = 'Already fired on ' + T0.label; simUI(); return; }
-  /* THE MISSILE GOES ON ONE TAP. It is the shot of every turn and covers one
-     square, so there is nothing to check before it leaves; the weapons that
-     cover a lane, a stick or a block keep the aim-then-fire */
-  if(SIM.weapon === 'fire' || (SIM.aim && SIM.aim.key === T0.key)){ simExec('us', SIM.weapon === 'fire' ? T0 : SIM.aim); return; }
-  SIM.aim = T0; SIM.note = null;
-  simUI(); refreshUI();
+  /* EVERY WEAPON GOES ON ONE TAP. Choosing it on the rail is the decision;
+     a second tap to confirm only slowed the turn down */
+  simExec('us', T0);
 }
 /* WHERE ON THEIR PLOT a point of the screen falls: the plot's half, seen
    through the same fixed plan camera the pass draws it with */
@@ -7256,8 +7286,10 @@ function simUI(){
     const w = KIND_NAME[SIM.weapon];
     say = 'T' + pad(SIM.turnN) + ' · <b>Your move</b> · '
         + (SIM.note ? SIM.note
-           : SIM.aim ? w + ' ' + SIM.aim.label + ' · tap again to fire'
-           : SIM.weapon === 'fire' ? w + ' · tap a square to fire' : w + ' · tap their plot');
+           : SIM.weapon === 'cat' ? w + ' ' + (SIM.catCross ? 'across' : 'down') + ' · tap a square · press again to turn'
+           : SIM.weapon === 'tor' ? w + ' · tap the column to fire'
+           : SIM.weapon === 'flare' ? w + ' · tap the centre square'
+           : w + ' · tap a square to fire');
   } else {
     const who = SIM.side === 'us' ? '<b>You</b>' : '<b class="them">Enemy</b>';
     const what = SIM.phase === 'fly' && SIM.act ? ' · ' + KIND_NAME[SIM.act.kind] : '';
@@ -7869,13 +7901,17 @@ function boardVis(enemy){
   waterUnis.uCellsI.value = SIM.dirty ? 1 : 0;
   /* the square being aimed at is bracketed on the plot; below, the bracket
      is still the burning cruiser's */
-  if(enemy && SALVO.aim > 0.002) waterUnis.uHitCell.value.set(SALVO.cell[0], SALVO.cell[1], SALVO.aim);
-  else if(enemy && TORP.aim > 0.002) waterUnis.uHitCell.value.set(TORP.cell[0], TORP.cell[1], TORP.aim);
-  else if(enemy && STRK.aim >= 0) waterUnis.uHitCell.value.set(STRK.cells[STRK.aim][0], STRK.cells[STRK.aim][1], 0.55 + 0.45*Math.sin(tt*9.0));
-  else if(!enemy && ESALVO.aim > 0.002) waterUnis.uHitCell.value.set(ESALVO.cell[0], ESALVO.cell[1], ESALVO.aim);
-  else if(!enemy && ETORP.aim > 0.002) waterUnis.uHitCell.value.set(ETORP.cell[0], ETORP.cell[1], ETORP.aim);
-  else if(!enemy && EAIR.aim >= 0) waterUnis.uHitCell.value.set(EAIR.cells[EAIR.aim][0], EAIR.cells[EAIR.aim][1], 0.55 + 0.45*Math.sin(tt*9.0));
-  else waterUnis.uHitCell.value.set(OWN_HIT[0], OWN_HIT[1], enemy ? 0 : ANIM.fire);
+  /* the square a round is falling on takes the beam's mark (uAimCell); the
+     struck orange (uHitCell) stays for the hull that is actually burning */
+  const aimC = waterUnis.uAimCell.value;
+  aimC.z = 0;
+  if(enemy && SALVO.aim > 0.002) aimC.set(SALVO.cell[0], SALVO.cell[1], 1);
+  else if(enemy && TORP.aim > 0.002) aimC.set(TORP.cell[0], TORP.cell[1], 1);
+  else if(enemy && STRK.aim >= 0) aimC.set(STRK.cells[STRK.aim][0], STRK.cells[STRK.aim][1], 1);
+  else if(!enemy && ESALVO.aim > 0.002) aimC.set(ESALVO.cell[0], ESALVO.cell[1], 1);
+  else if(!enemy && ETORP.aim > 0.002) aimC.set(ETORP.cell[0], ETORP.cell[1], 1);
+  else if(!enemy && EAIR.aim >= 0) aimC.set(EAIR.cells[EAIR.aim][0], EAIR.cells[EAIR.aim][1], 1);
+  waterUnis.uHitCell.value.set(OWN_HIT[0], OWN_HIT[1], enemy ? 0 : ANIM.fire);
   /* the star shell hangs over their plot: its pool of light and the nine
      squares it reads are drawn there and nowhere else */
   /* theirs over her board, hers over their plot: each board has its own */
@@ -7890,7 +7926,7 @@ function boardVis(enemy){
   if(aimT){
     const r = aimT.rect;
     waterUnis.uLitR.value.set(r[0], r[1], r[2], r[3]);
-    waterUnis.uLitI.value = aimT === SIM.aim ? 2.4 + 0.7*Math.sin(tt*6.0) : 1.1;
+    waterUnis.uLitI.value = aimT === SIM.aim ? 2.4 + 0.7*Math.sin(tt*6.0) : 2.0;
   }
 }
 /* dress the scene for one board or the other, then draw it */
