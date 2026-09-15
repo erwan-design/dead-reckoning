@@ -96,7 +96,7 @@
      screen, then small above the deployment card. Same element, so the move
      is a transition and not a cut. It is centred in both states because an
      alignment cannot be interpolated, and a jump mid-move would show. */
-  #brand{position:absolute;left:0;right:0;top:60px;z-index:9;pointer-events:none;
+  #brand{position:absolute;left:0;right:0;top:132px;z-index:9;pointer-events:none;
       text-align:center;opacity:0;
       transition:top 780ms cubic-bezier(.3,.9,.2,1), opacity 1800ms ease 700ms}
   #brand.in{opacity:1}
@@ -137,7 +137,7 @@
      translation — no size, no tracking, no break to interpolate.
      50% - 343 places its foot 26px over the card: the screen pads itself by
      208 so that title, card and action read as one centred block. */
-  body.s-setup #brand{top:calc(50% - 343px)}
+  body.s-setup #brand{top:calc(50% - 386px)}
   /* every other screen names itself */
   body:not(.s-attract):not(.s-setup) #brand{opacity:0}
   .go{margin-top:30px;appearance:none;cursor:pointer;box-sizing:border-box;
@@ -206,7 +206,7 @@
   /* THE PUBLISHED GAME wears none of the workbench: no screens drawer, no
      debug drawer, no framing button, no result switch, no prototype notes */
   body.prod #nav, body.prod #dbg, body.prod #hint, body.prod #gonote,
-  body.prod #camcap, body.prod #scr-over .bsw, body.prod #simbar [data-sim="new"]{display:none!important}
+  body.prod #scr-over .bsw, body.prod #simbar [data-sim="new"]{display:none!important}
   /* WHEN SOMETHING BREAKS the player is told so, with a way out */
   #fail{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
       padding:24px;background:rgba(5,8,14,.86);
@@ -794,6 +794,9 @@
   #simbar button.go2{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.34)}
   #simbar button[hidden]{display:none}
   body:not(.ipad) #simbar button:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.08)}
+  /* in a match the missile needs no button: it is what fires unless a battery
+     is armed, and pressing an armed battery again puts it away */
+  body.sim #rail .cap:has(#firechip){display:none}
   /* in a match the rail arms a weapon; the target is picked on their plot */
   body.sim #rail .chip.on{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.40);
       background:rgba(157,240,220,.12)}
@@ -1023,7 +1026,7 @@
 <div class="rail in-a" id="rail">
   <!-- the base gun has no cadence: no ring, always ready -->
   <div class="cap">
-    <button class="chip" data-a="fire" data-l="Missile"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 11 11 3"/><path d="M7.2 3H11v3.8"/><path d="M3.1 8.4 5.6 10.9"/></svg></button>
+    <button class="chip" id="firechip" data-a="fire" data-l="Missile"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 11 11 3"/><path d="M7.2 3H11v3.8"/><path d="M3.1 8.4 5.6 10.9"/></svg></button>
   </div>
   <div class="cap">
     <button class="chip" data-a="tor" data-l="Torpedo"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.9 7c0 1-1.6 1.8-3.4 1.8S5.1 8 5.1 7s1.6-1.8 3.4-1.8S11.9 6 11.9 7z"/><path d="M5.1 5.6 3.7 4.4M5.1 8.4 3.7 9.6"/><circle cx="1.9" cy="7" r=".65"/></svg></button>
@@ -1287,12 +1290,12 @@ window.__failShow = function(t, m){
 
 const T = THREE;
 
-/* PUBLISHED OR WORKBENCH. On battleship.erwanguillou.me or its workers.dev address
-   (or with ?prod) the page
+/* PUBLISHED OR WORKBENCH. On battleship.erwanguillou.me (or with ?prod) the page
    is the game: Title → Deployment → Match → After action, and nothing else.
-   Anywhere else it is the workbench with every screen and drawer; ?dev brings
-   the workbench back on the published site. */
-const PROD = (/(^|\.)(erwanguillou\.me|workers\.dev)$/i.test(location.hostname) || /[?&]prod\b/.test(location.search))
+   Anywhere else — the test branch's workers.dev address, a local server — it
+   is the workbench with every screen and drawer; ?dev brings the workbench back
+   on the published site. */
+const PROD = (/^(www\.)?battleship\.erwanguillou\.me$/i.test(location.hostname) || /[?&]prod\b/.test(location.search))
           && !/[?&]dev\b/.test(location.search);
 if(PROD){
   document.body.classList.add('prod');
@@ -7587,9 +7590,13 @@ function simArm(a){
   if(a !== 'fire' && SETUP.md === 0){ SIM.note = 'Traditional rules · guns only'; simUI(); return; }
   if(armLost('us', a)){ SIM.note = KIND_NAME[a] + ' lost · ' + ARM_SHIP[a] + ' sunk'; simUI(); return; }
   if(a !== 'fire' && CD[a].t < CD[a].n){ SIM.note = KIND_NAME[a] + ' reloading'; simUI(); return; }
-  /* THE STICK TURNS. Pressing the strike again while it is armed lays the
-     three squares the other way: down the screen, then across it */
-  if(a === 'cat' && SIM.weapon === 'cat') SIM.catCross = !SIM.catCross;
+  /* PRESS AGAIN. An armed torpedo or star shell pressed again is put away and
+     the missile is back. The strike turns first — down the screen, then across
+     it — and is put away on the third press. */
+  if(a !== 'fire' && SIM.weapon === a){
+    if(a === 'cat' && !SIM.catCross) SIM.catCross = true;
+    else { a = 'fire'; SIM.catCross = false; }
+  } else if(a === 'cat') SIM.catCross = false;
   SIM.weapon = a; SIM.note = null;
   SIM.aim = null;
   if(SIM.hover){ const T0 = simTarget(a, SIM.hover.gx, SIM.hover.gz); SIM.hover = T0.bad ? null : T0; }
@@ -7713,9 +7720,9 @@ function simUI(){
     const w = KIND_NAME[SIM.weapon];
     say = 'T' + pad(SIM.turnN) + ' · <b>' + (SIM.replay ? 'Hit · again' : 'Your move') + '</b> · '
         + (SIM.note ? SIM.note
-           : SIM.weapon === 'cat' ? w + ' ' + (SIM.catCross ? 'across' : 'down') + ' · tap a square · press again to turn'
-           : SIM.weapon === 'tor' ? w + ' · tap the column to fire'
-           : SIM.weapon === 'flare' ? w + ' · tap the centre square'
+           : SIM.weapon === 'cat' ? w + ' ' + (SIM.catCross ? 'across · tap a square · press again for missile' : 'down · tap a square · press again to turn')
+           : SIM.weapon === 'tor' ? w + ' · tap a column · press again for missile'
+           : SIM.weapon === 'flare' ? w + ' · tap the centre · press again for missile'
            : w + ' · tap a square to fire');
   } else {
     const who = SIM.side === 'us' ? '<b>You</b>' : '<b class="them">Enemy' + (SIM.replay && SIM.phase === 'think' ? ' · hit · again' : '') + '</b>';
@@ -7833,7 +7840,10 @@ function titleReady(){
   fill.classList.add('fill'); fill.style.width = '0%';
   const t0 = performance.now();
   const tick = () => {
-    const k = Math.min(1, (performance.now() - t0)/1700), e = 1 - Math.pow(1 - k, 2.2);
+    /* four seconds, and not at an even pace: it hesitates the way a real
+       load does, so the wait reads as work being done */
+    const k = Math.min(1, (performance.now() - t0)/4000);
+    const e = Math.min(1, k < 0.35 ? k*1.45 : k < 0.55 ? 0.5075 + (k - 0.35)*0.35 : 0.5775 + (k - 0.55)*0.94);
     fill.style.width = (e*100).toFixed(1) + '%'; pct.textContent = Math.round(e*100) + '%';
     if(k < 1) requestAnimationFrame(tick);
     else setTimeout(() => { load.classList.add('done'); go.classList.add('on'); }, 250);

@@ -35,33 +35,40 @@ Les trois s'ouvrent directement dans un navigateur, sans build.
 
 ## Deux modes, un fichier
 
-**Le jeu publié** — sur `battleship.erwanguillou.me` (et son adresse `*.workers.dev`),
-ou en local avec `?prod` : Title → Deployment (contre la machine : difficulté, règles,
+**Le jeu publié** — sur `battleship.erwanguillou.me`, ou n'importe où avec `?prod` : Title → Deployment (contre la machine : difficulté, règles,
 théâtre) → Match → After action. Pas de menu *Screens*, pas de *Debug*, pas de bouton
 de cadrage, pas de split sur Deployment et After action. Les écrans Battle (bac à sable)
 et Capture ne sont pas accessibles. En cas de panne (three.js qui ne charge pas, WebGL
 absent, erreur, perte du contexte graphique), un message propose de recharger.
 
-**L'atelier** — partout ailleurs, ou avec `?dev` sur le site publié : tous les écrans,
-le bac à sable Battle, le tiroir Debug.
+**L'atelier** — partout ailleurs (site de test, serveur local), ou avec `?dev` sur le
+site publié : tous les écrans, le bac à sable Battle, le tiroir Debug.
+
+Le mode dépend de l'adresse, pas de la branche : le même `index.html` est le jeu sur le
+domaine et l'atelier sur le site de test.
 
 ## Branches
 
-| | |
-|---|---|
-| `main` | L'atelier. On y travaille et on y pousse librement : rien n'y part en ligne. |
-| `prod` | Ce qui est en ligne sur `battleship.erwanguillou.me`. On n'y pousse que des versions testées. |
+| | | En ligne |
+|---|---|---|
+| `main` | Le travail en cours. On y pousse librement. | nulle part |
+| `test` | La version à essayer, avec les menus *Screens* et *Debug*. | adresse de test Cloudflare (`…workers.dev`) |
+| `prod` | Le jeu publié, sans les outils. | `battleship.erwanguillou.me` |
 
-**Sortir une version** (GitHub Desktop) : *Current branch* → `prod` → *Branch* →
-*Merge into current branch…* → `main` → *Push origin*. Cloudflare redéploie tout seul
-(~1 min). Revenir ensuite sur `main` pour continuer à travailler.
+Le chemin d'une version : `main` → `test` (on essaie en ligne) → `prod` (on publie).
+
+**Passer une version à l'étape suivante** (GitHub Desktop) : *Current branch* → la branche
+d'arrivée (`test` ou `prod`) → *Branch* → *Merge into current branch…* → la branche de
+départ (`main` ou `test`) → *Push origin*. Cloudflare redéploie tout seul (~1 min).
+Revenir ensuite sur `main` pour continuer à travailler.
 
 **Revenir en arrière** : remettre `prod` sur le commit de la version précédente et pousser.
 
 ## Mise en ligne (Cloudflare)
 
 Le jeu est servi par un **Worker Cloudflare en fichiers statiques** (`battleship-duo`),
-relié à ce dépôt : chaque push sur la branche `prod` le redéploie.
+relié à ce dépôt : un push sur `prod` met à jour le site publié, un push sur `test`
+met à jour l'adresse de test.
 
 - `wrangler.toml` — nom du Worker et dossier servi (la racine du dépôt)
 - `.assetsignore` — ce qui n'est **pas** mis en ligne : README, design system, règles,
@@ -72,7 +79,9 @@ Mise en place (une fois), dans le tableau de bord Cloudflare :
 1. *Workers & Pages* → *Create* → importer un dépôt Git → `erwan-design/dead-reckoning`.
    Nom du projet : `battleship-duo` (le même que dans `wrangler.toml`). Pas de commande
    de build ; commande de déploiement : `npx wrangler deploy`.
-2. Le Worker créé → *Settings* → *Build* → *Branch control* : branche de production = `prod`.
+2. Le Worker créé → *Settings* → *Build* → *Branch control* : branche de production = `prod` ;
+   activer les builds des autres branches (*non-production branch builds*), pour que `test`
+   ait son adresse de prévisualisation (visible dans *Deployments*, en `…workers.dev`).
 3. *Settings* → *Domains & Routes* → *Add* → *Custom domain* → `battleship.erwanguillou.me`.
    La zone `erwanguillou.me` est déjà chez Cloudflare : l'enregistrement DNS est créé tout seul.
 
