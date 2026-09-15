@@ -35,31 +35,46 @@ Les trois s'ouvrent directement dans un navigateur, sans build.
 
 ## Deux modes, un fichier
 
-**Le jeu publié** — sur `battleship.erwanguillou.me` (ou en local avec `?prod`) :
-Title → Deployment (contre la machine : difficulté, règles, théâtre) → Match → After action.
-Pas de menu *Screens*, pas de *Debug*, pas de bouton de cadrage, pas de split sur
-Deployment et After action. Les écrans Battle (bac à sable) et Capture ne sont pas
-accessibles. En cas de panne (three.js qui ne charge pas, WebGL absent, erreur,
-perte du contexte graphique), un message propose de recharger.
+**Le jeu publié** — sur `battleship.erwanguillou.me` (et son adresse `*.workers.dev`),
+ou en local avec `?prod` : Title → Deployment (contre la machine : difficulté, règles,
+théâtre) → Match → After action. Pas de menu *Screens*, pas de *Debug*, pas de bouton
+de cadrage, pas de split sur Deployment et After action. Les écrans Battle (bac à sable)
+et Capture ne sont pas accessibles. En cas de panne (three.js qui ne charge pas, WebGL
+absent, erreur, perte du contexte graphique), un message propose de recharger.
 
 **L'atelier** — partout ailleurs, ou avec `?dev` sur le site publié : tous les écrans,
 le bac à sable Battle, le tiroir Debug.
 
-## Mise en ligne
+## Branches
 
-Le site est servi par **GitHub Pages** depuis la racine de la branche `main`.
-Le fichier `CNAME` porte le domaine, `.nojekyll` sert les fichiers tels quels.
+| | |
+|---|---|
+| `main` | L'atelier. On y travaille et on y pousse librement : rien n'y part en ligne. |
+| `prod` | Ce qui est en ligne sur `battleship.erwanguillou.me`. On n'y pousse que des versions testées. |
 
-À faire une fois :
+**Sortir une version** (GitHub Desktop) : *Current branch* → `prod` → *Branch* →
+*Merge into current branch…* → `main` → *Push origin*. Cloudflare redéploie tout seul
+(~1 min). Revenir ensuite sur `main` pour continuer à travailler.
 
-1. **DNS** (chez le registrar de `erwanguillou.me`) : un enregistrement `CNAME`
-   `battleship` → `erwan-design.github.io`
-2. **GitHub** → dépôt `dead-reckoning` → *Settings* → *Pages* :
-   *Source* = *Deploy from a branch*, branche `main`, dossier `/ (root)` ;
-   *Custom domain* = `battleship.erwanguillou.me` ; cocher *Enforce HTTPS*
-   (disponible quelques minutes après la vérification du DNS)
+**Revenir en arrière** : remettre `prod` sur le commit de la version précédente et pousser.
 
-Ensuite, chaque push sur `main` met le jeu à jour.
+## Mise en ligne (Cloudflare)
+
+Le jeu est servi par un **Worker Cloudflare en fichiers statiques** (`battleship-duo`),
+relié à ce dépôt : chaque push sur la branche `prod` le redéploie.
+
+- `wrangler.toml` — nom du Worker et dossier servi (la racine du dépôt)
+- `.assetsignore` — ce qui n'est **pas** mis en ligne : README, design system, règles,
+  maquettes `ui-partie/`, fichiers de configuration
+
+Mise en place (une fois), dans le tableau de bord Cloudflare :
+
+1. *Workers & Pages* → *Create* → importer un dépôt Git → `erwan-design/dead-reckoning`.
+   Nom du projet : `battleship-duo` (le même que dans `wrangler.toml`). Pas de commande
+   de build ; commande de déploiement : `npx wrangler deploy`.
+2. Le Worker créé → *Settings* → *Build* → *Branch control* : branche de production = `prod`.
+3. *Settings* → *Domains & Routes* → *Add* → *Custom domain* → `battleship.erwanguillou.me`.
+   La zone `erwanguillou.me` est déjà chez Cloudflare : l'enregistrement DNS est créé tout seul.
 
 ## Ce qu'il y a dedans
 

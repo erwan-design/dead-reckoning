@@ -1,0 +1,7 @@
+# Battleship Duo — Worker Cloudflare en fichiers statiques.
+# Relié au dépôt GitHub (Workers Builds) : la branche de production est `prod`.
+name = "battleship-duo"
+compatibility_date = "2026-09-01"
+
+[assets]
+directory = "."

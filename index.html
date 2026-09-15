@@ -1287,11 +1287,12 @@ window.__failShow = function(t, m){
 
 const T = THREE;
 
-/* PUBLISHED OR WORKBENCH. On battleship.erwanguillou.me (or with ?prod) the page
+/* PUBLISHED OR WORKBENCH. On battleship.erwanguillou.me or its workers.dev address
+   (or with ?prod) the page
    is the game: Title → Deployment → Match → After action, and nothing else.
    Anywhere else it is the workbench with every screen and drawer; ?dev brings
    the workbench back on the published site. */
-const PROD = (/(^|\.)erwanguillou\.me$/i.test(location.hostname) || /[?&]prod\b/.test(location.search))
+const PROD = (/(^|\.)(erwanguillou\.me|workers\.dev)$/i.test(location.hostname) || /[?&]prod\b/.test(location.search))
           && !/[?&]dev\b/.test(location.search);
 if(PROD){
   document.body.classList.add('prod');

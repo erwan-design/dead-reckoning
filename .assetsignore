@@ -1,0 +1,12 @@
+# Ce qui reste dans le dépôt mais ne part pas en ligne
+.git
+.github
+.claude
+.DS_Store
+.gitignore
+.assetsignore
+wrangler.toml
+README.md
+design-system.html
+rules-of-engagement.html
+ui-partie
