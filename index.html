@@ -8419,7 +8419,13 @@ function frame(now){
        on it but what the beam has found, held on a fixed plan view; below,
        her own formation, on the orbit rig — the board nearest the hand is
        the one the hand moves. */
-    const W = rtScene.width, H = rtScene.height, Hh = Math.floor(H*0.5);
+    /* THE HALVES ARE ASKED FOR IN CSS PIXELS. setViewport and setScissor
+       apply the renderer's pixel ratio themselves, so handing them the
+       target's own pixels applied it twice: on a retina screen each half
+       came out 1.6 times too big, and the seam fell at four fifths of the
+       frame instead of the middle. */
+    const pr = renderer.getPixelRatio();
+    const W = rtScene.width/pr, H = rtScene.height/pr, Hh = H*0.5;
     const asp = W/Hh;
     /* the eye as the loop left it — that is the lower board's */
     _liveP.copy(camera.position); _liveQ.copy(camera.quaternion);
