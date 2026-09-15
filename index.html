@@ -2862,7 +2862,7 @@ const destroyer = new T.Group();
   fleet.add(destroyer); bob(destroyer, 0.92, 0.72, 3.4);
   occ(destroyer, 0,3.4,-40, 0,3.4,44, 6.2, 1.0, 0);
   occ(destroyer, 0,2.0,5, 0,26.5,5, 1.7, 0.92, 1);
-  sinkable('destroyer', destroyer, [0,1], [2,2,3,5]);
+  sinkable('destroyer', destroyer, [0,1], [2,2,3,5]).sinkK = 1.2;
 }
 
 /* ---- 2. carrier : 4 cells, horizontal ---- */
@@ -3068,6 +3068,9 @@ function catBank(a){
   fleet.add(carrier); bob(carrier, 0.72, 0.46, 1.9);
   occ(carrier, 0,9.0,-56, 0,9.0,56, 13.0, 1.0, 2);
   occ(carrier, 10.4,9.0,-7, 10.4,32.0,-6, 3.4, 0.98, 3);
+  /* in a match she can be sunk like any other hull: she goes in the register
+     too, her aircraft and lights riding down with her */
+  sinkable('carrier', carrier, [2, 3], [4, 6, 8, 7]).sinkK = 1.9;
   carrier.updateMatrixWorld(true);
   CAT.world.copy(carrier.localToWorld(new T.Vector3(4.2, 9.4, -4)));
 }
@@ -3107,7 +3110,7 @@ const FIRE = new T.Vector3();
   occ(cruiser, 0,3.6,-40, 0,3.6,42, 6.8, 1.0, 4);
   occ(cruiser, 0,4.0,-2, 26,92.0,-16, 11.0, 0.0, 5);
   FIRE.occs = [OCC[OCC.length-1]];
-  sinkable('cruiser', cruiser, [4], [5,2,8,3]);
+  sinkable('cruiser', cruiser, [4], [5,2,8,3]).sinkK = 1.25;
 }
 
 /* ---- 4. escort : 2 cells, horizontal — the one that goes down ---- */
@@ -3159,7 +3162,7 @@ const sub = new T.Group();
   HIDEABLE.push(sub);
   fleet.add(sub); bob(sub, 0.68, 0.5, 4.0);
   occ(sub, 0,0.4,-28, 0,0.4,28, 3.8, 0.95, 7);
-  sinkable('submarine', sub, [7], [1,7,2,9]);
+  sinkable('submarine', sub, [7], [1,7,2,9]).sinkK = 0.8;
 }
 
 /* ---- 5b. a round in the air : launched from the destroyer ---- */
@@ -4505,6 +4508,7 @@ function setStrike(on){
     scar(shipNamed('cruiser'), FIRE, 15.0); }
   ANIM.fireGoal = on ? 1 : 0;
 }
+const _misFrom = new T.Vector3();
 function launch(){
   matchShot();
   const sail = ANIM.era === 1;
@@ -4516,9 +4520,18 @@ function launch(){
   SALVO.tgt.copy(cellW(c[0] + 0.5, c[1] + 0.5, 1.0));
   SALVO.dirOut.set(-Math.sin(CAM.az), 0, -Math.cos(CAM.az)).normalize();
   const d = SALVO.dirOut;
-  SALVO.P0.copy(MIS.A);
-  SALVO.P1.copy(MIS.A).addScaledVector(d, 150).setY(MIS.A.y + 190);
-  SALVO.P2.copy(MIS.A).addScaledVector(d, 1900).setY(MIS.A.y + 260);
+  /* FROM A HULL STILL AFLOAT. The round leaves from her destroyer; in a match
+     where the destroyer is gone it leaves from the next ship she has left */
+  const A0 = _misFrom.copy(MIS.A);
+  if(SIM.dirty && ownGone('destroyer')){
+    const alive = ['cruiser', 'escort', 'carrier', 'submarine'].find(k => !ownGone(k));
+    const sh = alive && shipNamed(alive);
+    if(sh) A0.set(sh.pos.x, 7.5, sh.pos.z);
+  }
+  FX.launch.material.uniforms.uOrigin.value.set(A0.x - MIS.A.x, 0, A0.z - MIS.A.z);
+  SALVO.P0.copy(A0);
+  SALVO.P1.copy(A0).addScaledVector(d, 150).setY(A0.y + 190);
+  SALVO.P2.copy(A0).addScaledVector(d, 1900).setY(A0.y + 260);
   /* and it comes onto the plot over the edge nearest her own board — the
      bottom of the upper screen — so the two flights read as one */
   const S4 = shotList()[3], back = new T.Vector3(Math.sin(S4.az), 0, Math.cos(S4.az));
@@ -4549,6 +4562,11 @@ const TORP = { cell:[0,0], group:-1, gcell:-1, aim:0, dirOut:new T.Vector3(),
    half a second between the boards, 2.7 s in, then the splash */
 /* out 3.4 s, half a second between the boards, 2.7 s in, then the splash */
 const TOR_HOLD = 0, TOR_OUT = 0.405, TOR_IN = 0.464, TOR_HIT = 0.786, TOR_FOLLOW = 2.3;
+/* ON THEIR PLOT SHE RUNS AT A SPEED, NOT TO A CLOCK. The run in had a fixed
+   2.7 s whatever its length, which on the plan view read as slow motion after
+   the 720 units a second she left her own board at. Now it is a speed, and
+   the hit comes when she gets there. */
+const TOR_IN_V = 330;
 /* A LAUNCH, NOT A START. The tube throws her out on a slug of air: she leaves
    fast, under the surface, loses a little way as she rises to her running
    depth, and only then does her motor take her up to full speed. */
@@ -4582,7 +4600,7 @@ function pickOwnLane(){
     let L = null;
     for(let step=0; step<10 && !L; step++){
       const k = tsg > 0 ? step : 9 - step, gx = alongX ? k : lane, gz = alongX ? lane : k, at = ownShipAt(gx, gz);
-      if(at) L = { gx, gz, at, lane };
+      if(at && !ownGone(at.key)) L = { gx, gz, at, lane };
     }
     const xk = tsg > 0 ? 11.5 : -2.5;
     if(!L) L = { gx:-9, gz:-9, at:null, lane, exitW: alongX ? cellW(xk, lane + 0.5, 0.05) : cellW(lane + 0.5, xk, 0.05) };
@@ -4740,7 +4758,9 @@ function plotAxis(cross){
 }
 function pickTorpedoLane(){
   const { alongX, sgn } = plotAxis();
+  /* a hull already sunk is a wreck she runs past, not a target */
   const hullAt = (gx, gz) => { for(let gi=0; gi<CON_GROUPS.length; gi++){ const g = CON_GROUPS[gi];
+    if(g.hit.every(Boolean)) continue;
     for(let ci=0; ci<g.cells.length; ci++) if(g.cells[ci][0] === gx && g.cells[ci][1] === gz) return [gi, ci]; } return null; };
   if(SIM.force){
     /* a named lane: the first hull in it, or nothing and out the far side */
@@ -4765,6 +4785,8 @@ function pickTorpedoLane(){
       if(h){ lanes.push({gx, gz, gi:h[0], ci:h[1], fresh:!CON_GROUPS[h[0]].hit[h[1]], lane}); break; }
     }
   }
+  /* nothing left afloat in any lane: she runs one empty */
+  if(!lanes.length){ const f = SIM.force; SIM.force = { lane:4 }; const r = pickTorpedoLane(); SIM.force = f; return r; }
   const fresh = lanes.filter(l => l.fresh), pool = fresh.length ? fresh : lanes;
   const L = pool[Math.floor(Math.random()*pool.length)];
   /* where the lane crosses the edge, two squares out */
@@ -4784,6 +4806,8 @@ function torpedo(){
   TORP.C.copy(entry);
   TORP.D.copy(L.gi >= 0 || !L.exitW ? cellW(L.gx + 0.5, L.gz + 0.5, 0.05) : L.exitW);
   TORP.laneLab = L.lab || '';
+  TORP.hitU = Math.min(TOR_HIT, TOR_IN + TORP.C.distanceTo(TORP.D)/TOR_IN_V/TOR_DUR);
+  TORP.endU = Math.min(1, TORP.hitU + 1.9/TOR_DUR);
   const po = [], pi = [];
   for(let i=0;i<=200;i++){ po.push(new T.Vector3().lerpVectors(TORP.A, TORP.B, i/200));
                            pi.push(new T.Vector3().lerpVectors(TORP.C, TORP.D, i/200)); }
@@ -5553,6 +5577,8 @@ function setSink(on, ship){
     for(const w of WRECKS) restoreShip(w.sh); WRECKS.length = 0; return; }
   const sh = ship || shipNamed('escort');
   if(ANIM.sink >= 0 && ANIM.ship === sh) return;
+  /* a hull already on the bottom does not sink twice */
+  if(WRECKS.some(w => w.sh === sh)) return;
   if(SIM.on && ANIM.ship && ANIM.sink >= 0) WRECKS.push({ sh:ANIM.ship, u:ANIM.sink });
   else restoreShip(ANIM.ship);
   ANIM.ship = sh;
@@ -5581,7 +5607,10 @@ function sinkPose(SH2, u){
   else { const a=(u-0.93)/0.07;             roll=1.22+0.06*a;       pitch=0.35;              y=-5.9-0.2*a;       slide=4.4+0.2*a; }
   /* once she is down she still answers the swell, barely */
   if(u > 0.93){ y += Math.sin(tt*0.70)*0.24; roll += Math.sin(tt*0.53)*0.022; }
-  SH2.body.position.set(0, y + 0.4, slide);
+  /* a bigger hull settles deeper and further, or a carrier "sunk" rode as high
+     as an escort afloat */
+  const kk = SH2.sinkK || 1;
+  SH2.body.position.set(0, y*kk + 0.4, slide*kk);
   SH2.body.rotation.set(pitch, 0, roll);
   for(const o of SH2.occ) if(o.i !== 5) o.op = 0.95;
 }
@@ -5597,10 +5626,10 @@ const WRECKS = [];
    her own fleet with the same length, laid over the squares she lay on. */
 const EWRECKS = [];
 function wreckSource(n){
-  if(n >= 4) return { obj:carrier, cells:[4, 6, 8, 7] };
+  if(n >= 4) return { obj:carrier, cells:[4, 6, 8, 7], k:1.9 };
   const sh = shipNamed(n === 3 ? (EWRECKS.length % 2 ? 'destroyer' : 'cruiser') : (EWRECKS.length % 2 ? 'submarine' : 'escort'))
           || shipNamed(n === 3 ? 'cruiser' : 'escort');
-  return sh ? { obj:sh.grp, cells:sh.cells } : null;
+  return sh ? { obj:sh.grp, cells:sh.cells, k:sh.sinkK || 1 } : null;
 }
 function wreckReveal(gi, pending){
   if(!SIM.on || gi < 0 || EWRECKS.some(w => w.gi === gi)) return;
@@ -5620,7 +5649,7 @@ function wreckReveal(gi, pending){
   scene.add(grp);
   onBoard(BOARD_ENEMY, grp, true);
   bob(grp, 0.9, 0.7, 4.2);
-  EWRECKS.push({ gi, grp, body:inner, occ:[], rise:0, wait:-1, u:-1 });
+  EWRECKS.push({ gi, grp, body:inner, occ:[], rise:0, wait:-1, u:-1, sinkK:src.k });
 }
 function wreckSink(gi){
   const w = EWRECKS.find(v => v.gi === gi);
@@ -5733,12 +5762,13 @@ function updateFX(dt){
     if(ts < 1.5){ const k = ts/1.5; marks[14].set(TORP.A.x, TORP.A.z, 3 + 26*Math.sqrt(k), Math.pow(1 - k, 1.6)); }
     else marks[14].w = 0;
     /* IN */
-    const si = Math.max(0, Math.min(1, (u - TOR_IN)/(TOR_HIT - TOR_IN)));
-    const fi = u < TOR_IN ? 0 : u < TOR_HIT ? Math.min(1, (u - TOR_IN)*20) : Math.max(0, 1 - (u - TOR_HIT)/0.22);
+    const HU = TORP.hitU || TOR_HIT, EU = TORP.endU || 1;
+    const si = Math.max(0, Math.min(1, (u - TOR_IN)/(HU - TOR_IN)));
+    const fi = u < TOR_IN ? 0 : u < HU ? Math.min(1, (u - TOR_IN)*20) : Math.max(0, 1 - (u - HU)/0.22);
     for(const t of TOR.trailsIn){ t.material.uniforms.uProg.value = si; t.material.uniforms.uFade.value = fi; }
-    TOR.inb.userData.want = u >= TOR_IN && u < TOR_HIT;
+    TOR.inb.userData.want = u >= TOR_IN && u < HU;
     if(TOR.inb.userData.want) placeRun(TOR.inb, TORP.C, TORP.D, si, 0.45*2.6);
-    TORP.aim = (u >= TOR_IN && u < TOR_HIT) ? 0.55 + 0.45*Math.sin(tt*9.0) : 0;
+    TORP.aim = (u >= TOR_IN && u < HU) ? 0.55 + 0.45*Math.sin(tt*9.0) : 0;
     /* the water parting at her nose, on whichever board she is on */
     /* the bow wave grows with her speed, from nothing: at the tube, seen low
        from her beam, even a faint one lay on the water as a white bar beside
@@ -5746,10 +5776,10 @@ function updateFX(dt){
     /* the bow wave is her speed made visible, and only once she is up at the
        surface to make one */
     const ks = Math.min(1, (TORP.v || 0)/TOR_VMAX)*rise;
-    const wake = u < TOR_OUT ? ks : (u >= TOR_IN && u < TOR_HIT) ? 1 : 0;
+    const wake = u < TOR_OUT ? ks : (u >= TOR_IN && u < HU) ? 1 : 0;
     TOR.bow.material.uniforms.uI.value = wake*(0.82 + 0.10*Math.sin(tt*11.0));
-    if(u >= TOR_IN && u < TOR_HIT && TORP.group >= 0) wreckReveal(TORP.group, [TORP.gcell]);
-    if(u >= TOR_HIT && !ANIM.torHit){
+    if(u >= TOR_IN && u < HU && TORP.group >= 0) wreckReveal(TORP.group, [TORP.gcell]);
+    if(u >= HU && !ANIM.torHit){
       ANIM.torHit = true;
       const T0 = TORP.D;
       if(TORP.group >= 0){
@@ -5767,11 +5797,11 @@ function updateFX(dt){
       }
       refreshUI();
     }
-    if(u >= TOR_HIT && TORP.group >= 0){
-      const a = Math.min(1, (u - TOR_HIT)/(1 - TOR_HIT));
+    if(u >= HU && TORP.group >= 0){
+      const a = Math.min(1, (u - HU)/(EU - HU));
       MARKS_E[26].set(TORP.D.x, TORP.D.z, 9 + 42*a, (1-a)*(1-a));
     }
-    if(u >= 1){ ANIM.tor = -1; MARKS_E[26].w = 0; refreshUI(); }
+    if(u >= EU){ ANIM.tor = -1; MARKS_E[26].w = 0; refreshUI(); }
   } else {
     TOR.grp.userData.want = false; TOR.inb.userData.want = false; TORP.aim = 0; marks[14].w = 0;
     for(const t of TOR.trails.concat(TOR.trailsIn)) t.material.uniforms.uFade.value = 0;
@@ -6645,6 +6675,18 @@ function plotReadout(){
   }).join('');
 
 
+  /* IN A MATCH A CONTACT IS A SQUARE, NOT A SHIP. Grouping the hits and drawing
+     each group's hull gave away how long she was — and which hits were the
+     same ship — before she was sunk. So the panel lists the struck squares on
+     hulls still afloat, and nothing more. */
+  if(SIM.dirty){
+    const refs = [];
+    for(const g of CON_GROUPS){ if(g.hit.every(Boolean)) continue;
+      g.cells.forEach((c, i) => { if(g.hit[i]) refs.push([c[0], c[1]]); }); }
+    refs.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+    rHulls.innerHTML = '<h6>Contacts</h6><div class="cr">'
+      + (refs.length ? refs.map(r => colLetter(r[0]) + (r[1] + 1)).join(' ') : '\u2014') + '</div>';
+  }
   /* WHAT IS LEFT TO FIND: the length of every hull of theirs still afloat —
      the one thing that decides where the next round should go */
   const afloat = CON_GROUPS.filter(g => !g.hit.every(Boolean)).map(g => g.cells.length).sort((x, y) => y - x);
@@ -6736,9 +6778,9 @@ function refreshUI(){
        able to fire anything at any moment, cadence or no cadence. */
     /* in a match: the armed weapon is lit, and nothing is while it is not her move */
     if(SIM.on && b.closest('#rail') && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare')){
-      const mine = simYourMove();
-      b.classList.toggle('on', mine && SIM.weapon === a);
-      b.classList.toggle('na', !mine);
+      const mine = simYourMove(), lost = armLost('us', a);
+      b.classList.toggle('on', mine && SIM.weapon === a && !lost);
+      b.classList.toggle('na', !mine || lost);
     }
     if(CD[a] && b.classList.contains('chip')){
       const c = CD[a], full = c.t >= c.n;
@@ -7115,7 +7157,7 @@ function simDensity(S){
 function simChoose(side){
   const S = side === 'us' ? SIM.us : SIM.them, K = S.K, D = simDensity(S);
   const ax = side === 'us' ? plotAxis() : ownAxis();
-  const ready = k => side === 'us' ? CD[k].t >= CD[k].n : S.cd[k] >= SIM_CDN[k];
+  const ready = k => !armLost(side, k) && (side === 'us' ? CD[k].t >= CD[k].n : S.cd[k] >= SIM_CDN[k]);
   const hunting = !K.some(v => v === 2);
   let best = -1, bi = -1;
   for(let i=0;i<100;i++) if(K[i] === 0){ const d = D[i] + Math.random()*1e-3; if(d > best){ best = d; bi = i; } }
@@ -7136,7 +7178,7 @@ function simChoose(side){
       let sc = 0;
       for(let step=0; step<10; step++){
         const [x, z] = ax.sq(lane, step), v = K[z*10 + x];
-        if(v === 2 || v === 3) break;
+        if(v === 2) break;
         if(v === 0) sc += D[z*10 + x];
       }
       if(sc + Math.random()*1e-3 > tBest){ tBest = sc; torp = { kind:'tor', force:{ lane } }; }
@@ -7167,7 +7209,9 @@ function simPlan(side, A){
   if(A.kind === 'tor'){
     for(let step=0; step<10; step++){
       const c = ax.sq(A.force.lane, step);
-      if(simHull(side, c[0], c[1])){ P.struck.push(c); P.run = step + 1; break; }
+      const hh = simHull(side, c[0], c[1]);
+      if(hh && !hh.gone){ P.struck.push(c); P.run = step + 1; break; }
+      if(hh) continue;
       P.water.push(c);
     }
     if(!P.struck.length) P.run = 10;
@@ -7271,6 +7315,7 @@ function simTarget(kind, gx, gz){
 }
 function simArm(a){
   if(!simYourMove()) return;
+  if(armLost('us', a)){ SIM.note = KIND_NAME[a] + ' lost · ' + ARM_SHIP[a] + ' sunk'; simUI(); return; }
   if(a !== 'fire' && CD[a].t < CD[a].n){ SIM.note = KIND_NAME[a] + ' reloading'; simUI(); return; }
   /* THE STICK TURNS. Pressing the strike again while it is armed lays the
      three squares the other way: down the screen, then across it */
@@ -7320,7 +7365,7 @@ function simStep(dt){
     /* HER MOVE IS HERS: the match waits for a weapon and a square */
     if(SIM.side === 'us' && SIM.human){
       if(was > 0 && SIM.wait <= 0){
-        if(SIM.weapon !== 'fire' && CD[SIM.weapon].t < CD[SIM.weapon].n) SIM.weapon = 'fire';
+        if(SIM.weapon !== 'fire' && (CD[SIM.weapon].t < CD[SIM.weapon].n || armLost('us', SIM.weapon))) SIM.weapon = 'fire';
         simUI(); refreshUI();
       }
       return;
@@ -7359,6 +7404,22 @@ function simEnd(won){
   simUI(); refreshUI();
 }
 const KIND_NAME = { fire:'Missile', tor:'Torpedo', cat:'Air strike', flare:'Star shell' };
+/* THE BATTERIES LIVE ON HULLS. The torpedo is the submarine's, the strike the
+   carrier's, the star shell the escort's; sink the hull and the weapon is gone.
+   Theirs are the same five, laid out in the same order. */
+const ARM_SHIP = { tor:'submarine', cat:'carrier', flare:'escort' };
+const ARM_GROUP = { cat:0, flare:3, tor:4 };
+function ownGone(key){
+  const row = OWN_FLEET.find(f => f[0] === key); if(!row) return false;
+  const c = ownCells(key, row[2]); if(!c) return false;
+  const hs = OWN_HITS[key];
+  return !!hs && hs.size >= Math.max(c[2] - c[0], c[3] - c[1]);
+}
+function armLost(side, k){
+  if(!SIM.dirty || !(k in ARM_SHIP)) return false;
+  if(side === 'us') return ownGone(ARM_SHIP[k]);
+  const g = CON_GROUPS[ARM_GROUP[k]]; return !!g && g.hit.every(Boolean);
+}
 function simUI(){
   const bar = document.getElementById('simbar'); if(!bar) return;
   const pad = v => String(v).padStart(2, '0');
