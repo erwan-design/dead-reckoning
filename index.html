@@ -1690,16 +1690,21 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
       if(uAimCell.z > 0.002){
         vec2 ca = gc - uAimCell.xy;
         if(ca.x > -0.06 && ca.x < 1.06 && ca.y > -0.06 && ca.y < 1.06){
+          /* the same bracket as every other marked square — the same wash, the
+             same corner weight, the same beat — in the beam's colour. The cyan
+             is more than twice as bright as the orange, so it is drawn at a
+             little over half the strength to sit at the same weight; the
+             ping is a hairline inside the square, not a disc */
           vec2 ea = abs(ca - 0.5)*2.0;
           float ma = max(ea.x, ea.y);
-          float filla = (1.0 - smoothstep(0.26, 1.0, ma))*0.17;
-          float borda = exp(-pow((1.0 - ma)/0.080, 2.0));
-          float cora  = borda*smoothstep(0.28, 0.76, min(ea.x, ea.y));
-          float pha = fract(uTime*1.3), hota = 1.0 - pha;
+          float filla = (1.0 - smoothstep(0.30, 1.0, ma))*0.13;
+          float borda = exp(-pow((1.0 - ma)/0.075, 2.0));
+          float cora  = borda*smoothstep(0.30, 0.78, min(ea.x, ea.y));
+          float pula  = 0.70 + 0.30*sin(uTime*2.4);
+          float pha = fract(uTime*0.9);
           float ra = length(ca - 0.5)*2.0;
-          float pinga = exp(-pow((ra - pha*1.05)/0.17, 2.0))*hota;
-          float ka = uAimCell.z*(0.78 + 0.22*hota);
-          col += uConCol*(filla + cora*2.2 + pinga*1.1)*ka*mix(0.4, 1.0, facing);
+          float pinga = exp(-pow((ra - 0.15 - pha*0.75)/0.045, 2.0))*(1.0 - pha)*0.55;
+          col += uConCol*(filla + cora*1.9 + pinga)*pula*uAimCell.z*0.58*mix(0.4, 1.0, facing);
         }
       }
       float foam = 0.0, stain = 0.0;
