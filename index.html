@@ -7309,8 +7309,11 @@ function simCells(){
   CELLS_O.fill(0); CELLS_E.fill(0);
   for(const key of ENEMY_SHOT){
     const [x, z] = key.split(',').map(Number); if(x < 0 || x > 9 || z < 0 || z > 9) continue;
-    const i = (z*10 + x)*4;
-    if(hullUnder(x, z)) CELLS_E[i + 1] = 255; else CELLS_E[i] = 255;
+    /* THEIR PLOT KEEPS ONLY THE WATER. A hit on a hull nobody can see is
+       the beam's to show — the cold contact that lights as the sweep passes
+       and fades after it — and the orange comes only when she is sunk, from
+       the contacts themselves. So the square records misses alone. */
+    if(!hullUnder(x, z)) CELLS_E[(z*10 + x)*4] = 255;
   }
   for(const key of OWN_SHOT){
     const [x, z] = key.split(',').map(Number); if(x < 0 || x > 9 || z < 0 || z > 9) continue;
