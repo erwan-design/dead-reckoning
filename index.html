@@ -722,8 +722,11 @@
   #simbar button.go2{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.34)}
   #simbar button[hidden]{display:none}
   body:not(.ipad) #simbar button:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.08)}
-  /* the rail keeps showing our reloads, but in a match the match fires them */
-  body.sim #rail .chip{pointer-events:none}
+  /* in a match the rail arms a weapon; the target is picked on their plot */
+  body.sim #rail .chip.on{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.40);
+      background:rgba(157,240,220,.12)}
+  /* a match is played, not tuned: no debug drawer on this screen */
+  body.sim .dbg{display:none}
   /* one shot a turn: while the exchange runs the rail takes no second one,
      and says so by dimming until the hand comes back */
   body.exch #rail .chip.rdy{opacity:.45}
@@ -909,8 +912,6 @@
 <!-- THE MATCH BAR, shown only on the match screen -->
 <div id="simbar">
   <span class="sl"></span>
-  <button data-sim="run" aria-label="Pause"><svg viewBox="0 0 14 14" aria-hidden="true"><path class="pz" d="M5 3.2v7.6M9 3.2v7.6"/><path class="pl" d="M4.6 3 11 7l-6.4 4z"/></svg></button>
-  <button data-sim="step" aria-label="Next move"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.4 3 8.6 7l-5.2 4z"/><path d="M10.6 3v8"/></svg></button>
   <button data-sim="speed">&times;1</button>
   <button data-sim="new" aria-label="New match"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.4 7A4.4 4.4 0 1 1 9.9 3.7"/><path d="M10.2 1.6v2.4H7.8"/></svg></button>
   <button class="go2" data-sim="report" hidden>After action</button>
@@ -6583,6 +6584,12 @@ function refreshUI(){
     if(a === 'split') b.setAttribute('aria-pressed', String(SPLIT[SCREEN] === 1));
     /* the reload governs the rail only. The tray is scaffolding: it has to be
        able to fire anything at any moment, cadence or no cadence. */
+    /* in a match: the armed weapon is lit, and nothing is while it is not her move */
+    if(SIM.on && b.closest('#rail') && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare')){
+      const mine = simYourMove();
+      b.classList.toggle('on', mine && SIM.weapon === a);
+      b.classList.toggle('na', !mine);
+    }
     if(CD[a] && b.classList.contains('chip')){
       const c = CD[a], full = c.t >= c.n;
       b.classList.toggle('cool', !full);
@@ -6677,7 +6684,7 @@ function onCtl(e){
      own = the formation as she lies, enemy = an empty sea and what the beam finds */
   const a = b.dataset.a;
   /* a match plays itself: its weapons are not ours to fire, and reset means a new one */
-  if(SIM.on && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare')){ hideHint(); return; }
+  if(SIM.on && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare')){ simArm(a); hideHint(); return; }
   if(SIM.on && a === 'reset'){ simNew(); hideHint(); return; }
   if(a === 'snd'){ ANIM.snd = !ANIM.snd; sndOn(ANIM.snd); }
   if(a === 'radar') ANIM.radar = !ANIM.radar;
@@ -6870,7 +6877,7 @@ function setupCtl(b){
    ============================================================ */
 const SIM_SIZES = [4, 3, 3, 2, 2];
 const SIM_CDN = { tor:5, cat:4, flare:3 };
-Object.assign(SIM, { auto:true, step:false, speed:1, side:'us', phase:'think', wait:0, act:null,
+Object.assign(SIM, { human:true, weapon:'fire', aim:null, hover:null, note:null, auto:true, step:false, speed:1, side:'us', phase:'think', wait:0, act:null,
                      turnN:1, over:false, won:false, us:null, them:null, snap:null, dirty:false, overData:null });
 /* what one side knows of the other's grid: 0 nothing, 1 water, 2 a hit on a
    hull still afloat, 3 a hull that is gone — and which lengths are still out there */
@@ -7057,26 +7064,111 @@ function simResolved(side, kind){
   if(kind === 'cat') return EAIR.t < 0;
   return EFLR.out < 0 && EFLR.gap <= 0 && EFLR.u < 0 && EFLR.wet < 0;
 }
+function simExec(side, A){
+  simPlan(side, A);
+  SIM.force = A.force;
+  if(side === 'us'){
+    if(A.kind === 'fire') launch(); else if(A.kind === 'tor') torpedo();
+    else if(A.kind === 'cat') catapult(); else flare();
+  } else {
+    if(A.kind === 'fire') enemyMissile(); else if(A.kind === 'tor') enemyTorpedo();
+    else if(A.kind === 'cat') enemyAirStrike(); else enemyFlare();
+    if(A.kind !== 'fire') SIM.them.cd[A.kind] = 0;
+  }
+  SIM.force = null;
+  SIM.aim = null; SIM.hover = null; SIM.note = null;
+  SIM.act = A; SIM.phase = 'fly'; SIM.flyT = 0;
+  simUI(); refreshUI();
+}
+/* ------------------------------------------------------------
+   PLAYING IT. A weapon is armed on the rail — the missile unless another
+   is chosen and loaded — and the target is picked on their plot: the first
+   tap lays the aim on it (a square, a lane, a stick of three, a block of
+   nine), a second tap on the same aim fires. On a pointer that hovers, the
+   aim follows it before any tap.
+   ------------------------------------------------------------ */
+function simYourMove(){
+  return SIM.on && SIM.human && !SIM.over && SIM.side === 'us' && SIM.phase === 'think' && SIM.wait <= 0;
+}
+function simTarget(kind, gx, gz){
+  const ax = plotAxis(), lab = (x, z) => colLetter(x) + (z + 1);
+  const T0 = { kind, gx, gz };
+  if(kind === 'fire'){
+    Object.assign(T0, { force:[gx, gz], rect:[gx, gz, gx + 1, gz + 1], key:'f' + gx + ',' + gz, label:lab(gx, gz),
+                        bad:ENEMY_SHOT.has(gx + ',' + gz) });
+  } else if(kind === 'tor'){
+    const lane = ax.alongX ? gz : gx;
+    Object.assign(T0, { force:{ lane }, rect: ax.alongX ? [0, gz, 10, gz + 1] : [gx, 0, gx + 1, 10],
+                        key:'t' + lane, label: ax.alongX ? 'row ' + (lane + 1) : 'column ' + colLetter(lane) });
+  } else if(kind === 'cat'){
+    const lane = ax.alongX ? gz : gx, k = ax.alongX ? gx : gz, step = ax.sgn > 0 ? 9 - k : k;
+    const s0 = Math.max(0, Math.min(7, step - 1));
+    const cells = [0, 1, 2].map(i => ax.sq(lane, s0 + i));
+    const xs = cells.map(c => c[0]), zs = cells.map(c => c[1]);
+    Object.assign(T0, { force:{ lane, s0 }, rect:[Math.min(...xs), Math.min(...zs), Math.max(...xs) + 1, Math.max(...zs) + 1],
+                        key:'c' + lane + ',' + s0, label:lab(cells[0][0], cells[0][1]) + '\u2013' + lab(cells[2][0], cells[2][1]) });
+  } else {
+    const cx = Math.max(1, Math.min(8, gx)), cz = Math.max(1, Math.min(8, gz));
+    Object.assign(T0, { force:[cx, cz], rect:[cx - 1, cz - 1, cx + 2, cz + 2], key:'l' + cx + ',' + cz,
+                        label:lab(cx + 1, cz - 1) + '\u2013' + lab(cx - 1, cz + 1) });
+  }
+  return T0;
+}
+function simArm(a){
+  if(!simYourMove()) return;
+  if(a !== 'fire' && CD[a].t < CD[a].n){ SIM.note = KIND_NAME[a] + ' reloading'; simUI(); return; }
+  SIM.weapon = a; SIM.note = null;
+  if(SIM.aim){ const T0 = simTarget(a, SIM.aim.gx, SIM.aim.gz); SIM.aim = T0.bad ? null : T0; }
+  simUI(); refreshUI();
+}
+function simTap(gx, gz){
+  if(!simYourMove()) return;
+  const T0 = simTarget(SIM.weapon, gx, gz);
+  if(T0.bad){ SIM.aim = null; SIM.note = 'Already fired on ' + T0.label; simUI(); return; }
+  if(SIM.aim && SIM.aim.key === T0.key){ simExec('us', SIM.aim); return; }
+  SIM.aim = T0; SIM.note = null;
+  simUI(); refreshUI();
+}
+/* WHERE ON THEIR PLOT a point of the screen falls: the plot's half, seen
+   through the same fixed plan camera the pass draws it with */
+const _pickCam = new T.PerspectiveCamera(), _pickRay = new T.Raycaster(), _pickV = new T.Vector2(), _pickT = new T.Vector3();
+function plotPick(clientX, clientY){
+  const r = canvas.getBoundingClientRect(), hh = r.height/2;
+  const y0 = r.top + (ANIM.swap ? hh : 0);
+  if(clientY < y0 || clientY > y0 + hh || clientX < r.left || clientX > r.right) return null;
+  const S4 = shotList()[3], S = { az:S4.az, el:S4.el, dist:S4.dist*PLOT_BACK, t:S4.t };
+  const ce = Math.cos(S.el), ds = S.dist*frameScale;
+  _pickCam.fov = camera.fov; _pickCam.near = camera.near; _pickCam.far = camera.far;
+  _pickCam.aspect = r.width/hh; _pickCam.updateProjectionMatrix();
+  _pickT.copy(S.t);
+  _pickCam.position.set(_pickT.x + Math.sin(S.az)*ce*ds, Math.max(7.5, _pickT.y + Math.sin(S.el)*ds), _pickT.z + Math.cos(S.az)*ce*ds);
+  _pickT.y += 26*Math.min(ds/AD.camDist, 1.15);
+  _pickCam.lookAt(_pickT); _pickCam.updateMatrixWorld();
+  _pickV.set((clientX - r.left)/r.width*2 - 1, -((clientY - y0)/hh*2 - 1));
+  _pickRay.setFromCamera(_pickV, _pickCam);
+  const o = _pickRay.ray.origin, d = _pickRay.ray.direction;
+  if(d.y > -1e-4) return null;
+  const t = -o.y/d.y, x = o.x + d.x*t, z = o.z + d.z*t;
+  const lx = gC*x - gS*z, lz = gS*x + gC*z;
+  const gx = Math.floor(lx/AD.cell + 5), gz = Math.floor(lz/AD.cell + 5);
+  return (gx < 0 || gx > 9 || gz < 0 || gz > 9) ? null : [gx, gz];
+}
 function simStep(dt){
   if(!SIM.on || SIM.over) return;
   if(SIM.phase === 'think'){
+    const was = SIM.wait;
     SIM.wait -= dt;
+    /* HER MOVE IS HERS: the match waits for a weapon and a square */
+    if(SIM.side === 'us' && SIM.human){
+      if(was > 0 && SIM.wait <= 0){
+        if(SIM.weapon !== 'fire' && CD[SIM.weapon].t < CD[SIM.weapon].n) SIM.weapon = 'fire';
+        simUI(); refreshUI();
+      }
+      return;
+    }
     if(SIM.wait > 0 || (!SIM.auto && !SIM.step)) return;
     SIM.step = false;
-    const side = SIM.side, A = simChoose(side);
-    simPlan(side, A);
-    SIM.force = A.force;
-    if(side === 'us'){
-      if(A.kind === 'fire') launch(); else if(A.kind === 'tor') torpedo();
-      else if(A.kind === 'cat') catapult(); else flare();
-    } else {
-      if(A.kind === 'fire') enemyMissile(); else if(A.kind === 'tor') enemyTorpedo();
-      else if(A.kind === 'cat') enemyAirStrike(); else enemyFlare();
-      if(A.kind !== 'fire') SIM.them.cd[A.kind] = 0;
-    }
-    SIM.force = null;
-    SIM.act = A; SIM.phase = 'fly'; SIM.flyT = 0;
-    simUI(); refreshUI();
+    simExec(SIM.side, simChoose(SIM.side));
   } else if(SIM.phase === 'fly'){
     SIM.flyT += dt;
     if(!simResolved(SIM.side, SIM.act.kind) && SIM.flyT < 90) return;
@@ -7114,18 +7206,18 @@ function simUI(){
   let say;
   if(SIM.over) say = '<b class="' + (SIM.won ? '' : 'them') + '">' + (SIM.won ? 'Victory' : 'Defeat') + '</b> · ' + pad(SIM.turnN) + ' turns';
   /* the short form: the bar sits between the drawers and the rail */
-  else {
+  else if(simYourMove()){
+    const w = KIND_NAME[SIM.weapon];
+    say = 'T' + pad(SIM.turnN) + ' · <b>Your move</b> · '
+        + (SIM.note ? SIM.note
+           : SIM.aim ? w + ' ' + SIM.aim.label + ' · tap again to fire'
+           : w + ' · tap their plot');
+  } else {
     const who = SIM.side === 'us' ? '<b>You</b>' : '<b class="them">Enemy</b>';
-    const what = SIM.phase === 'fly' && SIM.act ? ' · ' + KIND_NAME[SIM.act.kind] : (SIM.auto ? '' : ' · hold');
+    const what = SIM.phase === 'fly' && SIM.act ? ' · ' + KIND_NAME[SIM.act.kind] : '';
     say = 'T' + pad(SIM.turnN) + ' · ' + who + what;
   }
   bar.querySelector('.sl').innerHTML = say;
-  const run = bar.querySelector('[data-sim="run"]');
-  run.classList.toggle('on', SIM.auto && !SIM.over);
-  run.querySelector('.pz').style.display = SIM.auto ? '' : 'none';
-  run.querySelector('.pl').style.display = SIM.auto ? 'none' : '';
-  run.setAttribute('aria-label', SIM.auto ? 'Pause' : 'Play');
-  run.hidden = SIM.over; bar.querySelector('[data-sim="step"]').hidden = SIM.over;
   bar.querySelector('[data-sim="speed"]').innerHTML = '&times;' + SIM.speed;
   bar.querySelector('[data-sim="report"]').hidden = !SIM.over;
 }
@@ -7314,8 +7406,6 @@ function setScreen(name, quiet){
 document.getElementById('simbar').addEventListener('click', e => {
   const b = e.target.closest('button'); if(!b || !SIM.on) return;
   const k = b.dataset.sim;
-  if(k === 'run'){ SIM.auto = !SIM.auto; }
-  if(k === 'step'){ SIM.auto = false; SIM.step = true; }
   if(k === 'speed'){ SIM.speed = SIM.speed === 1 ? 2 : SIM.speed === 2 ? 4 : 1; }
   if(k === 'new') simNew();
   if(k === 'report'){ ANIM.won = SIM.won; setScreen('over'); return; }
@@ -7573,6 +7663,8 @@ function goHome(){ shot(0); ANIM.glide = 2.6; }
 canvas.style.touchAction = 'none';
 canvas.addEventListener('pointerdown', e => {
   canvas.setPointerCapture(e.pointerId);
+  /* a tap on their plot is a move in a match; a drag still turns the view */
+  _tap = { id:e.pointerId, x:e.clientX, y:e.clientY, t:performance.now() };
   ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY, pan: e.button === 2 || e.shiftKey || e.metaKey});
   engaged = true; hideHint(); closePops();
   if(ptrs.size === 2){
@@ -7584,7 +7676,14 @@ canvas.addEventListener('pointerdown', e => {
 canvas.addEventListener('pointermove', e => {
   const p = ptrs.get(e.pointerId);
   if(!p){ const r = canvas.getBoundingClientRect();
-          ptx = (e.clientX - r.left)/r.width - 0.5; pty = (e.clientY - r.top)/r.height - 0.5; return; }
+          ptx = (e.clientX - r.left)/r.width - 0.5; pty = (e.clientY - r.top)/r.height - 0.5;
+          if(simYourMove() && e.pointerType === 'mouse'){
+            const g = plotPick(e.clientX, e.clientY);
+            const h = g ? simTarget(SIM.weapon, g[0], g[1]) : null;
+            SIM.hover = h && !h.bad ? h : null;
+            canvas.style.cursor = SIM.hover ? 'crosshair' : '';
+          }
+          return; }
   const dx = e.clientX - p.x, dy = e.clientY - p.y;
   p.x = e.clientX; p.y = e.clientY;
   if(ptrs.size === 2){
@@ -7598,7 +7697,14 @@ canvas.addEventListener('pointermove', e => {
     if(p.pan) pan(dx, dy); else orbit(dx, dy);
   }
 });
+let _tap = null;
 function release(e){
+  if(e.type === 'pointerup' && _tap && _tap.id === e.pointerId && ptrs.size === 1
+     && Math.hypot(e.clientX - _tap.x, e.clientY - _tap.y) < 8 && performance.now() - _tap.t < 450 && simYourMove()){
+    const g = plotPick(e.clientX, e.clientY);
+    if(g) simTap(g[0], g[1]);
+  }
+  if(_tap && _tap.id === e.pointerId) _tap = null;
   ptrs.delete(e.pointerId);
   if(ptrs.size < 2){ pinch0 = 0; mid0 = null; }
 }
@@ -7732,6 +7838,14 @@ function boardVis(enemy){
   waterUnis.uFlareI.value = FR.fI;
   waterUnis.uLitR.value.copy(FR.litR);
   waterUnis.uLitI.value   = FR.lI;
+  /* her aim on their plot, in the reading's cold white: steady and bright
+     once tapped, faint while only hovered */
+  const aimT = enemy && simYourMove() ? (SIM.aim || SIM.hover) : null;
+  if(aimT){
+    const r = aimT.rect;
+    waterUnis.uLitR.value.set(r[0], r[1], r[2], r[3]);
+    waterUnis.uLitI.value = aimT === SIM.aim ? 2.4 + 0.7*Math.sin(tt*6.0) : 1.1;
+  }
 }
 /* dress the scene for one board or the other, then draw it */
 function board(enemy){
