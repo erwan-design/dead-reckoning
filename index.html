@@ -3987,15 +3987,28 @@ function debrisFire(at){
   }
 }
 /* a burst of a dozen pieces at the square that was hit, over their plot or on her board */
+/* NO TWO HITS THROW THE SAME. Each burst draws its own count, force, lean and
+   rhythm: sometimes a few heavy pieces lobbed high, sometimes a spray of
+   small ones blown flat to one side, the pieces leaving over a beat instead
+   of all on the same frame. */
 function debrisPlot(at, pool){
-  const P = pool || DEB_E, k = P.k;
-  for(let n=0; n<12; n++){
+  const P = pool || DEB_E, k = P.k, R = Math.random;
+  const count = 7 + Math.floor(R()*10);
+  const power = 0.65 + R()*0.75;
+  const lift = 0.6 + R()*0.8;
+  const la = R()*Math.PI*2, lean = R()*0.75;
+  const lx = Math.cos(la)*lean, lz = Math.sin(la)*lean;
+  const size = 0.7 + R()*0.6;
+  for(let n=0; n<count; n++){
     const d = P.items[P.next]; P.next = (P.next + 1) % P.items.length;
-    d.m.position.set(at.x + (Math.random()-0.5)*7*k, (7 + Math.random()*4)*k, at.z + (Math.random()-0.5)*7*k);
-    d.v.set((Math.random()-0.5)*36*k, (15 + Math.random()*28)*k, (Math.random()-0.5)*36*k);
-    d.w.set(Math.random()*9-4.5, Math.random()*9-4.5, Math.random()*9-4.5);
-    d.m.rotation.set(Math.random()*6.3, Math.random()*6.3, Math.random()*6.3);
-    d.m.userData.want = true; d.alive = true;
+    d.m.position.set(at.x + (R()-0.5)*7*k, (6 + R()*5)*k, at.z + (R()-0.5)*7*k);
+    const sp = 36*power*(0.5 + R()*0.8);
+    d.v.set(((R()-0.5) + lx)*sp*k, (12 + R()*30)*lift*k, ((R()-0.5) + lz)*sp*k);
+    d.w.set(R()*12-6, R()*12-6, R()*12-6);
+    d.m.rotation.set(R()*6.3, R()*6.3, R()*6.3);
+    d.m.scale.setScalar(size*(0.6 + R()*0.8));
+    d.delay = R() < 0.35 ? R()*0.18 : 0;
+    d.m.userData.want = d.delay <= 0; d.alive = true;
   }
 }
 function updateDebris(dt){
@@ -4008,6 +4021,7 @@ function updateDebris(dt){
   }
   for(const P of [DEB_E, DEB_O]) for(const d of P.items){
     if(!d.alive) continue;
+    if(d.delay > 0){ d.delay -= dt; if(d.delay > 0) continue; d.m.userData.want = true; }
     d.v.y -= 27.0*P.k*dt;
     d.m.position.addScaledVector(d.v, dt);
     d.m.rotation.x += d.w.x*dt; d.m.rotation.y += d.w.y*dt; d.m.rotation.z += d.w.z*dt;
