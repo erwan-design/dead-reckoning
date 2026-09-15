@@ -4106,7 +4106,7 @@ function debrisFire(at){
    readout does. */
 function debrisPlot(at, pool, big){
   const P = pool || DEB_E, k = P.k, R = Math.random;
-  if(P === DEB_E) ANIM.plotShake = Math.max(ANIM.plotShake, big ? 1.35 : 0.45);
+  if(P === DEB_E) ANIM.plotShake = Math.max(ANIM.plotShake, big ? 1.7 : 0.45);
   const count = big ? 20 + Math.floor(R()*8) : 6 + Math.floor(R()*6);
   const power = big ? 1.15 + R()*0.5 : 0.5 + R()*0.45;
   const lift = big ? 1.1 + R()*0.5 : 0.45 + R()*0.5;
@@ -5868,7 +5868,7 @@ function setSink(on, ship){
   waterUnis.uBlastP.value.set(sh.pos.x, 4, sh.pos.z);
   waterUnis.uSunkR.value.set(sh.cells[0], sh.cells[1], sh.cells[2], sh.cells[3]);
   /* the blow that sinks her shakes the eye far harder than a hit */
-  ANIM.shake = Math.max(ANIM.shake, 1.45);
+  ANIM.shake = Math.max(ANIM.shake, 1.8);
   boom(sh.pos, 0.50); hiss(sh.pos, 0.24, 1900, 380, 1.5, 0.7);
   debrisFire(sh.pos);
 }
