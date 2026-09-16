@@ -4781,7 +4781,9 @@ const SALVO_DUR = 5.6;
    sinking on hers barely stirred. Now any hit, on either board, jolts both
    eyes, each by the same share of its distance to what it is looking at; and
    a sinking is a heavier, longer version of the same jolt. */
-const SHAKE_HIT = 1.0, SHAKE_SINK = 1.5, SHAKE_K = 0.011;
+/* soft by default: a jolt a quarter as wide as before and at half the
+   rate, the aim moving less than the eye — a shake felt, not a seizure */
+const SHAKE_HIT = 1.0, SHAKE_SINK = 1.5, SHAKE_K = 0.0055, SHAKE_F = 22.0, SHAKE_AIM = 0.35;
 function shakeHit(big){ ANIM.shake = Math.max(ANIM.shake, big ? SHAKE_SINK : SHAKE_HIT); }
 const ANIM = { flrOut:-1, fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, flrWet:-1, swap:0, env:1, envK:0 };
 
@@ -8432,11 +8434,11 @@ function boardCam(S){
   /* THE PLOT TAKES THE BLOW TOO: its fixed eye jolts on a hit up there and
      shakes on a sinking, with the same beat as the eye below */
   if(ANIM.shake > 0.0015){
-    const sk = ANIM.shake*ANIM.shake, f = tt*41.0, amp = ds*SHAKE_K*sk;
+    const sk = ANIM.shake*ANIM.shake, f = tt*SHAKE_F, amp = ds*SHAKE_K*sk;
     camera.position.x += Math.sin(f)*Math.sin(f*0.37)*amp;
     camera.position.z += Math.sin(f*0.87 + 3.1)*Math.sin(f*0.43)*amp;
-    _bt.x += Math.sin(f*1.13 + 0.7)*amp*0.75;
-    _bt.z += Math.sin(f*0.97 + 2.4)*amp*0.75;
+    _bt.x += Math.sin(f*1.13 + 0.7)*amp*SHAKE_AIM;
+    _bt.z += Math.sin(f*0.97 + 2.4)*amp*SHAKE_AIM;
   }
   camera.position.y = Math.max(camera.position.y, 7.5);
   _bt.y += 26*Math.min(ds/AD.camDist, 1.15);
@@ -8625,13 +8627,13 @@ function frame(now){
     /* the same share of the eye's distance as the plot's: the orbit's range,
        or, in the immersive view, how far the eye stands from what it watches */
     const dRef = ds + (CINE.pos.distanceTo(CINE.look) - ds)*(CINE.w*CINE.w*(3 - 2*CINE.w));
-    const sk = ANIM.shake*ANIM.shake, f = tt*41.0,
+    const sk = ANIM.shake*ANIM.shake, f = tt*SHAKE_F,
           amp = dRef*SHAKE_K*sk;
     camera.position.x += Math.sin(f)*Math.sin(f*0.37)*amp;
     camera.position.y += Math.sin(f*1.29 + 1.7)*Math.sin(f*0.31)*amp*0.8;
     camera.position.z += Math.sin(f*0.87 + 3.1)*Math.sin(f*0.43)*amp;
-    tmpT.x += Math.sin(f*1.13 + 0.7)*amp*0.75;
-    tmpT.y += Math.sin(f*0.97 + 2.4)*amp*0.75;
+    tmpT.x += Math.sin(f*1.13 + 0.7)*amp*SHAKE_AIM;
+    tmpT.y += Math.sin(f*0.97 + 2.4)*amp*SHAKE_AIM;
   } else ANIM.shake = 0;
   camera.lookAt(tmpT);
   /* the rock, about the view axis, and only as much of it as the cine holds */
