@@ -1040,9 +1040,6 @@
     <button class="chip" data-a="cat" data-l="Catapult"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.8v10.4"/><path d="M1.8 7.7 7 5.9l5.2 1.8"/><path d="M4.5 11.5 7 10.7l2.5.8"/></svg></button>
   </div>
   <div class="cap">
-    <button class="chip" data-a="mov" data-l="Manoeuvre"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.8 9.6h7.6l-1.3 2.2H3.1z"/><path d="M4.1 9.6V7.2h3.1v2.4"/><path d="M6.9 4.3h4.8"/><path d="M10.1 2.7 11.8 4.3 10.1 5.9"/></svg></button>
-  </div>
-  <div class="cap">
     <button class="chip" data-a="flare" data-l="Star shell"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5.8A5.4 5.4 0 0 1 12 5.8"/><path d="M7 6.2V9"/><path d="M7 10.4v2M4.9 10 3.7 12M9.1 10l1.2 2"/></svg></button>
   </div>
 </div>
@@ -1264,7 +1261,7 @@
       <button data-side="own">Own</button><button data-side="enemy">Enemy</button>
     </div>
     <div class="drow">
-      <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="flare">Star shell</button><button data-a="mov">Under way</button><button class="danger" data-a="reset">Reset</button>
+      <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="flare">Star shell</button><button class="danger" data-a="reset">Reset</button>
     </div>
   </div>
   <button class="dtog" id="dtog">Debug</button>
@@ -3445,7 +3442,7 @@ function pickSalvoCell(){
   /* a match names the square; the sandbox draws one */
   if(SIM.force){ const f = SIM.force, h = hullUnder(f[0], f[1]); return [f[0], f[1], h ? h[0] : -1, h ? h[1] : -1]; }
   const shot = new Set();
-  for(const g of CON_GROUPS) g.cells.forEach((c, i) => { if(g.hit[i]){ const a = conAt(g, i); shot.add(a[0] + ',' + a[1]); } });
+  for(const g of CON_GROUPS) g.cells.forEach((c, i) => { if(g.hit[i]) shot.add(c[0] + ',' + c[1]); });
   for(let i=0;i<NMARK;i++){ const m = MARKS_E[i]; if(m.w >= 0.99 && m.w <= 1.0){
     for(let gx=0; gx<10; gx++) for(let gz=0; gz<10; gz++){ const w = cellW(gx + 0.5, gz + 0.5);
       if(Math.hypot(w.x - m.x, w.z - m.y) < AD.cell*0.4) shot.add(gx + ',' + gz); } } }
@@ -3764,7 +3761,7 @@ function pushContacts(){
     const done = g.hit.every(Boolean);
     for(let c=0;c<g.cells.length;c++){
       if(!g.hit[c] || k >= NCON) continue;
-      const [cx, cz] = conAt(g, c);
+      const [cx, cz] = g.cells[c];
       const w = cellW(cx + 0.5, cz + 0.5);
       /* bearing from the plot centre, so the shader needs no trig of its own */
       U4[k].set(cx, cz, Math.atan2(w.z, w.x), 1 - ss(R*0.80, R, Math.hypot(w.x, w.z)));
@@ -4700,7 +4697,7 @@ const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
    the torpedo — the only shot that cannot come back empty-handed — waits
    longest for it. */
 const TURN_S = 4.0;
-const CD = { flare:{ n:3, t:3 }, cat:{ n:4, t:2 }, tor:{ n:5, t:0 }, mov:{ n:5, t:3 } };
+const CD = { flare:{ n:3, t:3 }, cat:{ n:4, t:2 }, tor:{ n:5, t:0 } };
 const CDN = { flare:'Star shell', cat:'Air strike', tor:'Torpedo' };
 /* THE ENGAGEMENT CLOCK. Two different things, kept apart on purpose.
    Time runs: T+ is a match clock and counts whether or not anyone acts.
@@ -4714,7 +4711,7 @@ const MATCH = { t:0, acc:-1, turn:6, sec:-1, dirty:true, act:null };
 var DBG_SIDE = 'own';
 /* THE MATCH SCREEN's state (see SIM below); declared here, where the rest of
    the engagement's globals are, so the weapons can ask whether one is on */
-var SIM = { on:false, force:null, movs:{ us:0, them:0 } };
+var SIM = { on:false, force:null };
 /* every square of theirs a round of ours has landed on, hit or miss */
 const ENEMY_SHOT = new Set();
 const ENEMY_ARMS = ['fire', 'tor', 'cat', 'flare'];
@@ -5776,7 +5773,7 @@ const STRK = { cells:[], at:[], done:[false,false,false], P:new T.Vector3(), Q:n
                label:'', aim:-1, dirOut:new T.Vector3() };
 function shotSquares(){
   const shot = new Set();
-  for(const g of CON_GROUPS) g.cells.forEach((c, i) => { if(g.hit[i]){ const a = conAt(g, i); shot.add(a[0] + ',' + a[1]); } });
+  for(const g of CON_GROUPS) g.cells.forEach((c, i) => { if(g.hit[i]) shot.add(c[0] + ',' + c[1]); });
   for(let i=0;i<22;i++){ const m = MARKS_E[i]; if(m.w < 0.99 || m.w > 1.0) continue;
     for(let gx=0; gx<10; gx++) for(let gz=0; gz<10; gz++){ const w = cellW(gx + 0.5, gz + 0.5);
       if(Math.hypot(w.x - m.x, w.z - m.y) < AD.cell*0.4) shot.add(gx + ',' + gz); } }
@@ -5992,8 +5989,6 @@ function wreckClear(){
 
 function updateFX(dt){
   firesTick(dt);
-  movTick(dt);
-  emovTick(dt);
   /* fire */
   const kf = 1 - Math.exp(-dt*(ANIM.fireGoal > ANIM.fire ? 0.42 : 0.9));
   ANIM.fire += (ANIM.fireGoal - ANIM.fire)*kf;
@@ -6104,7 +6099,7 @@ function updateFX(dt){
         ENEMY_SHOT.add(TORP.cell[0] + ',' + TORP.cell[1]);
         FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
         FX.eSplash.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eSplash.material.uniforms.uT0.value = tt;
-        CON_GROUPS[TORP.group].hit[TORP.gcell] = true; conMark(CON_GROUPS[TORP.group], TORP.gcell); pushContacts();
+        CON_GROUPS[TORP.group].hit[TORP.gcell] = true; pushContacts();
         if(CON_GROUPS[TORP.group].hit.every(Boolean)) wreckSink(TORP.group); else debrisPlot(T0);
         boom(T0, 0.44);
         noteShot('Torpedo ' + colLetter(TORP.cell[0]) + (TORP.cell[1] + 1) + ' \u00b7 hit', 'hit');
@@ -6205,7 +6200,7 @@ function updateFX(dt){
           ENEMY_SHOT.add(c[0] + ',' + c[1]);
           if(h){
             FX.sHit[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.sHit[i].material.uniforms.uT0.value = tt;
-            CON_GROUPS[h[0]].hit[h[1]] = true; conMark(CON_GROUPS[h[0]], h[1]); pushContacts();
+            CON_GROUPS[h[0]].hit[h[1]] = true; pushContacts();
             if(CON_GROUPS[h[0]].hit.every(Boolean)) wreckSink(h[0]); else debrisPlot(T0);
             boom(T0, 0.26);
           } else if(!SIM.on){
@@ -6277,7 +6272,7 @@ function updateFX(dt){
       const T0 = SALVO.tgt;
       if(SALVO.hit){
         FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
-        CON_GROUPS[SALVO.group].hit[SALVO.gcell] = true; conMark(CON_GROUPS[SALVO.group], SALVO.gcell); pushContacts();
+        CON_GROUPS[SALVO.group].hit[SALVO.gcell] = true; pushContacts();
         if(CON_GROUPS[SALVO.group].hit.every(Boolean)) wreckSink(SALVO.group); else debrisPlot(T0);
         boom(T0, 0.30);
         noteShot('Missile ' + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1) + ' \u00b7 hit', 'hit');
@@ -6905,109 +6900,6 @@ function ownShipAt(gx, gz){
   }
   return null;
 }
-/* ============================================================
-   GETTING UNDER WAY. A hull is not a mark on paper: it floats, and a
-   fleet that has been found can change its station. One hull slips one
-   or two squares along its own line — ahead or astern, never sideways,
-   never turning — and everything it has taken goes with it: the holes in
-   her, the fire on her deck, the list she has developed. What stays
-   behind is what the other side wrote down: the squares they struck are
-   still struck on their plot, and now they are a record of where she was,
-   not of where she is. That is the whole point of the manoeuvre.
-
-   The destroyer runs the formation: while she floats, the fleet can shift.
-   Sink her and every hull is nailed to the square it was laid on.
-   ============================================================ */
-const MOV_STEP_DUR = 2.1;          /* seconds of way for one square */
-var MOVE = { u:-1, sh:null, key:null, dur:MOV_STEP_DUR,
-             from:new T.Vector3(), to:new T.Vector3(), wake:null, fires:null, dl:null };
-/* the world vector a shift of (dx, dz) squares comes to, on a board that
-   is not square to the world */
-function movWorld(dx, dz){ return cellW(dx + 5, dz + 5, 0); }
-/* her line and her length, off the rectangle she was laid on */
-function hullAxis(cells){
-  const w = cells[2] - cells[0], h = cells[3] - cells[1];
-  return { alongX: w >= h, n: Math.max(w, h) };
-}
-/* WHERE A HULL MAY GO. Along her own line, one or two squares, without
-   leaving the board and without standing on another hull — sunk hulls
-   included: a wreck still lies where she went down. */
-function movLegal(key, step){
-  if(!step || Math.abs(step) > 2) return null;
-  const sh = shipNamed(key); if(!sh) return null;
-  const fixed = (OWN_FLEET.find(f => f[0] === key) || [])[2];
-  const c = ownCells(key, fixed); if(!c) return null;
-  const ax = hullAxis(c);
-  const dx = ax.alongX ? step : 0, dz = ax.alongX ? 0 : step;
-  const r = [c[0] + dx, c[1] + dz, c[2] + dx, c[3] + dz];
-  if(r[0] < 0 || r[1] < 0 || r[2] > 10 || r[3] > 10) return null;
-  for(const [k2, , fx2] of OWN_FLEET){
-    if(k2 === key) continue;
-    const o = ownCells(k2, fx2); if(!o) continue;
-    if(r[0] < o[2] && o[0] < r[2] && r[1] < o[3] && o[1] < r[3]) return null;
-  }
-  return { dx, dz, rect:r, cells:c, sh, fixed };
-}
-/* a hull that is going down, or already down, stays where she lies */
-function movAble(key){
-  if(ownGone(key)) return false;
-  if(ANIM.sink >= 0 && ANIM.ship && ANIM.ship === shipNamed(key)) return false;
-  return true;
-}
-/* SHE GETS UNDER WAY. The squares change hands at once — the move is done
-   the moment it is ordered — and the hull, her wake and her fires walk
-   across to them over the next few seconds. */
-function movStart(key, step){
-  const L = movLegal(key, step); if(!L || !movAble(key)) return null;
-  const sh = L.sh, d = movWorld(L.dx, L.dz);
-  /* the rectangle she answers to from now on */
-  L.cells[0] = L.rect[0]; L.cells[1] = L.rect[1]; L.cells[2] = L.rect[2]; L.cells[3] = L.rect[3];
-  /* her wake is a separate thing standing where she stood: it follows, or
-     she steams away from her own foam */
-  let wk = sh.wake;
-  if(wk === undefined){
-    wk = null;
-    const list = sh.era === 1 ? HIDEABLE2 : HIDEABLE;
-    for(const g of list){
-      if(g === sh.grp || !g.isGroup) continue;
-      if(g.position.distanceTo(sh.pos) < 1.0){ wk = g; break; }
-    }
-    sh.wake = wk;
-  }
-  MOVE.sh = sh; MOVE.key = key; MOVE.dl = d;
-  MOVE.dur = MOV_STEP_DUR*Math.abs(step);
-  MOVE.from.copy(sh.grp.position); MOVE.to.copy(sh.grp.position).add(d);
-  MOVE.wake = wk ? { grp:wk, from:wk.position.clone() } : null;
-  MOVE.fires = FIRES.filter(f => f.goal > 0 && f.ship === key)
-    .map(f => ({ f, o:f.smoke.material.uniforms.uOrigin.value.clone() }));
-  MOVE.u = 0;
-  return { step, cells:L.cells.slice(), label: movLabel(key, L.rect) };
-}
-function movLabel(key, r){
-  const nm = (OWN_FLEET.find(f => f[0] === key) || [null, key])[1];
-  return nm + ' \u00b7 ' + colLetter(r[0]) + (r[1] + 1) + '\u2013' + colLetter(r[2] - 1) + r[3];
-}
-function movTick(dt){
-  if(MOVE.u < 0) return;
-  MOVE.u = Math.min(1, MOVE.u + dt/MOVE.dur);
-  /* a hull does not start and stop like a missile: she gathers way and
-     takes it off again */
-  const u = MOVE.u, e = u*u*(3 - 2*u);
-  MOVE.sh.grp.position.lerpVectors(MOVE.from, MOVE.to, e);
-  if(MOVE.wake) MOVE.wake.grp.position.copy(MOVE.wake.from).addScaledVector(MOVE.dl, e);
-  for(const m of MOVE.fires){
-    const p = _movP.copy(m.o).addScaledVector(MOVE.dl, e);
-    m.f.smoke.material.uniforms.uOrigin.value.copy(p);
-    m.f.glow.material.uniforms.uOrigin.value.copy(p);
-    m.f.key = Math.round(p.x) + ',' + Math.round(p.z);
-  }
-  if(MOVE.u >= 1){
-    MOVE.sh.pos.copy(MOVE.sh.grp.position);
-    MOVE.u = -1; MOVE.sh = null; MOVE.key = null; MOVE.wake = null; MOVE.fires = null;
-    refreshUI();
-  }
-}
-const _movP = new T.Vector3();
 function ownInit(){
   if(OWN_HITS.__init) return;
   OWN_HITS.__init = true;
@@ -7105,7 +6997,7 @@ function plotReadout(){
   if(SIM.dirty){
     const refs = [];
     for(const g of CON_GROUPS){ if(g.hit.every(Boolean)) continue;
-      g.cells.forEach((c, i) => { if(g.hit[i]){ const a = conAt(g, i); refs.push([a[0], a[1]]); } }); }
+      g.cells.forEach((c, i) => { if(g.hit[i]) refs.push([c[0], c[1]]); }); }
     refs.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
     rHulls.innerHTML = '<h6>Contacts</h6><div class="cr">'
       + (refs.length ? refs.map(r => colLetter(r[0]) + (r[1] + 1)).join(' ') : '\u2014') + '</div>';
@@ -7200,8 +7092,8 @@ function refreshUI(){
     /* the reload governs the rail only. The tray is scaffolding: it has to be
        able to fire anything at any moment, cadence or no cadence. */
     /* in a match: the armed weapon is lit, and nothing is while it is not her move */
-    if(SIM.on && b.closest('#rail') && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare' || a === 'mov')){
-      const mine = simYourMove(), lost = armLost('us', a) || (a === 'mov' && !movLeft('us'));
+    if(SIM.on && b.closest('#rail') && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare')){
+      const mine = simYourMove(), lost = armLost('us', a);
       b.classList.toggle('on', mine && SIM.weapon === a && !lost);
       b.classList.toggle('na', !mine || lost);
     }
@@ -7299,7 +7191,7 @@ function onCtl(e){
      own = the formation as she lies, enemy = an empty sea and what the beam finds */
   const a = b.dataset.a;
   /* a match plays itself: its weapons are not ours to fire, and reset means a new one */
-  if(SIM.on && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare' || a === 'mov')){ simArm(a); hideHint(); return; }
+  if(SIM.on && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare')){ simArm(a); hideHint(); return; }
   if(SIM.on && a === 'reset'){ simNew(); hideHint(); return; }
   if(a === 'snd'){ ANIM.snd = !ANIM.snd; sndOn(ANIM.snd); }
   if(a === 'radar') ANIM.radar = !ANIM.radar;
@@ -7346,11 +7238,6 @@ function onCtl(e){
   if(a === 'tor' && ANIM.era === 0){ if(enemySide) enemyTorpedo(); else torpedo(); }
   /* the star shell exists in both eras: a signal rocket is not a modern idea */
   if(a === 'flare'){ if(enemySide) enemyFlare(); else flare(); }
-  /* on the bench the manoeuvre has no square to be given: the destroyer takes
-     one square ahead, and astern again when she has no water left forward */
-  if(a === 'mov' && !SIM.on){
-    if(!movStart('destroyer', 1) && !movStart('destroyer', -1)) movStart('cruiser', 1);
-  }
   if(a === 'sink') setSink(ANIM.sink < 0);
   if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true); firesOut();
     ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
@@ -7508,14 +7395,14 @@ function setupCtl(b){
    what its own fire has told it, until one fleet is on the bottom.
    ============================================================ */
 const SIM_SIZES = [4, 3, 3, 2, 2];
-const SIM_CDN = { tor:5, cat:4, flare:3, mov:5 };
+const SIM_CDN = { tor:5, cat:4, flare:3 };
 Object.assign(SIM, { human:true, weapon:'fire', catCross:false, aim:null, hover:null, note:null, auto:true, step:false, speed:1, side:'us', phase:'think', wait:0, act:null,
                      turnN:1, over:false, won:false, us:null, them:null, snap:null, dirty:false, overData:null });
 /* what one side knows of the other's grid: 0 nothing, 1 water, 2 a hit on a
    hull still afloat, 3 a hull that is gone — and which lengths are still out there */
 function simKnow(){
   return { K:new Int8Array(100), left:SIM_SIZES.slice(), blocks:[], gone:new Set(),
-           moves:0, shots:0, hits:0, sunk:0, dry:0, cd:{ tor:0, cat:0, flare:0, mov:3 }, range:0, last:'' };
+           moves:0, shots:0, hits:0, sunk:0, cd:{ tor:0, cat:0, flare:0 }, range:0, last:'' };
 }
 /* THEIR FLEET, laid out where nobody can see it: five hulls, none touching */
 function simFleet(){
@@ -7560,12 +7447,6 @@ function simShips(side){
   }
   return out;
 }
-/* THE PLOT REMEMBERS THE SQUARE, NOT THE HULL. A hull that gets under way
-   takes her holes with her, but the marks we made stay where the rounds
-   fell: they were true when we made them. Every square the plot draws from
-   a hit comes through here, so a hull can move without rewriting history. */
-function conMark(g, i){ (g.at = g.at || [])[i] = g.cells[i].slice(); }
-function conAt(g, i){ return (g.at && g.at[i]) || g.cells[i]; }
 function simHull(side, x, z){
   for(const sh of simShips(side)) for(const c of sh.cells) if(c[0] === x && c[1] === z) return sh;
   return null;
@@ -7586,12 +7467,7 @@ function simDensity(S){
           if(v === 2) hits++;
         }
         if(!ok) continue;
-        /* SHE GIVES UP ON A GHOST. A square that has been struck is worth
-           everything around it — until four rounds in a row find nothing
-           there, and the hull that made the mark has plainly gone. The
-           weight falls, the rest of the plot comes back into the reckoning,
-           and the hunt moves on instead of circling a hole in the water. */
-        const w = hits ? Math.pow((S.dry || 0) >= 4 ? 5 : 40, hits) : 1;
+        const w = hits ? Math.pow(40, hits) : 1;
         for(let k=0;k<n;k++){ const i = hz ? z0*10 + x0 + k : (z0 + k)*10 + x0; if(K[i] === 0) D[i] += w; }
       }
     }
@@ -7609,16 +7485,8 @@ function simChoose(side){
   const S = side === 'us' ? SIM.us : SIM.them, K = S.K, D = simDensity(S);
   const ax = side === 'us' ? plotAxis() : ownAxis();
   /* traditional rules: guns only, for both sides */
-  const ready = k => SETUP.md !== 0 && !armLost(side, k) && (k !== 'mov' || movLeft(side))
-                     && (side === 'us' ? CD[k].t >= CD[k].n : S.cd[k] >= SIM_CDN[k]);
+  const ready = k => SETUP.md !== 0 && !armLost(side, k) && (side === 'us' ? CD[k].t >= CD[k].n : S.cd[k] >= SIM_CDN[k]);
   const hunting = !K.some(v => v === 2);
-  /* SHE SLIPS AWAY FIRST. A hull that has been found and is being taken
-     apart is worth more than the next round: getting her under way costs a
-     turn and leaves the other side hunting the water she has left. */
-  if(ready('mov')){
-    const esc = movEscape(side);
-    if(esc && Math.random() < 0.75) return { kind:'mov', force:esc };
-  }
   /* HOW HARD THE MACHINE PLAYS. Cadet fires at random and only half follows up
      a hit; Officer plays the odds (everything below); Admiral plays the odds and
      now and then reads the plot outright. */
@@ -7683,64 +7551,6 @@ function simChoose(side){
 }
 /* WHAT THE MOVE WILL FIND, worked out from the hidden truth as it is fired;
    it is only learnt when the move lands */
-/* THEIR HULL GETS UNDER WAY. Nothing shows: no hull of theirs is drawn, and
-   the squares we struck stay struck. All we are told is that something moved
-   — which is exactly what a signal officer would report. */
-var EMOV = { t:-1, dur:1.9 };
-function emovLegal(gi, step){
-  const g = CON_GROUPS[gi];
-  if(!g || !step || Math.abs(step) > 2 || g.hit.every(Boolean)) return null;
-  const hz = g.cells.length > 1 && g.cells[0][1] === g.cells[1][1];
-  const dx = hz ? step : 0, dz = hz ? 0 : step;
-  const cells = g.cells.map(c => [c[0] + dx, c[1] + dz]);
-  if(cells.some(c => c[0] < 0 || c[0] > 9 || c[1] < 0 || c[1] > 9)) return null;
-  for(let j=0;j<CON_GROUPS.length;j++){
-    if(j === gi) continue;
-    if(CON_GROUPS[j].cells.some(o => cells.some(c => c[0] === o[0] && c[1] === o[1]))) return null;
-  }
-  return { cells };
-}
-function emovStart(gi, step){
-  const L = emovLegal(gi, step); if(!L) return null;
-  CON_GROUPS[gi].cells = L.cells;
-  pushContacts(); EMOV.t = 0;
-  return true;
-}
-function emovTick(dt){ if(EMOV.t >= 0){ EMOV.t += dt; if(EMOV.t >= EMOV.dur) EMOV.t = -1; } }
-/* A HULL WORTH SAVING is one they have found and not yet finished: she is
-   being taken apart a square at a time, and a turn spent moving her costs
-   less than the squares she has left. The furthest legal shift wins. */
-/* ONLY A HULL AT THE END OF HER TETHER. Getting under way costs a turn, and
-   a turn is worth more than a scratch: she goes only when the next round or
-   two would finish her — half her squares gone, or one left. A fleet that
-   dodged every graze would make a match that never ends. */
-/* TWO IN A MATCH, EACH SIDE. A cadence alone could not hold it: at five
-   turns a wounded hull simply walked away from every hunt and matches ran to
-   fifty turns; at eight it was so rare a player finished without seeing it.
-   A short cadence and a hard count give both — she is there from the fifth
-   turn, and she cannot be the answer to everything. */
-const MOV_MAX = 2;
-function movLeft(side){ return !SIM.on || (SIM.movs[side] || 0) < MOV_MAX; }
-function movWorth(hit, n){ const h = hit.filter(Boolean).length; return h >= n - 1 || h*2 >= n; }
-function movEscape(side){
-  const out = [];
-  if(side === 'them'){
-    CON_GROUPS.forEach((g, gi) => {
-      if(g.hit.every(Boolean) || !movWorth(g.hit, g.cells.length)) return;
-      for(const st of [2, -2, 1, -1]) if(emovLegal(gi, st)){ out.push({ gi, step:st }); break; }
-    });
-  } else {
-    for(const [key, , fixed] of OWN_FLEET){
-      const hs = OWN_HITS[key], c = ownCells(key, fixed);
-      if(!hs || !hs.size || !c || !movAble(key)) continue;
-      const n = Math.max(c[2] - c[0], c[3] - c[1]);
-      const hit = new Array(n).fill(false); for(const i of hs) if(i < n) hit[i] = true;
-      if(!movWorth(hit, n)) continue;
-      for(const st of [2, -2, 1, -1]) if(movLegal(key, st)){ out.push({ key, step:st }); break; }
-    }
-  }
-  return out.length ? out[Math.floor(Math.random()*out.length)] : null;
-}
 function simPlan(side, A){
   const ax = side === 'us' ? plotAxis() : ownAxis(), P = { struck:[], water:[], block:null };
   if(A.kind === 'fire') P.struck.push(A.force);
@@ -7790,13 +7600,9 @@ function simLearn(side, A){
     for(const [x, z] of sh.cells) K[z*10 + x] = 3;
     const li = S.left.indexOf(sh.cells.length); if(li >= 0) S.left.splice(li, 1);
   }
-  /* the dry count: rounds since the last square that answered */
-  if(A.newHits > 0) S.dry = 0;
-  else if(P.struck.length && K.some(v => v === 2)) S.dry = (S.dry || 0) + 1;
   S.blocks = S.blocks.filter(b => b.cells.some(i => K[i] === 0));
 }
 function simResolved(side, kind){
-  if(kind === 'mov') return side === 'us' ? MOVE.u < 0 : EMOV.t < 0;
   if(side === 'us'){
     if(kind === 'fire') return ANIM.mis < 0;
     if(kind === 'tor') return ANIM.tor < 0;
@@ -7813,14 +7619,10 @@ function simExec(side, A){
   SIM.force = A.force;
   if(side === 'us'){
     if(A.kind === 'fire') launch(); else if(A.kind === 'tor') torpedo();
-    else if(A.kind === 'cat') catapult();
-    else if(A.kind === 'mov'){ movStart(A.force.key, A.force.step); matchSpend('mov'); SIM.movs.us++; }
-    else flare();
+    else if(A.kind === 'cat') catapult(); else flare();
   } else {
     if(A.kind === 'fire') enemyMissile(); else if(A.kind === 'tor') enemyTorpedo();
-    else if(A.kind === 'cat') enemyAirStrike();
-    else if(A.kind === 'mov'){ emovStart(A.force.gi, A.force.step); SIM.movs.them++; }
-    else enemyFlare();
+    else if(A.kind === 'cat') enemyAirStrike(); else enemyFlare();
     if(A.kind !== 'fire') SIM.them.cd[A.kind] = 0;
   }
   SIM.force = null;
@@ -7868,7 +7670,6 @@ function simArm(a){
   if(!simYourMove()) return;
   if(a !== 'fire' && SETUP.md === 0){ SIM.note = 'Traditional rules · guns only'; simUI(); return; }
   if(armLost('us', a)){ SIM.note = KIND_NAME[a] + ' lost · ' + ARM_SHIP[a] + ' sunk'; simUI(); return; }
-  if(a === 'mov' && !movLeft('us')){ SIM.note = 'No manoeuvre left \u00b7 two a match'; simUI(); return; }
   if(a !== 'fire' && CD[a].t < CD[a].n){ SIM.note = KIND_NAME[a] + ' reloading'; simUI(); return; }
   /* PRESS AGAIN. An armed torpedo or star shell pressed again is put away and
      the missile is back. The strike turns first — down the screen, then across
@@ -7879,8 +7680,7 @@ function simArm(a){
   } else if(a === 'cat') SIM.catCross = false;
   SIM.weapon = a; SIM.note = null;
   SIM.aim = null;
-  if(a === 'mov') SIM.hover = null;
-  else if(SIM.hover){ const T0 = simTarget(a, SIM.hover.gx, SIM.hover.gz); SIM.hover = T0.bad ? null : T0; }
+  if(SIM.hover){ const T0 = simTarget(a, SIM.hover.gx, SIM.hover.gz); SIM.hover = T0.bad ? null : T0; }
   simUI(); refreshUI();
 }
 function simTap(gx, gz){
@@ -7914,53 +7714,6 @@ function plotPick(clientX, clientY){
   const lx = gC*x - gS*z, lz = gS*x + gC*z;
   const gx = Math.floor(lx/AD.cell + 5), gz = Math.floor(lz/AD.cell + 5);
   return (gx < 0 || gx > 9 || gz < 0 || gz > 9) ? null : [gx, gz];
-}
-/* WHERE ON HER OWN BOARD a point of the screen falls. The plot above is
-   drawn by a camera the pass builds from a preset; the board below is drawn
-   by the eye the loop left, so the pick borrows that eye exactly as it stood
-   when the half was last rendered. */
-const _pickOwnCam = new T.PerspectiveCamera();
-function ownPick(clientX, clientY){
-  const r = canvas.getBoundingClientRect(), hh = r.height/2;
-  const y0 = r.top + (ANIM.swap ? 0 : hh);
-  if(clientY < y0 || clientY > y0 + hh || clientX < r.left || clientX > r.right) return null;
-  _pickOwnCam.fov = camera.fov; _pickOwnCam.near = camera.near; _pickOwnCam.far = camera.far;
-  _pickOwnCam.aspect = r.width/hh; _pickOwnCam.updateProjectionMatrix();
-  _pickOwnCam.position.copy(_liveP); _pickOwnCam.quaternion.copy(_liveQ); _pickOwnCam.updateMatrixWorld();
-  _pickV.set((clientX - r.left)/r.width*2 - 1, -((clientY - y0)/hh*2 - 1));
-  _pickRay.setFromCamera(_pickV, _pickOwnCam);
-  const o = _pickRay.ray.origin, d = _pickRay.ray.direction;
-  if(d.y > -1e-4) return null;
-  const t = -o.y/d.y, x = o.x + d.x*t, z = o.z + d.z*t;
-  const lx = gC*x - gS*z, lz = gS*x + gC*z;
-  const gx = Math.floor(lx/AD.cell + 5), gz = Math.floor(lz/AD.cell + 5);
-  return (gx < 0 || gx > 9 || gz < 0 || gz > 9) ? null : [gx, gz];
-}
-/* WHICH HULL CAN REACH THAT SQUARE. She is ordered by the water she is to
-   occupy, not by being picked and then pushed: tap a square off her bow or
-   her stern, in her own line, and she takes it. The shortest way wins. */
-function movFind(gx, gz){
-  let best = null;
-  for(const [key, name, fixed] of OWN_FLEET){
-    if(!movAble(key)) continue;
-    const c = ownCells(key, fixed); if(!c) continue;
-    if(gx >= c[0] && gx < c[2] && gz >= c[1] && gz < c[3]) continue;
-    for(const st of [1, -1, 2, -2]){
-      const L = movLegal(key, st); if(!L) continue;
-      const r = L.rect;
-      if(gx < r[0] || gx >= r[2] || gz < r[1] || gz >= r[3]) continue;
-      if(!best || Math.abs(st) < Math.abs(best.step)) best = { key, name, step:st, rect:r };
-    }
-  }
-  return best;
-}
-function movTap(gx, gz){
-  if(!simYourMove() || SIM.weapon !== 'mov') return;
-  const M = movFind(gx, gz);
-  if(!M){ SIM.note = 'No hull reaches ' + colLetter(gx) + (gz + 1); simUI(); return; }
-  simExec('us', { kind:'mov', force:{ key:M.key, step:M.step }, key:'m' + M.key,
-                  label:M.name + ' \u00b7 ' + (Math.abs(M.step) === 2 ? 'two squares' : 'one square')
-                        + ' ' + (M.step > 0 ? 'ahead' : 'astern') });
 }
 function simStep(dt){
   if(!SIM.on) return;
@@ -8032,12 +7785,12 @@ function simEnd(won, now){
   overUI();
   simUI(); refreshUI();
 }
-const KIND_NAME = { fire:'Missile', tor:'Torpedo', cat:'Air strike', flare:'Star shell', mov:'Manoeuvre' };
+const KIND_NAME = { fire:'Missile', tor:'Torpedo', cat:'Air strike', flare:'Star shell' };
 /* THE BATTERIES LIVE ON HULLS. The torpedo is the submarine's, the strike the
    carrier's, the star shell the escort's; sink the hull and the weapon is gone.
    Theirs are the same five, laid out in the same order. */
-const ARM_SHIP = { tor:'submarine', cat:'carrier', flare:'escort', mov:'destroyer' };
-const ARM_GROUP = { cat:0, flare:3, tor:4, mov:1 };
+const ARM_SHIP = { tor:'submarine', cat:'carrier', flare:'escort' };
+const ARM_GROUP = { cat:0, flare:3, tor:4 };
 function ownGone(key){
   const row = OWN_FLEET.find(f => f[0] === key); if(!row) return false;
   const c = ownCells(key, row[2]); if(!c) return false;
@@ -8062,7 +7815,6 @@ function simUI(){
            : SIM.weapon === 'cat' ? w + ' ' + (SIM.catCross ? 'across · tap a square · press again for missile' : 'down · tap a square · press again to turn')
            : SIM.weapon === 'tor' ? w + ' · tap a column · press again for missile'
            : SIM.weapon === 'flare' ? w + ' · tap the centre · press again for missile'
-           : SIM.weapon === 'mov' ? w + ' · tap the water a hull should take · press again for missile'
            : w + ' · tap a square to fire');
   } else {
     const who = SIM.side === 'us' ? '<b>You</b>' : '<b class="them">Enemy' + (SIM.replay && SIM.phase === 'think' ? ' · hit · again' : '') + '</b>';
@@ -8169,7 +7921,6 @@ function simNew(){
   matchReset();
   MATCH.turn = 1; MATCH.t = 0;
   for(const k in CD) CD[k].t = 0;
-  SIM.movs = { us:0, them:0 };
   SIM.us = simKnow(); SIM.them = simKnow();
   SIM.side = 'us'; SIM.phase = 'think'; SIM.wait = 2.2; SIM.act = null;
   SIM.turnN = 1; SIM.over = false; SIM.won = false; SIM.overData = null; SIM.step = false; SIM.replay = false;
@@ -8453,19 +8204,6 @@ function cineUpdate(dt){
     _flrLook.copy(EFLR.wetP); _flrLook.y = waterY(EFLR.wetP.x, EFLR.wetP.z, tt);
     LD = 110; LH = 74; lookLag = 2.4;
     look = _flrLook;
-  } else if(MOVE.u >= 0 && MOVE.sh){
-    /* SHE IS WATCHED FROM HER OWN BEAM. A hull under way is slow, and a
-       camera chasing her from astern would show a stern and a wake and
-       nothing else; standing off her side, the board slides past behind
-       her and the move reads as ground covered. The eye lets her go for
-       the last breath, so the view is back on the board before the enemy
-       answers. */
-    age = MOVE.u*MOVE.dur;
-    want = MOVE.u < 0.88 ? 1 : 0;
-    blendIn = 2.0;
-    zoomAmt = 0.9; zoomT0 = 0.2; zoomRate = 1.4;
-    followRate = 5.0;
-    obj = MOVE.sh.grp; D = 205; H = 92; S = 128; L = 150;
   } else if(ANIM.cat >= 0){
     const u = ANIM.cat;
     age = u*CAT_DUR;
@@ -8581,19 +8319,10 @@ canvas.addEventListener('pointermove', e => {
   if(!p){ const r = canvas.getBoundingClientRect();
           ptx = (e.clientX - r.left)/r.width - 0.5; pty = (e.clientY - r.top)/r.height - 0.5;
           if(simYourMove() && e.pointerType === 'mouse'){
-            if(SIM.weapon === 'mov'){
-              const g = ownPick(e.clientX, e.clientY);
-              const M = g ? movFind(g[0], g[1]) : null;
-              const note = M ? M.name + ' \u00b7 ' + (Math.abs(M.step) === 2 ? 'two squares' : 'one square')
-                                 + ' ' + (M.step > 0 ? 'ahead' : 'astern') : null;
-              if(note !== SIM.note){ SIM.note = note; simUI(); }
-              canvas.style.cursor = M ? 'crosshair' : '';
-            } else {
-              const g = plotPick(e.clientX, e.clientY);
-              const h = g ? simTarget(SIM.weapon, g[0], g[1]) : null;
-              SIM.hover = h && !h.bad ? h : null;
-              canvas.style.cursor = SIM.hover ? 'crosshair' : '';
-            }
+            const g = plotPick(e.clientX, e.clientY);
+            const h = g ? simTarget(SIM.weapon, g[0], g[1]) : null;
+            SIM.hover = h && !h.bad ? h : null;
+            canvas.style.cursor = SIM.hover ? 'crosshair' : '';
           }
           return; }
   const dx = e.clientX - p.x, dy = e.clientY - p.y;
@@ -8613,13 +8342,8 @@ let _tap = null;
 function release(e){
   if(e.type === 'pointerup' && _tap && _tap.id === e.pointerId && ptrs.size === 1
      && Math.hypot(e.clientX - _tap.x, e.clientY - _tap.y) < 8 && performance.now() - _tap.t < 450 && simYourMove()){
-    if(SIM.weapon === 'mov'){
-      const g = ownPick(e.clientX, e.clientY);
-      if(g) movTap(g[0], g[1]);
-    } else {
-      const g = plotPick(e.clientX, e.clientY);
-      if(g) simTap(g[0], g[1]);
-    }
+    const g = plotPick(e.clientX, e.clientY);
+    if(g) simTap(g[0], g[1]);
   }
   if(_tap && _tap.id === e.pointerId) _tap = null;
   ptrs.delete(e.pointerId);
