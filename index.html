@@ -6001,6 +6001,7 @@ function wreckClear(){
 function updateFX(dt){
   firesTick(dt);
   luretTick(dt);
+  lureFX(dt);
   /* fire */
   const kf = 1 - Math.exp(-dt*(ANIM.fireGoal > ANIM.fire ? 0.42 : 0.9));
   ANIM.fire += (ANIM.fireGoal - ANIM.fire)*kf;
@@ -7545,32 +7546,70 @@ function lureTick(){
 }
 function lureClear(){
   for(const side of ['us', 'them']){
-    for(const l of LURE[side]) if(l.raft){ scene.remove(l.raft); }
+    for(const l of LURE[side]) if(l.raft){ lureSink(l.raft); scene.remove(l.raft); }
     LURE[side].length = 0;
   }
 }
-/* A RAFT AND A REFLECTOR: two plates crossed above a float, which is all a
-   decoy has ever been, and enough to look like a ship to anything reading
-   returns from a distance. */
+/* A NAVIGATION BUOY, IN THE FLEET'S OWN GREY. A drum float, a braced column,
+   a topmark and a light — the thing any hull at sea reads without thinking.
+   This one answers more than it should: every few seconds it puts out a ring
+   across the water, which is what the other side's beam finds and takes for a
+   ship. The light keeps its character while the buoy is worth anything; when
+   the echo has been seen through, both go out and it rides there, dark. */
+var LURE_FX = [];
 function lureRaft(x, z){
   const g = new T.Group(), p = cellW(x + 0.5, z + 0.5, 0);
   g.position.set(p.x, 0, p.z); g.rotation.y = Math.random()*Math.PI;
-  const m = shipMat({ kind:'accent', lift:1.05 });
-  const raft = new T.Mesh(new T.BoxGeometry(15, 2.4, 15), m); raft.position.y = 1.2; g.add(raft);
-  /* the reflector: two plates crossed, and a third lying flat across them —
-     the corner that sends a round's own beam straight back at it */
-  for(let i=0;i<2;i++){
-    const pl = new T.Mesh(new T.BoxGeometry(i ? 0.9 : 14, 14, i ? 14 : 0.9), m);
-    pl.position.y = 10.5; g.add(pl);
+  const hull = shipMat({ kind:'hull' }), acc = shipMat({ kind:'accent' });
+  const drum  = new T.Mesh(new T.CylinderGeometry(7.6, 6.4, 5.6, 18), hull); drum.position.y = 2.4;  g.add(drum);
+  const skirt = new T.Mesh(new T.CylinderGeometry(6.6, 7.8, 1.5, 18), acc);  skirt.position.y = -0.3; g.add(skirt);
+  const col   = new T.Mesh(new T.CylinderGeometry(2.5, 3.3, 18, 12), hull);  col.position.y = 13.5;  g.add(col);
+  for(const y of [8.8, 16.4]){
+    const f = new T.Mesh(new T.CylinderGeometry(3.7, 3.7, 0.7, 14), acc); f.position.y = y; g.add(f);
   }
-  const flat = new T.Mesh(new T.BoxGeometry(13, 0.9, 13), m); flat.position.y = 10.5; g.add(flat);
-  const mast = new T.Mesh(new T.CylinderGeometry(0.6, 0.6, 21, 6), m);
-  mast.position.y = 10.5; g.add(mast);
+  /* the topmark: a light cage, four legs and a hood */
+  const cage = new T.Mesh(new T.BoxGeometry(5.6, 0.7, 5.6), acc); cage.position.y = 26.4; g.add(cage);
+  for(const [dx, dz] of [[2.2,2.2],[-2.2,2.2],[2.2,-2.2],[-2.2,-2.2]]){
+    const leg = new T.Mesh(new T.BoxGeometry(0.7, 5.4, 0.7), acc);
+    leg.position.set(dx, 23.6, dz); g.add(leg);
+  }
+  const lamp = new T.Mesh(new T.SphereGeometry(1.9, 12, 10),
+    new T.MeshBasicMaterial({ color:0x9df0dc, transparent:true, opacity:1,
+                              blending:T.AdditiveBlending, depthWrite:false }));
+  lamp.position.y = 23.4; g.add(lamp);
+  const ring = new T.Mesh(new T.RingGeometry(0.94, 1, 64),
+    new T.MeshBasicMaterial({ color:0x9df0dc, transparent:true, opacity:0,
+                              blending:T.AdditiveBlending, depthWrite:false, side:T.DoubleSide }));
+  ring.rotation.x = -Math.PI/2; ring.position.y = 0.6; g.add(ring);
   scene.add(g); onBoard(BOARD_OWN, g, true);
-  bob(g, 1.4, 1.1, 5.0);
+  bob(g, 1.3, 1.6, 6.0);
+  const fx = { g, lamp, ring, t: Math.random()*3 };
+  LURE_FX.push(fx);
+  g.userData.fx = fx;
   return g;
 }
-function lureSink(g){ g.userData.want = false; g.visible = false; }
+/* the character of the light, and the ring it sends out with it */
+function lureFX(dt){
+  for(let i = LURE_FX.length - 1; i >= 0; i--){
+    const f = LURE_FX[i];
+    /* visible is the pass's business — it is false half the time, between the
+       plot's pass and her own. What says a buoy is still working is its want. */
+    if(!f.g.userData.want){ f.ring.material.opacity = 0; continue; }
+    f.t += dt;
+    const p = f.t % 3.0;
+    const lit = p < 0.22 || (p > 0.48 && p < 0.70);
+    f.lamp.material.opacity = lit ? 1 : 0.05;
+    f.lamp.scale.setScalar(lit ? 1.3 : 0.85);
+    const e = Math.min(1, p/2.1);
+    f.ring.scale.setScalar(7 + e*46);
+    f.ring.material.opacity = 0.42*(1 - e)*(1 - e);
+  }
+}
+function lureSink(g){
+  g.userData.want = false; g.visible = false;
+  const f = g.userData.fx;
+  if(f){ f.ring.material.opacity = 0; const k = LURE_FX.indexOf(f); if(k >= 0) LURE_FX.splice(k, 1); }
+}
 function simHull(side, x, z, solid){
   /* a decoy of the side being fired at answers like a hull — unless the thing
      coming is a torpedo, which runs under a raft */
