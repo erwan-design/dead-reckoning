@@ -1264,7 +1264,7 @@
       <button data-side="own">Own</button><button data-side="enemy">Enemy</button>
     </div>
     <div class="drow">
-      <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="flare">Star shell</button><button class="danger" data-a="reset">Reset</button>
+      <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="flare">Star shell</button><button data-a="mov">Under way</button><button class="danger" data-a="reset">Reset</button>
     </div>
   </div>
   <button class="dtog" id="dtog">Debug</button>
@@ -4700,7 +4700,7 @@ const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
    the torpedo — the only shot that cannot come back empty-handed — waits
    longest for it. */
 const TURN_S = 4.0;
-const CD = { flare:{ n:3, t:3 }, cat:{ n:4, t:2 }, tor:{ n:5, t:0 }, mov:{ n:8, t:5 } };
+const CD = { flare:{ n:3, t:3 }, cat:{ n:4, t:2 }, tor:{ n:5, t:0 }, mov:{ n:5, t:3 } };
 const CDN = { flare:'Star shell', cat:'Air strike', tor:'Torpedo' };
 /* THE ENGAGEMENT CLOCK. Two different things, kept apart on purpose.
    Time runs: T+ is a match clock and counts whether or not anyone acts.
@@ -4714,7 +4714,7 @@ const MATCH = { t:0, acc:-1, turn:6, sec:-1, dirty:true, act:null };
 var DBG_SIDE = 'own';
 /* THE MATCH SCREEN's state (see SIM below); declared here, where the rest of
    the engagement's globals are, so the weapons can ask whether one is on */
-var SIM = { on:false, force:null };
+var SIM = { on:false, force:null, movs:{ us:0, them:0 } };
 /* every square of theirs a round of ours has landed on, hit or miss */
 const ENEMY_SHOT = new Set();
 const ENEMY_ARMS = ['fire', 'tor', 'cat', 'flare'];
@@ -7201,7 +7201,7 @@ function refreshUI(){
        able to fire anything at any moment, cadence or no cadence. */
     /* in a match: the armed weapon is lit, and nothing is while it is not her move */
     if(SIM.on && b.closest('#rail') && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare' || a === 'mov')){
-      const mine = simYourMove(), lost = armLost('us', a);
+      const mine = simYourMove(), lost = armLost('us', a) || (a === 'mov' && !movLeft('us'));
       b.classList.toggle('on', mine && SIM.weapon === a && !lost);
       b.classList.toggle('na', !mine || lost);
     }
@@ -7508,14 +7508,14 @@ function setupCtl(b){
    what its own fire has told it, until one fleet is on the bottom.
    ============================================================ */
 const SIM_SIZES = [4, 3, 3, 2, 2];
-const SIM_CDN = { tor:5, cat:4, flare:3, mov:8 };
+const SIM_CDN = { tor:5, cat:4, flare:3, mov:5 };
 Object.assign(SIM, { human:true, weapon:'fire', catCross:false, aim:null, hover:null, note:null, auto:true, step:false, speed:1, side:'us', phase:'think', wait:0, act:null,
                      turnN:1, over:false, won:false, us:null, them:null, snap:null, dirty:false, overData:null });
 /* what one side knows of the other's grid: 0 nothing, 1 water, 2 a hit on a
    hull still afloat, 3 a hull that is gone — and which lengths are still out there */
 function simKnow(){
   return { K:new Int8Array(100), left:SIM_SIZES.slice(), blocks:[], gone:new Set(),
-           moves:0, shots:0, hits:0, sunk:0, cd:{ tor:0, cat:0, flare:0, mov:5 }, range:0, last:'' };
+           moves:0, shots:0, hits:0, sunk:0, dry:0, cd:{ tor:0, cat:0, flare:0, mov:3 }, range:0, last:'' };
 }
 /* THEIR FLEET, laid out where nobody can see it: five hulls, none touching */
 function simFleet(){
@@ -7586,7 +7586,12 @@ function simDensity(S){
           if(v === 2) hits++;
         }
         if(!ok) continue;
-        const w = hits ? Math.pow(40, hits) : 1;
+        /* SHE GIVES UP ON A GHOST. A square that has been struck is worth
+           everything around it — until four rounds in a row find nothing
+           there, and the hull that made the mark has plainly gone. The
+           weight falls, the rest of the plot comes back into the reckoning,
+           and the hunt moves on instead of circling a hole in the water. */
+        const w = hits ? Math.pow((S.dry || 0) >= 4 ? 5 : 40, hits) : 1;
         for(let k=0;k<n;k++){ const i = hz ? z0*10 + x0 + k : (z0 + k)*10 + x0; if(K[i] === 0) D[i] += w; }
       }
     }
@@ -7604,7 +7609,8 @@ function simChoose(side){
   const S = side === 'us' ? SIM.us : SIM.them, K = S.K, D = simDensity(S);
   const ax = side === 'us' ? plotAxis() : ownAxis();
   /* traditional rules: guns only, for both sides */
-  const ready = k => SETUP.md !== 0 && !armLost(side, k) && (side === 'us' ? CD[k].t >= CD[k].n : S.cd[k] >= SIM_CDN[k]);
+  const ready = k => SETUP.md !== 0 && !armLost(side, k) && (k !== 'mov' || movLeft(side))
+                     && (side === 'us' ? CD[k].t >= CD[k].n : S.cd[k] >= SIM_CDN[k]);
   const hunting = !K.some(v => v === 2);
   /* SHE SLIPS AWAY FIRST. A hull that has been found and is being taken
      apart is worth more than the next round: getting her under way costs a
@@ -7708,6 +7714,13 @@ function emovTick(dt){ if(EMOV.t >= 0){ EMOV.t += dt; if(EMOV.t >= EMOV.dur) EMO
    a turn is worth more than a scratch: she goes only when the next round or
    two would finish her — half her squares gone, or one left. A fleet that
    dodged every graze would make a match that never ends. */
+/* TWO IN A MATCH, EACH SIDE. A cadence alone could not hold it: at five
+   turns a wounded hull simply walked away from every hunt and matches ran to
+   fifty turns; at eight it was so rare a player finished without seeing it.
+   A short cadence and a hard count give both — she is there from the fifth
+   turn, and she cannot be the answer to everything. */
+const MOV_MAX = 2;
+function movLeft(side){ return !SIM.on || (SIM.movs[side] || 0) < MOV_MAX; }
 function movWorth(hit, n){ const h = hit.filter(Boolean).length; return h >= n - 1 || h*2 >= n; }
 function movEscape(side){
   const out = [];
@@ -7777,6 +7790,9 @@ function simLearn(side, A){
     for(const [x, z] of sh.cells) K[z*10 + x] = 3;
     const li = S.left.indexOf(sh.cells.length); if(li >= 0) S.left.splice(li, 1);
   }
+  /* the dry count: rounds since the last square that answered */
+  if(A.newHits > 0) S.dry = 0;
+  else if(P.struck.length && K.some(v => v === 2)) S.dry = (S.dry || 0) + 1;
   S.blocks = S.blocks.filter(b => b.cells.some(i => K[i] === 0));
 }
 function simResolved(side, kind){
@@ -7798,12 +7814,12 @@ function simExec(side, A){
   if(side === 'us'){
     if(A.kind === 'fire') launch(); else if(A.kind === 'tor') torpedo();
     else if(A.kind === 'cat') catapult();
-    else if(A.kind === 'mov'){ movStart(A.force.key, A.force.step); matchSpend('mov'); }
+    else if(A.kind === 'mov'){ movStart(A.force.key, A.force.step); matchSpend('mov'); SIM.movs.us++; }
     else flare();
   } else {
     if(A.kind === 'fire') enemyMissile(); else if(A.kind === 'tor') enemyTorpedo();
     else if(A.kind === 'cat') enemyAirStrike();
-    else if(A.kind === 'mov') emovStart(A.force.gi, A.force.step);
+    else if(A.kind === 'mov'){ emovStart(A.force.gi, A.force.step); SIM.movs.them++; }
     else enemyFlare();
     if(A.kind !== 'fire') SIM.them.cd[A.kind] = 0;
   }
@@ -7852,6 +7868,7 @@ function simArm(a){
   if(!simYourMove()) return;
   if(a !== 'fire' && SETUP.md === 0){ SIM.note = 'Traditional rules · guns only'; simUI(); return; }
   if(armLost('us', a)){ SIM.note = KIND_NAME[a] + ' lost · ' + ARM_SHIP[a] + ' sunk'; simUI(); return; }
+  if(a === 'mov' && !movLeft('us')){ SIM.note = 'No manoeuvre left \u00b7 two a match'; simUI(); return; }
   if(a !== 'fire' && CD[a].t < CD[a].n){ SIM.note = KIND_NAME[a] + ' reloading'; simUI(); return; }
   /* PRESS AGAIN. An armed torpedo or star shell pressed again is put away and
      the missile is back. The strike turns first — down the screen, then across
@@ -8152,6 +8169,7 @@ function simNew(){
   matchReset();
   MATCH.turn = 1; MATCH.t = 0;
   for(const k in CD) CD[k].t = 0;
+  SIM.movs = { us:0, them:0 };
   SIM.us = simKnow(); SIM.them = simKnow();
   SIM.side = 'us'; SIM.phase = 'think'; SIM.wait = 2.2; SIM.act = null;
   SIM.turnN = 1; SIM.over = false; SIM.won = false; SIM.overData = null; SIM.step = false; SIM.replay = false;
