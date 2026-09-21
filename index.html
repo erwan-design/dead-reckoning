@@ -1040,7 +1040,7 @@
     <button class="chip" data-a="cat" data-l="Catapult"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.8v10.4"/><path d="M1.8 7.7 7 5.9l5.2 1.8"/><path d="M4.5 11.5 7 10.7l2.5.8"/></svg></button>
   </div>
   <div class="cap">
-    <button class="chip" data-a="lure" data-l="Decoy"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 10.4h8.8l-1.4 1.9H4z"/><path d="M7 10.2V3.1"/><path d="M4.3 5.6 7 3.1l2.7 2.5"/><path d="M4.3 8.1 7 5.6l2.7 2.5"/></svg></button>
+    <button class="chip" data-a="lure" data-l="Decoy"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5.3 9.3h3.4l-.5 2.4H5.8z"/><path d="M7 9.3V4.3"/><path d="M5.8 2.3h2.4v2H5.8z"/><path d="M3.6 2.2a4 4 0 0 0 0 4.2"/><path d="M10.4 2.2a4 4 0 0 1 0 4.2"/></svg></button>
   </div>
   <div class="cap">
     <button class="chip" data-a="flare" data-l="Star shell"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5.8A5.4 5.4 0 0 1 12 5.8"/><path d="M7 6.2V9"/><path d="M7 10.4v2M4.9 10 3.7 12M9.1 10l1.2 2"/></svg></button>
@@ -8025,8 +8025,12 @@ const KIND_NAME = { fire:'Missile', tor:'Torpedo', cat:'Air strike', flare:'Star
 /* THE BATTERIES LIVE ON HULLS. The torpedo is the submarine's, the strike the
    carrier's, the star shell the escort's; sink the hull and the weapon is gone.
    Theirs are the same five, laid out in the same order. */
-const ARM_SHIP = { tor:'submarine', cat:'carrier', flare:'escort', lure:'destroyer' };
-const ARM_GROUP = { cat:0, flare:3, tor:4, lure:1 };
+/* THE DECOY HANGS ON NO HULL. Two a match is limit enough; hanging it on the
+   destroyer as well meant a rule nobody could hold in their head, and a
+   manoeuvre that vanished before it had been understood. Anyone aboard can
+   stream a buoy. */
+const ARM_SHIP = { tor:'submarine', cat:'carrier', flare:'escort' };
+const ARM_GROUP = { cat:0, flare:3, tor:4 };
 function ownGone(key){
   const row = OWN_FLEET.find(f => f[0] === key); if(!row) return false;
   const c = ownCells(key, row[2]); if(!c) return false;
