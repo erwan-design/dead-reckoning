@@ -4106,7 +4106,6 @@ function debrisFire(at){
    readout does. */
 function debrisPlot(at, pool, big){
   const P = pool || DEB_E, k = P.k, R = Math.random;
-  if(P === DEB_E) shakeHit(big);
   const count = big ? 20 + Math.floor(R()*8) : 6 + Math.floor(R()*6);
   const power = big ? 1.15 + R()*0.5 : 0.5 + R()*0.45;
   const lift = big ? 1.1 + R()*0.5 : 0.45 + R()*0.5;
@@ -4783,6 +4782,11 @@ const SALVO_DUR = 5.6;
    a sinking is a heavier, longer version of the same jolt. */
 /* soft by default: a jolt a quarter as wide as before and at half the
    rate, the aim moving less than the eye — a shake felt, not a seizure */
+/* ONLY WHAT SHE IS STANDING ON SHAKES. A round landing on her board throws
+   the eye that watches it; a round landing on theirs is read off a plan and
+   moves nothing. So the shake is raised where she is hit — by their missile,
+   their torpedo, their aircraft, and hardest when one of her hulls goes down
+   — and never by her own fire finding its mark. */
 const SHAKE_HIT = 1.0, SHAKE_SINK = 1.5, SHAKE_K = 0.0055, SHAKE_F = 22.0, SHAKE_AIM = 0.35;
 function shakeHit(big){ ANIM.shake = Math.max(ANIM.shake, big ? SHAKE_SINK : SHAKE_HIT); }
 const ANIM = { flrOut:-1, fire:0, fireGoal:0, sink:-1, steamFired:false, mis:-1, misHit:false, tor:-1, torHit:false, blast:-1, ship:null, bomb:-1, shake:0, radar:true, rings:true, ringsK:0, con:true, conK:0, ipad:true, plot:0, split:true, half:false, halfEnemy:false, won:true, hour:-1, era:0, fleet:true, glide:0, shot:0, snd:false, cat:-1, flr:-1, flrLit:false, flrWet:-1, swap:0, env:1, envK:0 };
@@ -8431,15 +8435,10 @@ function boardCam(S){
   camera.position.set(_bt.x + Math.sin(S.az)*ce*ds,
                       _bt.y + Math.sin(S.el)*ds,
                       _bt.z + Math.cos(S.az)*ce*ds);
-  /* THE PLOT TAKES THE BLOW TOO: its fixed eye jolts on a hit up there and
-     shakes on a sinking, with the same beat as the eye below */
-  if(ANIM.shake > 0.0015){
-    const sk = ANIM.shake*ANIM.shake, f = tt*SHAKE_F, amp = ds*SHAKE_K*sk;
-    camera.position.x += Math.sin(f)*Math.sin(f*0.37)*amp;
-    camera.position.z += Math.sin(f*0.87 + 3.1)*Math.sin(f*0.43)*amp;
-    _bt.x += Math.sin(f*1.13 + 0.7)*amp*SHAKE_AIM;
-    _bt.z += Math.sin(f*0.97 + 2.4)*amp*SHAKE_AIM;
-  }
+  /* THE PLOT NEVER SHAKES. It is a plan of their water, held on a fixed eye —
+     a reading, not a place. Nothing that happens out there reaches the hand
+     holding it, so a hit or a sinking up there leaves this view dead still.
+     The shake belongs to the board below, where her own hulls take the blow. */
   camera.position.y = Math.max(camera.position.y, 7.5);
   _bt.y += 26*Math.min(ds/AD.camDist, 1.15);
   camera.lookAt(_bt);
