@@ -40,6 +40,9 @@
     border-radius:30px;
     box-shadow:0 0 0 11px #14161d, 0 0 0 12px rgba(226,236,244,.10),
                0 0 0 13px rgba(0,0,0,.55), 0 44px 110px rgba(0,0,0,.62)}
+  /* the phone takes the whole glass: no bezel, no corners, no room around */
+  body.ipad.phone{background:#0b0c14}
+  body.ipad.phone #stage{border-radius:0;box-shadow:none}
   canvas.in{opacity:1}
   /* ---- readout: one block, top left, out of the picture's way ---- */
   .rd{position:absolute;left:26px;top:22px;pointer-events:none;user-select:none;
@@ -138,6 +141,9 @@
      50% - 343 places its foot 26px over the card: the screen pads itself by
      208 so that title, card and action read as one centred block. */
   body.s-setup #brand{top:calc(50% - 386px)}
+  /* on a phone the box is half again as tall: a wordmark hung off its middle
+     came down onto the card. It stays where the title left it. */
+  body.phone.s-setup #brand{top:180px}
   /* every other screen names itself */
   body:not(.s-attract):not(.s-setup) #brand{opacity:0}
   .go{margin-top:30px;appearance:none;cursor:pointer;box-sizing:border-box;
@@ -1117,7 +1123,7 @@
   <!-- WHICH BUILD IS THIS. Four rounds of a fix were spent arguing with a page
        that was not the page being looked at. The stamp says, at a glance and
        without a console, exactly which one is running. -->
-  <div id="build">BUILD 260921-6e4e49e</div>
+  <div id="build">BUILD 260922-368277a</div>
 </div>
 <div class="scr" id="scr-setup">
   <div class="card">
@@ -7906,7 +7912,7 @@ function plotPick(clientX, clientY){
   const r = canvas.getBoundingClientRect(), hh = r.height/2;
   const y0 = r.top + (ANIM.swap ? hh : 0);
   if(clientY < y0 || clientY > y0 + hh || clientX < r.left || clientX > r.right) return null;
-  const S4 = shotList()[3], S = { az:S4.az, el:S4.el, dist:S4.dist*PLOT_BACK, t:S4.t };
+  const S4 = shotList()[3], S = { az:S4.az, el:S4.el, dist:S4.dist*PLOT_BACK*PLOT_PH, t:S4.t };
   const ce = Math.cos(S.el), ds = S.dist*frameScale;
   _pickCam.fov = camera.fov; _pickCam.near = camera.near; _pickCam.far = camera.far;
   _pickCam.aspect = r.width/hh; _pickCam.updateProjectionMatrix();
@@ -8689,6 +8695,7 @@ setTimeout(hideHint, 11000);
 const _bt = new T.Vector3(), _liveP = new T.Vector3(), _liveQ = new T.Quaternion();
 /* how far the upper board stands back from Cam 04's own framing */
 const PLOT_BACK = 1.45;
+var PLOT_PH = 1;
 function boardCam(S){
   const ce = Math.cos(S.el), ds = S.dist*frameScale;
   _bt.copy(S.t);
@@ -8803,10 +8810,21 @@ var PR_MAX = 1.6;
 function frameFit(){
   if(!document.body.classList.contains('ipad')) return 1;
   const cs = getComputedStyle(document.body);
-  const aw = parseFloat(cs.getPropertyValue('--arw')) || 744, ah = parseFloat(cs.getPropertyValue('--arh')) || 1133;
+  const aw = parseFloat(cs.getPropertyValue('--arw')) || 744;
   const vw = Math.min(innerWidth, document.documentElement.clientWidth || innerWidth, (window.visualViewport && visualViewport.width) || innerWidth);
   const vh = Math.min(innerHeight, (window.visualViewport && visualViewport.height) || innerHeight);
-  const pad = Math.min(vw, vh) < 700 ? 16 : 56;
+  /* A PHONE IS NOT A TABLET SEEN ACROSS A ROOM. Held in the hand there is no
+     room to show around the frame, and a tablet's proportion left a third of
+     the glass as black bands. On a phone the stage keeps its width of 744 and
+     takes the height the screen actually has, so it fills it: the boards get
+     taller, the readouts stay on the edges they were pinned to, and the
+     bezel — a picture of a device, shown on a device — goes away. */
+  const phone = vw < 560 && vh > vw && SCREEN !== 'shot';
+  document.body.classList.toggle('phone', phone);
+  if(phone) document.body.style.setProperty('--arh', Math.round(aw*vh/vw));
+  else document.body.style.removeProperty('--arh');
+  const ah = parseFloat(getComputedStyle(document.body).getPropertyValue('--arh')) || 1133;
+  const pad = phone ? 0 : (Math.min(vw, vh) < 700 ? 16 : 56);
   const k = Math.max(0.2, Math.min(1, (vw - pad)/aw, (vh - pad)/ah));
   document.body.style.setProperty('--k', k.toFixed(4));
   return k;
@@ -8824,7 +8842,14 @@ function fit(){
   const f = asp >= 1.6 ? AD.fovV : T.MathUtils.radToDeg(2*Math.atan(refTanH/Math.max(asp, 0.5)));
   camera.fov = Math.min(f, 46);
   camera.updateProjectionMatrix();
+  /* A HALF OF A PHONE IS NARROWER, NOT WIDER. Bringing the eye in to fill the
+     height ran the board off both sides — a square board in a tall frame
+     fits by its width, and what is left over is sea. So the distance is the
+     tablet's, and only the plot comes in a little, which has a gutter of
+     instrument beside it and can afford it. */
+  const onPhone = document.body.classList.contains('phone');
   frameScale = asp >= 1.6 ? 1.0 : 0.76 + 0.24*(asp/1.6);
+  PLOT_PH = onPhone ? 0.97 : 1;
   sizeTargets();
 }
 addEventListener('resize', fit, {passive:true});
@@ -8991,7 +9016,7 @@ function frame(now){
          itself is untouched: this is the upper board's framing, not Cam 04's. */
       if(enemy && !ANIM.half){
         const S4 = shotList()[3];
-        boardCam({ az:S4.az, el:S4.el, dist:S4.dist*PLOT_BACK, t:S4.t });
+        boardCam({ az:S4.az, el:S4.el, dist:S4.dist*PLOT_BACK*PLOT_PH, t:S4.t });
       }
       else {
         camera.position.copy(_liveP); camera.quaternion.copy(_liveQ);
