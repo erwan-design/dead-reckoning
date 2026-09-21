@@ -204,6 +204,10 @@
   /* no CSS transition on the fill: it is stepped every frame, and a transition
      on top made it lag — the bar shrank back from 68% while the figure rose */
   .lbar i.fill{transition:none}
+  #build{position:absolute;left:0;right:0;bottom:16px;text-align:center;
+      font:400 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.28em;
+      color:rgba(206,224,236,.30);pointer-events:none;z-index:6;transition:opacity 600ms ease}
+  body:not(.s-attract) #build{opacity:0}
   #scr-attract .tgo{position:absolute;left:50%;bottom:64px;transform:translate(-50%, 10px);margin:0;
       opacity:0;pointer-events:none;transition:opacity 700ms ease, transform 700ms cubic-bezier(.2,.7,.2,1)}
   #scr-attract .tgo.on{opacity:1;pointer-events:auto;transform:translate(-50%, 0)}
@@ -1110,6 +1114,10 @@
     <div class="lbar"><i id="lfill"></i></div>
   </div>
   <button class="go prim tgo" id="tgo" data-scr="setup">Take command <i>&#8594;</i></button>
+  <!-- WHICH BUILD IS THIS. Four rounds of a fix were spent arguing with a page
+       that was not the page being looked at. The stamp says, at a glance and
+       without a console, exactly which one is running. -->
+  <div id="build">BUILD 260921-854d7d1</div>
 </div>
 <div class="scr" id="scr-setup">
   <div class="card">
