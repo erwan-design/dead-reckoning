@@ -802,9 +802,6 @@
   #simbar button.go2{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.34)}
   #simbar button[hidden]{display:none}
   body:not(.ipad) #simbar button:hover{color:rgba(243,249,252,.96);background:rgba(255,255,255,.08)}
-  /* in a match the missile needs no button: it is what fires unless a battery
-     is armed, and pressing an armed battery again puts it away */
-  body.sim #rail .cap:has(#firechip){display:none}
   /* in a match the rail arms a weapon; the target is picked on their plot */
   body.sim #rail .chip.on{color:rgba(170,242,224,.98);border-color:rgba(157,240,220,.40);
       background:rgba(157,240,220,.12)}
@@ -1030,12 +1027,12 @@
 <!-- THE THREE BATTERIES, EACH ON ITS OWN. A shared capsule says these
      belong to one group; they are three separate weapons, so each takes a
      disc of its own. Missile, Sink and Reset are not manoeuvres you choose —
-     they stay in the debug tray, where the rest of the scaffolding lives. -->
+     they stay in the debug tray, where the rest of the scaffolding lives.
+     THE MISSILE HAS NO BUTTON AT ALL. It is the round that leaves unless a
+     battery is armed — on the plot it is a tap, on the bench it is in the
+     debug tray with the other scaffolding. A disc of its own, beside three
+     batteries that each have a cadence to watch, only said otherwise. -->
 <div class="rail in-a" id="rail">
-  <!-- the base gun has no cadence: no ring, always ready -->
-  <div class="cap">
-    <button class="chip" id="firechip" data-a="fire" data-l="Missile"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 11 11 3"/><path d="M7.2 3H11v3.8"/><path d="M3.1 8.4 5.6 10.9"/></svg></button>
-  </div>
   <div class="cap">
     <button class="chip" data-a="tor" data-l="Torpedo"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M11.9 7c0 1-1.6 1.8-3.4 1.8S5.1 8 5.1 7s1.6-1.8 3.4-1.8S11.9 6 11.9 7z"/><path d="M5.1 5.6 3.7 4.4M5.1 8.4 3.7 9.6"/><circle cx="1.9" cy="7" r=".65"/></svg></button>
   </div>
