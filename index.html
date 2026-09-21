@@ -1040,6 +1040,9 @@
     <button class="chip" data-a="cat" data-l="Catapult"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.8v10.4"/><path d="M1.8 7.7 7 5.9l5.2 1.8"/><path d="M4.5 11.5 7 10.7l2.5.8"/></svg></button>
   </div>
   <div class="cap">
+    <button class="chip" data-a="lure" data-l="Decoy"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 10.4h8.8l-1.4 1.9H4z"/><path d="M7 10.2V3.1"/><path d="M4.3 5.6 7 3.1l2.7 2.5"/><path d="M4.3 8.1 7 5.6l2.7 2.5"/></svg></button>
+  </div>
+  <div class="cap">
     <button class="chip" data-a="flare" data-l="Star shell"><svg class="cd" viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="17.1"/><circle class="fg" cx="20" cy="20" r="17.1"/></svg><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5.8A5.4 5.4 0 0 1 12 5.8"/><path d="M7 6.2V9"/><path d="M7 10.4v2M4.9 10 3.7 12M9.1 10l1.2 2"/></svg></button>
   </div>
 </div>
@@ -1261,7 +1264,7 @@
       <button data-side="own">Own</button><button data-side="enemy">Enemy</button>
     </div>
     <div class="drow">
-      <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="flare">Star shell</button><button class="danger" data-a="reset">Reset</button>
+      <button data-a="fire">Missile</button><button data-a="cat">Catapult</button><button data-a="tor">Torpedo</button><button data-a="flare">Star shell</button><button data-a="lure">Decoy</button><button class="danger" data-a="reset">Reset</button>
     </div>
   </div>
   <button class="dtog" id="dtog">Debug</button>
@@ -3769,6 +3772,14 @@ function pushContacts(){
       k++;
     }
   }
+  /* a decoy of theirs reads exactly like a hull until it is seen through:
+     that is the whole trick, so it lights with the sweep like any contact */
+  if(LURE) for(const l of LURE.them){
+    if(!l.hit || l.spent || k >= NCON) continue;
+    const w = cellW(l.x + 0.5, l.z + 0.5);
+    U4[k].set(l.x, l.z, Math.atan2(w.z, w.x), 1 - ss(R*0.80, R, Math.hypot(w.x, w.z)));
+    US[k] = 0; k++;
+  }
   for(; k < NCON; k++){ U4[k].set(0, 0, 0, -1); US[k] = 0; }
 }
 pushContacts();
@@ -4697,7 +4708,7 @@ const MIS_TW_MOD = [1, 1, 1], MIS_TW_SAIL = [0.42, 0, 0];
    the torpedo — the only shot that cannot come back empty-handed — waits
    longest for it. */
 const TURN_S = 4.0;
-const CD = { flare:{ n:3, t:3 }, cat:{ n:4, t:2 }, tor:{ n:5, t:0 } };
+const CD = { flare:{ n:3, t:3 }, cat:{ n:4, t:2 }, tor:{ n:5, t:0 }, lure:{ n:5, t:3 } };
 const CDN = { flare:'Star shell', cat:'Air strike', tor:'Torpedo' };
 /* THE ENGAGEMENT CLOCK. Two different things, kept apart on purpose.
    Time runs: T+ is a match clock and counts whether or not anyone acts.
@@ -4711,7 +4722,7 @@ const MATCH = { t:0, acc:-1, turn:6, sec:-1, dirty:true, act:null };
 var DBG_SIDE = 'own';
 /* THE MATCH SCREEN's state (see SIM below); declared here, where the rest of
    the engagement's globals are, so the weapons can ask whether one is on */
-var SIM = { on:false, force:null };
+var SIM = { on:false, force:null, lures:{ us:0, them:0 } };
 /* every square of theirs a round of ours has landed on, hit or miss */
 const ENEMY_SHOT = new Set();
 const ENEMY_ARMS = ['fire', 'tor', 'cat', 'flare'];
@@ -5989,6 +6000,7 @@ function wreckClear(){
 
 function updateFX(dt){
   firesTick(dt);
+  luretTick(dt);
   /* fire */
   const kf = 1 - Math.exp(-dt*(ANIM.fireGoal > ANIM.fire ? 0.42 : 0.9));
   ANIM.fire += (ANIM.fireGoal - ANIM.fire)*kf;
@@ -6197,8 +6209,12 @@ function updateFX(dt){
           STRK.done[i] = true;
           const c = STRK.cells[i], T0 = cellW(c[0] + 0.5, c[1] + 0.5);
           const h = hullUnder(c[0], c[1]);
+          const sLu = !h && lureAt('them', c[0], c[1]);
           ENEMY_SHOT.add(c[0] + ',' + c[1]);
-          if(h){
+          if(sLu){
+            FX.sHit[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.sHit[i].material.uniforms.uT0.value = tt;
+            lureStrike(sLu); pushContacts(); debrisPlot(T0); boom(T0, 0.26);
+          } else if(h){
             FX.sHit[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.sHit[i].material.uniforms.uT0.value = tt;
             CON_GROUPS[h[0]].hit[h[1]] = true; pushContacts();
             if(CON_GROUPS[h[0]].hit.every(Boolean)) wreckSink(h[0]); else debrisPlot(T0);
@@ -6270,7 +6286,14 @@ function updateFX(dt){
       ANIM.misHit = true;
       ENEMY_SHOT.add(SALVO.cell[0] + ',' + SALVO.cell[1]);
       const T0 = SALVO.tgt;
-      if(SALVO.hit){
+      const eLu = !SALVO.hit && lureAt('them', SALVO.cell[0], SALVO.cell[1]);
+      if(eLu){
+        /* a raft of theirs, and no way of knowing it yet: the plot reads a
+           contact and the readout calls it a hit, as it should */
+        FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
+        lureStrike(eLu); pushContacts(); debrisPlot(T0); boom(T0, 0.30);
+        noteShot('Missile ' + colLetter(SALVO.cell[0]) + (SALVO.cell[1] + 1) + ' \u00b7 hit', 'hit');
+      } else if(SALVO.hit){
         FX.eHit.material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.eHit.material.uniforms.uT0.value = tt;
         CON_GROUPS[SALVO.group].hit[SALVO.gcell] = true; pushContacts();
         if(CON_GROUPS[SALVO.group].hit.every(Boolean)) wreckSink(SALVO.group); else debrisPlot(T0);
@@ -6352,9 +6375,14 @@ function updateFX(dt){
       if(!EAIR.done[i] && t >= tl){
         EAIR.done[i] = true;
         const c = EAIR.cells[i], own = ownShipAt(c[0], c[1]);
+        const lu = lureAt('us', c[0], c[1]);
         OWN_SHOT.add(c[0] + ',' + c[1]);
         FX.oSpl[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.oSpl[i].material.uniforms.uT0.value = tt;
-        if(own){
+        if(lu && !own){
+          FX.oHit[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.oHit[i].material.uniforms.uT0.value = tt;
+          lureStrike(lu); debrisPlot(T0, DEB_O); boom(T0, 0.22);
+          EAIR.hits++;
+        } else if(own){
           FX.oHit[i].material.uniforms.uOrigin.value.set(T0.x, 0, T0.z); FX.oHit[i].material.uniforms.uT0.value = tt;
           const set = OWN_HITS[own.key] = OWN_HITS[own.key] || new Set();
           const was = set.size >= own.n;
@@ -6482,10 +6510,20 @@ function updateFX(dt){
     if(u >= ES_HIT && !ESALVO.hitDone){
       ESALVO.hitDone = true;
       const T0 = ESALVO.tgt, at = ESALVO.at, lab = colLetter(ESALVO.cell[0]) + (ESALVO.cell[1] + 1);
+      const lu = lureAt('us', ESALVO.cell[0], ESALVO.cell[1]);
       OWN_SHOT.add(ESALVO.cell[0] + ',' + ESALVO.cell[1]);
       FX.misSplash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z);
       FX.misSplash.material.uniforms.uT0.value = tt;
-      if(at){
+      if(lu){
+        /* THE RAFT TAKES IT. The same flash and the same wreckage as a hull —
+           what they are reading is what they are told — but nothing of hers
+           is touched, and the eye does not jump: it is a raft, not a ship. */
+        FX.hitFlash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z);
+        FX.hitFlash.material.uniforms.uT0.value = tt;
+        lureStrike(lu); debrisPlot(T0, DEB_O); boom(T0, 0.26);
+        ESALVO.label = 'Missile ' + lab + ' \u00b7 decoy struck';
+        LASTIN = { label: ESALVO.label, kind:'miss' };
+      } else if(at){
         FX.hitFlash.material.uniforms.uOrigin.value.set(T0.x - MIS.B.x, 0, T0.z - MIS.B.z);
         FX.hitFlash.material.uniforms.uT0.value = tt;
         const set = OWN_HITS[at.key] = OWN_HITS[at.key] || new Set();
@@ -7092,8 +7130,8 @@ function refreshUI(){
     /* the reload governs the rail only. The tray is scaffolding: it has to be
        able to fire anything at any moment, cadence or no cadence. */
     /* in a match: the armed weapon is lit, and nothing is while it is not her move */
-    if(SIM.on && b.closest('#rail') && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare')){
-      const mine = simYourMove(), lost = armLost('us', a);
+    if(SIM.on && b.closest('#rail') && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare' || a === 'lure')){
+      const mine = simYourMove(), lost = armLost('us', a) || (a === 'lure' && !lureLeft('us'));
       b.classList.toggle('on', mine && SIM.weapon === a && !lost);
       b.classList.toggle('na', !mine || lost);
     }
@@ -7191,7 +7229,7 @@ function onCtl(e){
      own = the formation as she lies, enemy = an empty sea and what the beam finds */
   const a = b.dataset.a;
   /* a match plays itself: its weapons are not ours to fire, and reset means a new one */
-  if(SIM.on && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare')){ simArm(a); hideHint(); return; }
+  if(SIM.on && (a === 'fire' || a === 'tor' || a === 'cat' || a === 'flare' || a === 'lure')){ simArm(a); hideHint(); return; }
   if(SIM.on && a === 'reset'){ simNew(); hideHint(); return; }
   if(a === 'snd'){ ANIM.snd = !ANIM.snd; sndOn(ANIM.snd); }
   if(a === 'radar') ANIM.radar = !ANIM.radar;
@@ -7238,6 +7276,14 @@ function onCtl(e){
   if(a === 'tor' && ANIM.era === 0){ if(enemySide) enemyTorpedo(); else torpedo(); }
   /* the star shell exists in both eras: a signal rocket is not a modern idea */
   if(a === 'flare'){ if(enemySide) enemyFlare(); else flare(); }
+  /* on the bench the decoy has no square to be given: it goes on the first
+     clear water it finds, so the raft itself can be looked at */
+  if(a === 'lure' && !SIM.on){
+    for(let n=0; n<60; n++){
+      const x = Math.floor(Math.random()*10), z = Math.floor(Math.random()*10);
+      if(lurePlace('us', x, z)) break;
+    }
+  }
   if(a === 'sink') setSink(ANIM.sink < 0);
   if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true); firesOut();
     ANIM.plot = 0; ANIM.fleet = true; ANIM.mis = -1; ANIM.tor = -1;
@@ -7395,14 +7441,14 @@ function setupCtl(b){
    what its own fire has told it, until one fleet is on the bottom.
    ============================================================ */
 const SIM_SIZES = [4, 3, 3, 2, 2];
-const SIM_CDN = { tor:5, cat:4, flare:3 };
+const SIM_CDN = { tor:5, cat:4, flare:3, lure:5 };
 Object.assign(SIM, { human:true, weapon:'fire', catCross:false, aim:null, hover:null, note:null, auto:true, step:false, speed:1, side:'us', phase:'think', wait:0, act:null,
                      turnN:1, over:false, won:false, us:null, them:null, snap:null, dirty:false, overData:null });
 /* what one side knows of the other's grid: 0 nothing, 1 water, 2 a hit on a
    hull still afloat, 3 a hull that is gone — and which lengths are still out there */
 function simKnow(){
   return { K:new Int8Array(100), left:SIM_SIZES.slice(), blocks:[], gone:new Set(),
-           moves:0, shots:0, hits:0, sunk:0, cd:{ tor:0, cat:0, flare:0 }, range:0, last:'' };
+           moves:0, shots:0, hits:0, sunk:0, cd:{ tor:0, cat:0, flare:0, lure:3 }, range:0, last:'' };
 }
 /* THEIR FLEET, laid out where nobody can see it: five hulls, none touching */
 function simFleet(){
@@ -7447,7 +7493,91 @@ function simShips(side){
   }
   return out;
 }
-function simHull(side, x, z){
+/* ============================================================
+   THE DECOY. A raft with a corner reflector, streamed off the destroyer and
+   left riding one square of her own water. To the other side it answers like
+   a hull: the round that finds it reports a hit, and they work the squares
+   around it while nothing of hers is in danger. Two turns later the echo is
+   read for what it is, the square goes cold, and the raft is done — a decoy
+   buys time, it does not win a match.
+
+   A torpedo runs underneath one: only what falls on a square — missile,
+   bombs — takes the bait.
+   ============================================================ */
+const LURE_MAX = 2, LURE_LIFE = 2;
+var LURE = { us:[], them:[] };
+function lureAt(side, x, z){
+  if(!LURE) return null;
+  for(const l of LURE[side]) if(!l.spent && l.x === x && l.z === z) return l;
+  return null;
+}
+function lureOpen(side, x, z){
+  if(x < 0 || x > 9 || z < 0 || z > 9 || lureAt(side, x, z)) return false;
+  if(side === 'us') return !ownShipAt(x, z) && !OWN_SHOT.has(x + ',' + z);
+  return !hullUnder(x, z) && !ENEMY_SHOT.has(x + ',' + z);
+}
+function lureLeft(side){ return !SIM.on || (SIM.lures[side] || 0) < LURE_MAX; }
+function lurePlace(side, x, z){
+  if(!lureOpen(side, x, z)) return null;
+  const l = { x, z, hit:false, turn:0, spent:false, raft:null };
+  if(side === 'us') l.raft = lureRaft(x, z);
+  LURE[side].push(l);
+  if(SIM.on) SIM.lures[side]++;
+  simCells();
+  return l;
+}
+/* a round found it: it answers like a hull, and the clock starts */
+function lureStrike(l){ if(!l.hit){ l.hit = true; l.turn = SIM.turnN; } }
+/* the echo read for what it is: the square goes cold on the plot that holds it */
+function lureTick(){
+  let any = false;
+  for(const side of ['us', 'them']) for(const l of LURE[side]){
+    if(l.spent || !l.hit || SIM.turnN - l.turn < LURE_LIFE) continue;
+    l.spent = true; any = true;
+    const i = l.z*10 + l.x, S = side === 'us' ? SIM.them : SIM.us;
+    if(S && S.K[i] === 2){ S.K[i] = 1; S.hits = Math.max(0, S.hits - 1); }
+    if(l.raft) lureSink(l.raft);
+    const sq = colLetter(l.x) + (l.z + 1);
+    if(side === 'them') noteShot('Decoy ' + sq + ' \u00b7 false echo', 'miss');
+    else LASTIN = { label:'Decoy ' + sq + ' \u00b7 spent', kind:'miss' };
+  }
+  if(any){ simCells(); pushContacts(); refreshUI(); }
+}
+function lureClear(){
+  for(const side of ['us', 'them']){
+    for(const l of LURE[side]) if(l.raft){ scene.remove(l.raft); }
+    LURE[side].length = 0;
+  }
+}
+/* A RAFT AND A REFLECTOR: two plates crossed above a float, which is all a
+   decoy has ever been, and enough to look like a ship to anything reading
+   returns from a distance. */
+function lureRaft(x, z){
+  const g = new T.Group(), p = cellW(x + 0.5, z + 0.5, 0);
+  g.position.set(p.x, 0, p.z); g.rotation.y = Math.random()*Math.PI;
+  const m = shipMat({ kind:'accent', lift:1.05 });
+  const raft = new T.Mesh(new T.BoxGeometry(15, 2.4, 15), m); raft.position.y = 1.2; g.add(raft);
+  /* the reflector: two plates crossed, and a third lying flat across them —
+     the corner that sends a round's own beam straight back at it */
+  for(let i=0;i<2;i++){
+    const pl = new T.Mesh(new T.BoxGeometry(i ? 0.9 : 14, 14, i ? 14 : 0.9), m);
+    pl.position.y = 10.5; g.add(pl);
+  }
+  const flat = new T.Mesh(new T.BoxGeometry(13, 0.9, 13), m); flat.position.y = 10.5; g.add(flat);
+  const mast = new T.Mesh(new T.CylinderGeometry(0.6, 0.6, 21, 6), m);
+  mast.position.y = 10.5; g.add(mast);
+  scene.add(g); onBoard(BOARD_OWN, g, true);
+  bob(g, 1.4, 1.1, 5.0);
+  return g;
+}
+function lureSink(g){ g.userData.want = false; g.visible = false; }
+function simHull(side, x, z, solid){
+  /* a decoy of the side being fired at answers like a hull — unless the thing
+     coming is a torpedo, which runs under a raft */
+  if(!solid){
+    const l = lureAt(side === 'us' ? 'them' : 'us', x, z);
+    if(l) return { id:'lure' + x + ',' + z, cells:[[x, z]], gone:false, lure:true };
+  }
   for(const sh of simShips(side)) for(const c of sh.cells) if(c[0] === x && c[1] === z) return sh;
   return null;
 }
@@ -7485,8 +7615,19 @@ function simChoose(side){
   const S = side === 'us' ? SIM.us : SIM.them, K = S.K, D = simDensity(S);
   const ax = side === 'us' ? plotAxis() : ownAxis();
   /* traditional rules: guns only, for both sides */
-  const ready = k => SETUP.md !== 0 && !armLost(side, k) && (side === 'us' ? CD[k].t >= CD[k].n : S.cd[k] >= SIM_CDN[k]);
+  const ready = k => SETUP.md !== 0 && !armLost(side, k) && (k !== 'lure' || lureLeft(side))
+                     && (side === 'us' ? CD[k].t >= CD[k].n : S.cd[k] >= SIM_CDN[k]);
   const hunting = !K.some(v => v === 2);
+  /* A RAFT WHILE SHE IS BEING HUNTED. Once one of her hulls has answered,
+     the other side is working that water: a decoy laid in clear sea draws
+     rounds into it, and every round it takes is a square of hers left alone. */
+  if(ready('lure') && lureLeft(side)){
+    const hurt = side === 'them'
+      ? CON_GROUPS.some(g => g.hit.some(Boolean) && !g.hit.every(Boolean))
+      : OWN_FLEET.some(([k]) => OWN_HITS[k] && OWN_HITS[k].size);
+    const sp = hurt ? lureSpot(side) : null;
+    if(sp && Math.random() < 0.7) return { kind:'lure', force:[sp.x, sp.z] };
+  }
   /* HOW HARD THE MACHINE PLAYS. Cadet fires at random and only half follows up
      a hit; Officer plays the odds (everything below); Admiral plays the odds and
      now and then reads the plot outright. */
@@ -7551,6 +7692,25 @@ function simChoose(side){
 }
 /* WHAT THE MOVE WILL FIND, worked out from the hidden truth as it is fired;
    it is only learnt when the move lands */
+var LURET = { t:-1, dur:1.3 };
+function luretTick(dt){ if(LURET.t >= 0){ LURET.t += dt; if(LURET.t >= LURET.dur) LURET.t = -1; } }
+/* WHERE A RAFT IS WORTH STREAMING: water nobody has fired into, with unknown
+   squares around it — a decoy in a corner they have already swept is a turn
+   thrown away. */
+function lureSpot(side){
+  const own = side === 'them' ? 'them' : 'us', K = side === 'them' ? SIM.us.K : SIM.them.K;
+  const best = [];
+  for(let x=0; x<10; x++) for(let z=0; z<10; z++){
+    if(!lureOpen(own, x, z) || K[z*10 + x] !== 0) continue;
+    let unk = 0;
+    for(const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const X = x + dx, Z = z + dz;
+      if(X >= 0 && X < 10 && Z >= 0 && Z < 10 && K[Z*10 + X] === 0) unk++;
+    }
+    if(unk >= 3) best.push({ x, z });
+  }
+  return best.length ? best[Math.floor(Math.random()*best.length)] : null;
+}
 function simPlan(side, A){
   const ax = side === 'us' ? plotAxis() : ownAxis(), P = { struck:[], water:[], block:null };
   if(A.kind === 'fire') P.struck.push(A.force);
@@ -7561,7 +7721,7 @@ function simPlan(side, A){
   if(A.kind === 'tor'){
     for(let step=0; step<10; step++){
       const c = ax.sq(A.force.lane, step);
-      const hh = simHull(side, c[0], c[1]);
+      const hh = simHull(side, c[0], c[1], true);
       if(hh && !hh.gone){ P.struck.push(c); P.run = step + 1; break; }
       if(hh) continue;
       P.water.push(c);
@@ -7603,6 +7763,7 @@ function simLearn(side, A){
   S.blocks = S.blocks.filter(b => b.cells.some(i => K[i] === 0));
 }
 function simResolved(side, kind){
+  if(kind === 'lure') return LURET.t < 0;
   if(side === 'us'){
     if(kind === 'fire') return ANIM.mis < 0;
     if(kind === 'tor') return ANIM.tor < 0;
@@ -7619,10 +7780,14 @@ function simExec(side, A){
   SIM.force = A.force;
   if(side === 'us'){
     if(A.kind === 'fire') launch(); else if(A.kind === 'tor') torpedo();
-    else if(A.kind === 'cat') catapult(); else flare();
+    else if(A.kind === 'cat') catapult();
+    else if(A.kind === 'lure'){ lurePlace('us', A.force[0], A.force[1]); matchSpend('lure'); LURET.t = 0; }
+    else flare();
   } else {
     if(A.kind === 'fire') enemyMissile(); else if(A.kind === 'tor') enemyTorpedo();
-    else if(A.kind === 'cat') enemyAirStrike(); else enemyFlare();
+    else if(A.kind === 'cat') enemyAirStrike();
+    else if(A.kind === 'lure'){ lurePlace('them', A.force[0], A.force[1]); LURET.t = 0; }
+    else enemyFlare();
     if(A.kind !== 'fire') SIM.them.cd[A.kind] = 0;
   }
   SIM.force = null;
@@ -7670,6 +7835,7 @@ function simArm(a){
   if(!simYourMove()) return;
   if(a !== 'fire' && SETUP.md === 0){ SIM.note = 'Traditional rules · guns only'; simUI(); return; }
   if(armLost('us', a)){ SIM.note = KIND_NAME[a] + ' lost · ' + ARM_SHIP[a] + ' sunk'; simUI(); return; }
+  if(a === 'lure' && !lureLeft('us')){ SIM.note = 'No decoy left \u00b7 two a match'; simUI(); return; }
   if(a !== 'fire' && CD[a].t < CD[a].n){ SIM.note = KIND_NAME[a] + ' reloading'; simUI(); return; }
   /* PRESS AGAIN. An armed torpedo or star shell pressed again is put away and
      the missile is back. The strike turns first — down the screen, then across
@@ -7680,7 +7846,8 @@ function simArm(a){
   } else if(a === 'cat') SIM.catCross = false;
   SIM.weapon = a; SIM.note = null;
   SIM.aim = null;
-  if(SIM.hover){ const T0 = simTarget(a, SIM.hover.gx, SIM.hover.gz); SIM.hover = T0.bad ? null : T0; }
+  if(a === 'lure') SIM.hover = null;
+  else if(SIM.hover){ const T0 = simTarget(a, SIM.hover.gx, SIM.hover.gz); SIM.hover = T0.bad ? null : T0; }
   simUI(); refreshUI();
 }
 function simTap(gx, gz){
@@ -7714,6 +7881,33 @@ function plotPick(clientX, clientY){
   const lx = gC*x - gS*z, lz = gS*x + gC*z;
   const gx = Math.floor(lx/AD.cell + 5), gz = Math.floor(lz/AD.cell + 5);
   return (gx < 0 || gx > 9 || gz < 0 || gz > 9) ? null : [gx, gz];
+}
+/* WHERE ON HER OWN BOARD a point of the screen falls. The plot above is drawn
+   by a camera the pass builds from a preset; the board below is drawn by the
+   eye the loop left, so the pick borrows that eye exactly as it stood when
+   the half was last rendered. A decoy is the one thing she places at home. */
+const _pickOwnCam = new T.PerspectiveCamera();
+function ownPick(clientX, clientY){
+  const r = canvas.getBoundingClientRect(), hh = r.height/2;
+  const y0 = r.top + (ANIM.swap ? 0 : hh);
+  if(clientY < y0 || clientY > y0 + hh || clientX < r.left || clientX > r.right) return null;
+  _pickOwnCam.fov = camera.fov; _pickOwnCam.near = camera.near; _pickOwnCam.far = camera.far;
+  _pickOwnCam.aspect = r.width/hh; _pickOwnCam.updateProjectionMatrix();
+  _pickOwnCam.position.copy(_liveP); _pickOwnCam.quaternion.copy(_liveQ); _pickOwnCam.updateMatrixWorld();
+  _pickV.set((clientX - r.left)/r.width*2 - 1, -((clientY - y0)/hh*2 - 1));
+  _pickRay.setFromCamera(_pickV, _pickOwnCam);
+  const o = _pickRay.ray.origin, d = _pickRay.ray.direction;
+  if(d.y > -1e-4) return null;
+  const t = -o.y/d.y, x = o.x + d.x*t, z = o.z + d.z*t;
+  const lx = gC*x - gS*z, lz = gS*x + gC*z;
+  const gx = Math.floor(lx/AD.cell + 5), gz = Math.floor(lz/AD.cell + 5);
+  return (gx < 0 || gx > 9 || gz < 0 || gz > 9) ? null : [gx, gz];
+}
+function lureTap(gx, gz){
+  if(!simYourMove() || SIM.weapon !== 'lure') return;
+  const sq = colLetter(gx) + (gz + 1);
+  if(!lureOpen('us', gx, gz)){ SIM.note = 'No room for a decoy on ' + sq; simUI(); return; }
+  simExec('us', { kind:'lure', force:[gx, gz], key:'l' + gx + ',' + gz, label:'Decoy ' + sq });
 }
 function simStep(dt){
   if(!SIM.on) return;
@@ -7753,6 +7947,7 @@ function simStep(dt){
         for(const k in SIM.them.cd) SIM.them.cd[k]++;
         for(const k in CD){ const c = CD[k]; if(c.t < c.n) c.t++; }
         SIM.turnN++; MATCH.turn = SIM.turnN; MATCH.dirty = true;
+        lureTick();
       /* THE THEATRE EVOLVES: every few turns the weather turns to another of
          morning, squall and storm, cross-fading as it does */
       if(SETUP.evo && SIM.turnN >= SIM.nextWx) simWeather();
@@ -7785,12 +7980,12 @@ function simEnd(won, now){
   overUI();
   simUI(); refreshUI();
 }
-const KIND_NAME = { fire:'Missile', tor:'Torpedo', cat:'Air strike', flare:'Star shell' };
+const KIND_NAME = { fire:'Missile', tor:'Torpedo', cat:'Air strike', flare:'Star shell', lure:'Decoy' };
 /* THE BATTERIES LIVE ON HULLS. The torpedo is the submarine's, the strike the
    carrier's, the star shell the escort's; sink the hull and the weapon is gone.
    Theirs are the same five, laid out in the same order. */
-const ARM_SHIP = { tor:'submarine', cat:'carrier', flare:'escort' };
-const ARM_GROUP = { cat:0, flare:3, tor:4 };
+const ARM_SHIP = { tor:'submarine', cat:'carrier', flare:'escort', lure:'destroyer' };
+const ARM_GROUP = { cat:0, flare:3, tor:4, lure:1 };
 function ownGone(key){
   const row = OWN_FLEET.find(f => f[0] === key); if(!row) return false;
   const c = ownCells(key, row[2]); if(!c) return false;
@@ -7815,6 +8010,7 @@ function simUI(){
            : SIM.weapon === 'cat' ? w + ' ' + (SIM.catCross ? 'across · tap a square · press again for missile' : 'down · tap a square · press again to turn')
            : SIM.weapon === 'tor' ? w + ' · tap a column · press again for missile'
            : SIM.weapon === 'flare' ? w + ' · tap the centre · press again for missile'
+           : SIM.weapon === 'lure' ? w + ' · tap clear water of your own · press again for missile'
            : w + ' · tap a square to fire');
   } else {
     const who = SIM.side === 'us' ? '<b>You</b>' : '<b class="them">Enemy' + (SIM.replay && SIM.phase === 'think' ? ' · hit · again' : '') + '</b>';
@@ -7834,7 +8030,7 @@ function simCells(){
        the beam's to show — the cold contact that lights as the sweep passes
        and fades after it — and the orange comes only when she is sunk, from
        the contacts themselves. So the square records misses alone. */
-    if(!hullUnder(x, z)) CELLS_E[(z*10 + x)*4] = 255;
+    if(!hullUnder(x, z) && !lureAt('them', x, z)) CELLS_E[(z*10 + x)*4] = 255;
   }
   for(const key of OWN_SHOT){
     const [x, z] = key.split(',').map(Number); if(x < 0 || x > 9 || z < 0 || z > 9) continue;
@@ -7921,6 +8117,7 @@ function simNew(){
   matchReset();
   MATCH.turn = 1; MATCH.t = 0;
   for(const k in CD) CD[k].t = 0;
+  SIM.lures = { us:0, them:0 }; lureClear();
   SIM.us = simKnow(); SIM.them = simKnow();
   SIM.side = 'us'; SIM.phase = 'think'; SIM.wait = 2.2; SIM.act = null;
   SIM.turnN = 1; SIM.over = false; SIM.won = false; SIM.overData = null; SIM.step = false; SIM.replay = false;
@@ -8319,10 +8516,18 @@ canvas.addEventListener('pointermove', e => {
   if(!p){ const r = canvas.getBoundingClientRect();
           ptx = (e.clientX - r.left)/r.width - 0.5; pty = (e.clientY - r.top)/r.height - 0.5;
           if(simYourMove() && e.pointerType === 'mouse'){
-            const g = plotPick(e.clientX, e.clientY);
-            const h = g ? simTarget(SIM.weapon, g[0], g[1]) : null;
-            SIM.hover = h && !h.bad ? h : null;
-            canvas.style.cursor = SIM.hover ? 'crosshair' : '';
+            if(SIM.weapon === 'lure'){
+              const g = ownPick(e.clientX, e.clientY);
+              const ok = g && lureOpen('us', g[0], g[1]);
+              const note = ok ? 'Decoy ' + colLetter(g[0]) + (g[1] + 1) : null;
+              if(note !== SIM.note){ SIM.note = note; simUI(); }
+              canvas.style.cursor = ok ? 'crosshair' : '';
+            } else {
+              const g = plotPick(e.clientX, e.clientY);
+              const h = g ? simTarget(SIM.weapon, g[0], g[1]) : null;
+              SIM.hover = h && !h.bad ? h : null;
+              canvas.style.cursor = SIM.hover ? 'crosshair' : '';
+            }
           }
           return; }
   const dx = e.clientX - p.x, dy = e.clientY - p.y;
@@ -8342,8 +8547,13 @@ let _tap = null;
 function release(e){
   if(e.type === 'pointerup' && _tap && _tap.id === e.pointerId && ptrs.size === 1
      && Math.hypot(e.clientX - _tap.x, e.clientY - _tap.y) < 8 && performance.now() - _tap.t < 450 && simYourMove()){
-    const g = plotPick(e.clientX, e.clientY);
-    if(g) simTap(g[0], g[1]);
+    if(SIM.weapon === 'lure'){
+      const g = ownPick(e.clientX, e.clientY);
+      if(g) lureTap(g[0], g[1]);
+    } else {
+      const g = plotPick(e.clientX, e.clientY);
+      if(g) simTap(g[0], g[1]);
+    }
   }
   if(_tap && _tap.id === e.pointerId) _tap = null;
   ptrs.delete(e.pointerId);
