@@ -1253,6 +1253,11 @@
       <button data-e="0">Morning</button><button data-e="1">Squall</button><button data-e="2">Night</button><button data-e="3">Storm</button><button data-a="spout">Waterspout</button>
     </div>
 
+    <!-- how often Storm lets a waterspout down, start to start -->
+    <h5>Trombe &middot; toutes les</h5><div class="hrow">
+      <input type="range" id="spoutr" min="20" max="180" step="5" value="60" aria-label="Intervalle entre deux trombes, en secondes">
+      <span class="hv" id="spoutv">60 s</span>
+    </div>
     <div class="cam" id="camro"></div>
     <!-- one control for how light the fleet is painted: every tone of every
          hull moves together, so the steps between them survive any setting -->
@@ -1945,11 +1950,12 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
       float sr = length(sd), R = uSpout.z;
       if(sr < R*7.5){
         float sa = atan(sd.y, sd.x);
-        float arm = smoothstep(0.15, 1.0, sin(sa*3.0 + log(sr + 1.0)*5.2 - uTime*3.6));
-        float band = arm*exp(-pow(sr/(R*3.4), 1.5));
-        float churn = exp(-pow(sr/(R*1.3), 2.0));
-        float torn = 0.50 + 0.95*fbm(sd*0.085 + vec2(uTime*0.6, -uTime*0.4));
-        float fm = clamp((churn*1.15 + band*0.80)*torn, 0.0, 1.0)*uSpout.w;
+        /* thin arms, many of them, drawn in along a log spiral */
+        float arm = pow(0.5 + 0.5*sin(sa*4.0 + log(sr + 1.0)*6.5 - uTime*3.8), 7.0);
+        float band = arm*exp(-pow(sr/(R*3.8), 1.4));
+        float churn = exp(-pow(sr/(R*0.95), 2.0));
+        float torn = 0.55 + 0.90*fbm(sd*0.11 + vec2(uTime*0.7, -uTime*0.5));
+        float fm = clamp((churn*1.10 + band*0.95)*torn, 0.0, 1.0)*uSpout.w;
         float pull = exp(-pow((sr - R*2.1)/(R*1.0), 2.0))*0.30*uSpout.w;
         col *= 1.0 - pull;
         col = mix(col, uFoam*(0.55 + 0.45*sh), fm*0.86);
@@ -5321,87 +5327,171 @@ const SPRAY = { mesh:null, k:0 };
 /* ------------------------------------------------------------
    THE WATERSPOUT — Storm's one visitor.
    ------------------------------------------------------------
-   A rope of cloud let down onto the sea, walked across the water
-   and drawn back up. It belongs to her own water only: the plot
-   is read from straight above, where a spout is a smudge, and the
-   two boards are two seas. It changes the light, never the rule —
+   A thread of cloud let down onto the sea, walked across the water
+   and drawn back up. It belongs to her own water only: the plot is
+   read from straight above, where a spout is a smudge, and the two
+   boards are two seas. It changes the light, never the rule —
    nothing it crosses is touched.
-   Four pieces, one clock: the funnel (drawn twice, the far wall
-   before the near one, so the tube has an inside), the spray it
-   throws at its foot, a wider mist round that, and the collar of
-   cloud it hangs from. The water under it gets its own term in
-   the sea shader — a churn and a spiral — see uSpout.
+   What makes it read as a spout and not as a pipe of water is the
+   air round it, not the tube: the rope itself is thin, pale at the
+   foot and dark where it hangs from the cloud, and everything that
+   turns is round it — filaments of spray wound up it in a tightening
+   helix, spray flung out in arcs, puffs of mist orbiting its foot.
+   Pieces, one clock: the rope (drawn twice, far wall before near, so
+   it has an inside), the filaments, the mist, a thin skirt of spray,
+   and the collar of cloud it hangs from. The water under it has its
+   own term in the sea shader — see uSpout.
    ------------------------------------------------------------ */
 const SPOUT_H = 460;
-const SPOUT = { t:-1, dur:66, next:14, k:0, wk:0, form:0, touch:0, thin:0, collar:0,
+/* ONE EVERY SPOUT_EVERY SECONDS, start to start, while the storm is up;
+   the first comes a few seconds after the rain has set in. A spout lives
+   about 44 s: an interval shorter than that lets the next one down as
+   soon as the last has lifted, never two at once. The debug slider sets it. */
+var SPOUT_EVERY = 60;
+const SPOUT = { t:-1, dur:44, since:0, wait:8, k:0, wk:0, form:0, touch:0, spin:0, thin:0, collar:0,
                 A:new T.Vector2(), B:new T.Vector2(), p:new T.Vector2(), roar:null, parts:[] };
 {
-  const SP_VS = G_HEAD + `
-    uniform vec2 uPos, uLean;
-    uniform float uH, uR0, uR1, uTall, uThin, uFlare, uSnake;
+  /* the rope's line, shared by everything that has to stay wrapped round it */
+  const SP_LINE = `
+    uniform vec2 uPos, uLean; uniform float uH, uSnake;
+    vec2 spoutLine(float h, float t){
+      return (uLean*h*h*uH*0.22
+           + vec2(sin(h*3.1 + t*0.23), cos(h*2.6 - t*0.19))*20.0*h
+           + vec2(sin(h*7.3 - t*0.52), cos(h*6.1 + t*0.47))*5.5*h
+           + vec2(sin(h*9.0 - t*0.9), cos(h*8.0 + t*0.7))*7.0*smoothstep(0.0, 0.32, h))*uSnake;
+    }`;
+  const SP_VS = G_HEAD + SP_LINE + `
+    uniform float uR0, uR1, uTall, uThin, uFlare;
     varying vec3 vW, vNr; varying float vDi, vH, vA;
     void main(){
       float h = position.y + 0.5;
       float a = atan(position.z, position.x);
-      float t = uTime;
-      /* the rope: its line snakes, more the higher it goes, and leans with the wind */
-      vec2 c = (uLean*h*h*uH*0.22
-             + vec2(sin(h*3.1 + t*0.23), cos(h*2.6 - t*0.19))*20.0*h
-             + vec2(sin(h*7.3 - t*0.52), cos(h*6.1 + t*0.47))*5.5*h
-             /* and low down, where the eye sees it, an S that travels up the rope */
-             + vec2(sin(h*9.0 - t*0.9), cos(h*8.0 + t*0.7))*7.0*smoothstep(0.0, 0.32, h))*uSnake;
+      vec2 c = spoutLine(h, uTime);
+      /* a thread most of the way up, opening only where it meets the cloud */
       float r = mix(uR0, uR1, pow(h, uTall));
-      /* roping out: the tube thins, the top least */
-      r *= 1.0 - uThin*(0.66 - 0.42*h);
-      r += uFlare*exp(-h*22.0);
-      /* it breathes: two lobes chasing round it at different rates */
-      r *= 1.0 + 0.07*sin(a*3.0 + h*15.0 - t*3.2) + 0.04*sin(a*5.0 - h*23.0 + t*2.1);
+      r *= 1.0 - uThin*(0.62 - 0.40*h);
+      r += uFlare*exp(-h*30.0);
+      r *= 1.0 + 0.045*sin(a*3.0 + h*15.0 - uTime*3.2) + 0.025*sin(a*5.0 - h*23.0 + uTime*2.1);
       vec3 nr = vec3(cos(a), 0.0, sin(a));
       vec3 p = vec3(uPos.x + c.x, h*uH - 1.2, uPos.y + c.y) + nr*r;
       vNr = nr; vH = h; vA = a;
       vW = p; vDi = length(uCam - p);
       gl_Position = projectionMatrix*viewMatrix*vec4(p, 1.0);
     }`;
-  /* the funnel: condensation, grey, banded in a helix that climbs as it turns */
-  const SP_FUNNEL = G_HEAD + G_NOISE + G_SKY + G_FOG + `
+  const SP_ROPE = G_HEAD + G_NOISE + G_SKY + G_FOG + `
     uniform float uI, uForm, uSpin, uBack;
     uniform vec3 uDark, uLit;
     varying vec3 vW, vNr; varying float vDi, vH, vA;
     void main(){
-      /* it is let down from the cloud: below the cut there is nothing yet */
+      /* let down from the cloud: below the cut there is nothing yet */
       float cut = (1.0 - uForm)*0.94;
-      float fade = smoothstep(cut, cut + 0.09, vH)*(1.0 - smoothstep(0.74, 1.0, vH));
-      /* the bands are read on a circle, so the tube has no seam */
-      float ang = vA + vH*9.0 - uTime*uSpin;
-      vec2 q = vec2(cos(ang), sin(ang))*1.6 + vec2(vH*6.0 - uTime*0.55, vH*3.0);
-      float band = smoothstep(0.30, 0.78, fbm(q*1.7));
+      float fade = smoothstep(cut, cut + 0.06, vH)*(1.0 - smoothstep(0.70, 1.0, vH));
       vec3 V = normalize(uCam - vW);
-      float rim = 1.0 - abs(dot(vNr, V));
-      float a = uI*fade*(0.55 + 0.40*rim)*(0.60 + 0.62*band)*mix(1.0, 0.5, uBack);
+      float ndv = abs(dot(vNr, V));
+      /* a column of cloud: thick through its middle, thin at its edges */
+      float body = 1.0 - exp(-2.6*ndv - 0.22);
+      /* fine striations wound round it, turning as they climb */
+      float ang = vA - uTime*uSpin;
+      float st = mix(0.80, 1.0, 0.5 + 0.5*sin(ang*6.0 + vH*72.0));
+      float n = fbm(vec2(cos(ang), sin(ang))*1.2 + vec2(vH*9.0 - uTime*0.4, 0.0));
+      float a = uI*fade*body*st*(0.72 + 0.36*n)*mix(1.0, 0.45, uBack);
       if(a < 0.004) discard;
       vec3 sd = normalize(vec3(uSunDir.x, 0.0, uSunDir.z) + 1e-4);
       float lit = clamp(0.5 + 0.5*dot(vNr, sd), 0.0, 1.0);
       vec3 air = fogColor(V);
-      vec3 c = mix(uDark, uLit, lit*0.78 + band*0.22);
-      c = mix(c, air, 0.14);
-      /* a spout in a gale is a dark column against lighter murk: the fog takes
-         some of its colour but never all of it, or it is not there at all */
+      /* dark where it hangs from the cloud, paler where it feeds on the spray */
+      float low = 1.0 - smoothstep(0.0, 0.45, vH);
+      vec3 c = mix(uDark, uLit, clamp(lit*0.50 + low*0.60, 0.0, 1.0));
+      /* its edge takes the murk behind it: a thin pale line keeps it drawn */
+      c += air*0.24*pow(1.0 - ndv, 3.0);
+      c = mix(c, air, 0.10);
       float f = fogAmt(vW, vDi);
       gl_FragColor = vec4(mix(c, air, f*0.55), min(1.0, a*(1.0 - f*0.30)));
     }`;
-  /* the spray at its foot: white, torn, spun faster than the cloud above */
-  const SP_SPRAY = G_HEAD + G_NOISE + G_SKY + G_FOG + `
+  /* FILAMENTS. Most are drawn in off the water and wound up the rope in a
+     helix that tightens as it climbs; a quarter are flung out and fall back.
+     A line, one pixel wide: this is where the fineness comes from. */
+  const SP_FIL_VS = G_HEAD + SP_LINE + `
+    attribute vec4 aSeed; attribute float aEnd;
+    varying float vF, vDi, vY; varying vec3 vW;
+    vec3 along(float u){
+      float fl = step(0.74, aSeed.y);
+      float rIn = mix(7.0, 15.0, aSeed.y), rOut = mix(30.0, 76.0, aSeed.y);
+      float r  = fl > 0.5 ? mix(12.0, rOut*1.25, pow(u, 0.7)) : mix(rOut, rIn, pow(u, 0.55));
+      float hh = fl > 0.5 ? sin(u*3.14159)*mix(16.0, 44.0, aSeed.w)
+                          : mix(1.0, mix(36.0, 170.0, aSeed.w*aSeed.w), pow(u, 1.35));
+      float th = aSeed.x*6.28318 + u*mix(2.4, 4.6, aSeed.z)*6.28318*(fl > 0.5 ? 0.30 : 1.0) + uTime*0.25;
+      vec2 c = spoutLine(hh/uH, uTime);
+      return vec3(uPos.x + c.x + cos(th)*r, hh, uPos.y + c.y + sin(th)*r);
+    }
+    void main(){
+      float u = fract(uTime*mix(0.10, 0.21, aSeed.w) + aSeed.z);
+      float len = mix(0.028, 0.062, aSeed.y);
+      vec3 p = along(max(u - aEnd*len, 0.0));
+      vY = p.y;
+      vF = smoothstep(0.0, 0.10, u)*(1.0 - smoothstep(0.70, 1.0, u))*(0.30 + 0.70*aSeed.x)*(1.0 - aEnd*0.75);
+      vW = p; vDi = length(uCam - p);
+      gl_Position = projectionMatrix*viewMatrix*vec4(p, 1.0);
+    }`;
+  const SP_FIL_FS = G_HEAD + G_NOISE + G_SKY + G_FOG + `
+    uniform float uI; uniform vec3 uCol;
+    varying float vF, vDi, vY; varying vec3 vW;
+    void main(){
+      float a = uI*vF*smoothstep(14.0, 70.0, vDi)*0.46;
+      if(a < 0.004) discard;
+      vec3 air = fogColor(normalize(uCam - vW));
+      vec3 c = mix(uCol, air, 0.22 + 0.40*smoothstep(20.0, 160.0, vY));
+      float f = fogAmt(vW, vDi);
+      gl_FragColor = vec4(mix(c, air, f*0.6), a*(1.0 - f*0.35));
+    }`;
+  /* MIST. Soft puffs orbiting the foot, growing as they rise and drift out:
+     the volume the filaments are drawn through. */
+  const SP_MIST_VS = G_HEAD + SP_LINE + `
+    uniform float uSize;
+    attribute vec4 aSeed;
+    varying vec2 vUv; varying float vF, vDi, vSide; varying vec3 vW;
+    void main(){
+      float u = fract(uTime*mix(0.05, 0.10, aSeed.w) + aSeed.z);
+      float r  = mix(mix(9.0, 20.0, aSeed.y), mix(28.0, 62.0, aSeed.y), pow(u, 0.8));
+      float hh = mix(2.0, mix(14.0, 50.0, aSeed.w), pow(u, 0.9));
+      float th = aSeed.x*6.28318 + u*2.2*6.28318 + uTime*0.35;
+      vec2 c = spoutLine(hh/uH, uTime);
+      vec3 ctr = vec3(uPos.x + c.x + cos(th)*r, hh, uPos.y + c.y + sin(th)*r);
+      float sz = uSize*mix(0.5, 1.0, aSeed.y)*(0.45 + 1.10*u);
+      vec3 rt = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+      vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+      float rot = aSeed.x*6.28318 + uTime*0.4*(aSeed.y - 0.5);
+      vec2 q = uv - 0.5; float cr = cos(rot), sn = sin(rot);
+      vUv = vec2(q.x*cr - q.y*sn, q.x*sn + q.y*cr) + 0.5;
+      vec3 wp = ctr + (rt*position.x + up*position.y)*sz;
+      vSide = dot(rt, normalize(uSunDir))*position.x;
+      vF = smoothstep(0.0, 0.18, u)*(1.0 - smoothstep(0.55, 1.0, u));
+      vW = wp; vDi = length(uCam - wp);
+      gl_Position = projectionMatrix*viewMatrix*vec4(wp, 1.0);
+    }`;
+  const SP_MIST_FS = G_HEAD + G_NOISE + G_SKY + G_FOG + `
+    uniform sampler2D map; uniform float uI; uniform vec3 uDark, uLit;
+    varying vec2 vUv; varying float vF, vDi, vSide; varying vec3 vW;
+    void main(){
+      float a = texture2D(map, vUv).a*vF*uI*0.50;
+      if(a < 0.003) discard;
+      vec3 c = mix(uDark, uLit, clamp(0.55 + vSide*1.2, 0.0, 1.0));
+      vec3 air = fogColor(normalize(uCam - vW));
+      float f = fogAmt(vW, vDi);
+      gl_FragColor = vec4(mix(c, air, f*0.6), a*(1.0 - f*0.40));
+    }`;
+  /* the skirt: a thin torn sheet of spray at the waterline */
+  const SP_SKIRT = G_HEAD + G_NOISE + G_SKY + G_FOG + `
     uniform float uI, uSpin, uTop;
     uniform vec3 uDark, uLit;
     varying vec3 vW, vNr; varying float vDi, vH, vA;
     void main(){
       float fade = smoothstep(0.0, 0.10, vH)*(1.0 - smoothstep(uTop, 1.0, vH));
       float ang = vA - uTime*uSpin + vH*4.0;
-      vec2 q = vec2(cos(ang), sin(ang))*2.2 + vec2(vH*5.0 - uTime*1.3, vH*2.0);
-      float n = fbm(q*2.1);
+      float n = fbm(vec2(cos(ang), sin(ang))*2.6 + vec2(vH*6.0 - uTime*1.4, vH*2.0));
       vec3 V = normalize(uCam - vW);
       float rim = 1.0 - abs(dot(vNr, V));
-      float a = uI*fade*smoothstep(0.26, 0.84, n)*(0.40 + 0.60*rim);
+      float a = uI*fade*smoothstep(0.34, 0.86, n)*(0.35 + 0.65*rim);
       if(a < 0.004) discard;
       vec3 sd = normalize(vec3(uSunDir.x, 0.0, uSunDir.z) + 1e-4);
       float lit = clamp(0.5 + 0.5*dot(vNr, sd), 0.0, 1.0);
@@ -5436,34 +5526,62 @@ const SPOUT = { t:-1, dur:66, next:14, k:0, wk:0, form:0, touch:0, thin:0, colla
       gl_FragColor = vec4(mix(c, air, f*0.8), a);
     }`;
 
-  const tube = new T.CylinderGeometry(1, 1, 1, 48, 72, true);
-  const short = new T.CylinderGeometry(1, 1, 1, 40, 18, true);
-  const mk = (geo, fs, u, side, order, vs) => {
-    const m = new T.Mesh(geo, new T.ShaderMaterial({
-      uniforms: U(Object.assign({ uPos:{value:new T.Vector2()} }, u)),
-      vertexShader: vs || SP_VS, fragmentShader: fs,
-      transparent:true, depthWrite:false, side, blending:T.NormalBlending
-    }));
+  const add = (geo, vs, fs, u, side, order, lines) => {
+    const mat = new T.ShaderMaterial({
+      uniforms: U(Object.assign({ uPos:{value:new T.Vector2()}, uLean:{value:new T.Vector2(0.93, 0.37)},
+                                  uH:{value:SPOUT_H}, uSnake:{value:1.0} }, u)),
+      vertexShader: vs, fragmentShader: fs,
+      transparent:true, depthWrite:false, side, blending:T.NormalBlending });
+    const m = lines ? new T.LineSegments(geo, mat) : new T.Mesh(geo, mat);
     m.frustumCulled = false; m.renderOrder = order;
     scene.add(m); onBoard(BOARD_OWN, m, false);
     SPOUT.parts.push(m);
     return m;
   };
-  const tubeU = back => ({ uLean:{value:new T.Vector2(0.93, 0.37)}, uH:{value:SPOUT_H},
-    uR0:{value:8.5}, uR1:{value:74.0}, uTall:{value:3.6}, uThin:{value:0}, uFlare:{value:6.5}, uSnake:{value:1.0},
-    uI:{value:0}, uForm:{value:0}, uSpin:{value:1.35}, uBack:{value:back},
-    uDark:{value:Cs(0x171c21, 1.0)}, uLit:{value:Cs(0x57636c, 1.0)} });
-  SPOUT.back  = mk(tube, SP_FUNNEL, tubeU(1), T.BackSide, 9);
-  SPOUT.front = mk(tube, SP_FUNNEL, tubeU(0), T.FrontSide, 10);
-  const sprayU = (h, r0, r1, spin, top, i) => ({ uLean:{value:new T.Vector2()}, uH:{value:h},
-    uR0:{value:r0}, uR1:{value:r1}, uTall:{value:0.7}, uThin:{value:0}, uFlare:{value:0}, uSnake:{value:0.12},
-    uI:{value:0}, uSpin:{value:spin}, uTop:{value:top}, uMax:{value:i},
-    uDark:{value:Cs(0x7d8990, 1.0)}, uLit:{value:Cs(0xe8eff1, 1.0)} });
-  SPOUT.spray = mk(short, SP_SPRAY, sprayU(52, 30, 13, 2.4, 0.30, 0.95), T.DoubleSide, 11);
-  SPOUT.mist  = mk(short, SP_SPRAY, sprayU(30, 64, 44, 1.1, 0.10, 0.55), T.DoubleSide, 11);
-  SPOUT.collarM = mk(new T.CircleGeometry(1, 64), SP_COLLAR_FS,
-    { uY:{value:SPOUT_H - 36}, uR:{value:230}, uI:{value:0}, uDark:{value:Cs(0x20262c, 1.0)} },
-    T.DoubleSide, 8, SP_COLLAR_VS);
+  const tube = new T.CylinderGeometry(1, 1, 1, 48, 96, true);
+  const ropeU = back => ({ uR0:{value:4.2}, uR1:{value:58.0}, uTall:{value:4.2}, uThin:{value:0}, uFlare:{value:5.0},
+    uI:{value:0}, uForm:{value:0}, uSpin:{value:1.6}, uBack:{value:back},
+    uDark:{value:Cs(0x1b2127, 1.0)}, uLit:{value:Cs(0x8e9aa2, 1.0)} });
+  SPOUT.back  = add(tube, SP_VS, SP_ROPE, ropeU(1), T.BackSide, 9);
+  SPOUT.front = add(tube, SP_VS, SP_ROPE, ropeU(0), T.FrontSide, 10);
+  SPOUT.skirt = add(new T.CylinderGeometry(1, 1, 1, 40, 18, true), SP_VS, SP_SKIRT,
+    { uR0:{value:24}, uR1:{value:10}, uTall:{value:0.7}, uThin:{value:0}, uFlare:{value:0},
+      uI:{value:0}, uSpin:{value:2.6}, uTop:{value:0.22},
+      uDark:{value:Cs(0x7d8990, 1.0)}, uLit:{value:Cs(0xe8eff1, 1.0)} }, T.DoubleSide, 11);
+  SPOUT.skirt.material.uniforms.uH.value = 40; SPOUT.skirt.material.uniforms.uSnake.value = 0.1;
+  {
+    const N = 860, pos = new Float32Array(N*6), sd = new Float32Array(N*8), en = new Float32Array(N*2);
+    for(let i=0;i<N;i++){
+      const s = [Math.random(), Math.random(), Math.random(), Math.random()];
+      for(let k=0;k<2;k++){ const j = i*2 + k; sd.set(s, j*4); en[j] = k; }
+    }
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.BufferAttribute(pos, 3));
+    g.setAttribute('aSeed', new T.BufferAttribute(sd, 4));
+    g.setAttribute('aEnd', new T.BufferAttribute(en, 1));
+    SPOUT.fil = add(g, SP_FIL_VS, SP_FIL_FS, { uI:{value:0}, uCol:{value:Cs(0xe6eef1, 1.0)} }, T.FrontSide, 12, true);
+  }
+  {
+    const N = 64, pos = [], uvs = [], sd = [], idx = [];
+    for(let i=0;i<N;i++){
+      const s = [Math.random(), Math.random(), Math.random(), Math.random()], b = i*4;
+      for(const [x, y, u, v] of [[-1,-1,0,0],[1,-1,1,0],[1,1,1,1],[-1,1,0,1]]){ pos.push(x, y, 0); uvs.push(u, v); sd.push(...s); }
+      idx.push(b, b+1, b+2, b, b+2, b+3);
+    }
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+    g.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2));
+    g.setAttribute('aSeed', new T.Float32BufferAttribute(sd, 4));
+    g.setIndex(idx);
+    SPOUT.mist = add(g, SP_MIST_VS, SP_MIST_FS, { map:{value:PUFF}, uSize:{value:17}, uI:{value:0},
+      uDark:{value:Cs(0x707c84, 1.0)}, uLit:{value:Cs(0xdfe7ea, 1.0)} }, T.DoubleSide, 11);
+  }
+  SPOUT.collarM = add(new T.CircleGeometry(1, 64), SP_COLLAR_VS, SP_COLLAR_FS,
+    { uY:{value:SPOUT_H - 36}, uR:{value:230}, uI:{value:0}, uDark:{value:Cs(0x20262c, 1.0)} }, T.DoubleSide, 8);
+}
+{
+  const r = document.getElementById('spoutr'), v = document.getElementById('spoutv');
+  if(r) r.addEventListener('input', () => { SPOUT_EVERY = +r.value; v.textContent = r.value + ' s'; });
 }
 /* one across the water: it crosses the eye's view rather than coming at it,
    level with the plot or beyond it, so it walks over the board or behind it */
@@ -5471,11 +5589,11 @@ function spoutStart(){
   const fx = -Math.sin(CAM.az), fz = -Math.cos(CAM.az);
   const tw = (Math.random()*2 - 1)*0.55, s = Math.random() < 0.5 ? -1 : 1;
   const dx = (-fz*Math.cos(tw) - fx*Math.sin(tw))*s, dz = (fx*Math.cos(tw) - fz*Math.sin(tw))*s;
-  const o = -60 + Math.random()*300, L = 470;
+  const o = -60 + Math.random()*300, L = 330;
   const mx = CAM.tgt.x + fx*o, mz = CAM.tgt.z + fz*o;
   SPOUT.A.set(mx - dx*L, mz - dz*L);
   SPOUT.B.set(mx + dx*L, mz + dz*L);
-  SPOUT.t = 0; SPOUT.dur = 60 + Math.random()*16;
+  SPOUT.t = 0; SPOUT.dur = 40 + Math.random()*8; SPOUT.since = 0;
 }
 function spoutRoar(level){
   if(!SPOUT.roar){
@@ -5490,57 +5608,62 @@ function spoutRoar(level){
   const R = SPOUT.roar, now = SND.ctx.currentTime;
   R.g.gain.setTargetAtTime(ANIM.snd ? level : 0, now, 0.5);
   /* a roar is not a steady hiss: it surges */
-  R.lp.frequency.setTargetAtTime(260 + 220*(0.5 + 0.5*Math.sin(now*0.9) * Math.sin(now*0.37)), now, 0.3);
+  R.lp.frequency.setTargetAtTime(260 + 220*(0.5 + 0.5*Math.sin(now*0.9)*Math.sin(now*0.37)), now, 0.3);
   if(level < 0.0015 && SPOUT.t < 0){ try{ R.s.stop(now + 1.5); }catch(e){} SPOUT.roar = null; }
 }
 function spoutTick(dt){
-  const storm = !!ENVS[ANIM.env].bolt;
-  /* the next one is only counted down while the storm is actually up */
-  if(SPOUT.t < 0){
-    if(storm && RAIN.k > 0.6){ SPOUT.next -= dt; if(SPOUT.next <= 0) spoutStart(); }
-    else if(!storm) SPOUT.next = 10 + Math.random()*8;
-  }
+  const storm = !!ENVS[ANIM.env].bolt, up = storm && RAIN.k > 0.6;
+  /* the interval runs start to start, and only while the storm is actually up */
+  if(up){
+    SPOUT.since += dt;
+    if(SPOUT.t < 0){
+      if(SPOUT.wait > 0){ SPOUT.wait -= dt; if(SPOUT.wait <= 0) spoutStart(); }
+      else if(SPOUT.since >= SPOUT_EVERY) spoutStart();
+    }
+  } else if(!storm){ SPOUT.wait = 8; SPOUT.since = 0; }
   let want = 0;
   if(SPOUT.t >= 0){
     SPOUT.t += dt;
     const t = SPOUT.t, D = SPOUT.dur, sm = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a)/(b - a))); return u*u*(3 - 2*u); };
     SPOUT.collar = sm(0, 5, t)*(1 - sm(D - 5, D, t));
     /* let down from the cloud, walked, then drawn back up */
-    SPOUT.form  = sm(2, 10, t)*(1 - sm(D - 10, D - 2, t));
+    SPOUT.form  = sm(1.5, 8, t)*(1 - sm(D - 8, D - 1.5, t));
+    /* the water starts to turn before the rope has reached it */
+    SPOUT.spin  = sm(0.35, 0.9, SPOUT.form);
     SPOUT.touch = sm(0.88, 1, SPOUT.form);
-    SPOUT.thin  = sm(D - 14, D - 4, t);
+    SPOUT.thin  = sm(D - 11, D - 3, t);
     const u = sm(0, D, t)*0.18 + (t/D)*0.82;
     SPOUT.p.lerpVectors(SPOUT.A, SPOUT.B, u);
     /* the foot wanders off the line: nobody steers it */
-    SPOUT.p.x += Math.sin(t*0.21)*26 + Math.sin(t*0.53 + 1.3)*9;
-    SPOUT.p.y += Math.cos(t*0.17)*24 + Math.sin(t*0.61)*8;
+    SPOUT.p.x += Math.sin(t*0.21)*24 + Math.sin(t*0.53 + 1.3)*8;
+    SPOUT.p.y += Math.cos(t*0.17)*22 + Math.sin(t*0.61)*7;
     want = 1;
-    if(t >= D){ SPOUT.t = -1; SPOUT.next = 30 + Math.random()*30; }
+    if(t >= D) SPOUT.t = -1;
   }
   /* it goes with the storm: a theatre that turns takes it away with the rain */
   SPOUT.k += ((storm ? want : 0) - SPOUT.k)*(1 - Math.exp(-dt*(storm ? 2.0 : 0.9)));
   const k = SPOUT.k*Math.min(1, RAIN.k*1.4);
   const on = k > 0.003;
   for(const m of SPOUT.parts) m.userData.want = on;
-  SPOUT.wk = k*SPOUT.touch;
-  waterUnis.uSpout.value.set(SPOUT.p.x, SPOUT.p.y, 17, SPOUT.wk);
+  SPOUT.wk = k*SPOUT.spin;
+  waterUnis.uSpout.value.set(SPOUT.p.x, SPOUT.p.y, 15, SPOUT.wk);
   if(on){
+    for(const m of SPOUT.parts) m.material.uniforms.uPos.value.copy(SPOUT.p);
     for(const m of [SPOUT.back, SPOUT.front]){
       const w = m.material.uniforms;
-      w.uPos.value.copy(SPOUT.p); w.uI.value = k*0.92; w.uForm.value = SPOUT.form; w.uThin.value = SPOUT.thin;
+      w.uI.value = k*0.95; w.uForm.value = SPOUT.form; w.uThin.value = SPOUT.thin;
     }
-    for(const m of [SPOUT.spray, SPOUT.mist]){
-      const w = m.material.uniforms;
-      w.uPos.value.copy(SPOUT.p); w.uI.value = k*SPOUT.touch*(1 - SPOUT.thin*0.6)*w.uMax.value;
-    }
-    const cw = SPOUT.collarM.material.uniforms;
-    cw.uPos.value.copy(SPOUT.p); cw.uI.value = k*SPOUT.collar;
+    const fade = 1 - SPOUT.thin*0.6;
+    SPOUT.skirt.material.uniforms.uI.value = k*SPOUT.touch*fade*0.55;
+    SPOUT.fil.material.uniforms.uI.value   = k*SPOUT.spin*fade;
+    SPOUT.mist.material.uniforms.uI.value  = k*SPOUT.spin*fade;
+    SPOUT.collarM.material.uniforms.uI.value = k*SPOUT.collar;
   }
   /* heard as much as it is near what the eye is working */
   if(SND.ready){
     const d = Math.hypot(SPOUT.p.x - CAM.tgt.x, SPOUT.p.y - CAM.tgt.z);
     const near = 1 - Math.min(1, Math.max(0, (d - 120)/680));
-    spoutRoar(on ? 0.22*k*Math.max(SPOUT.form*0.45, SPOUT.touch)*(0.35 + 0.65*near) : 0);
+    spoutRoar(on ? 0.22*k*Math.max(SPOUT.form*0.45, SPOUT.spin)*(0.35 + 0.65*near) : 0);
   }
 }
 
