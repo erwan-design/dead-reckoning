@@ -5475,7 +5475,7 @@ const SPOUT = { t:-1, dur:44, since:0, wait:8, k:0, wk:0, form:0, touch:0, spin:
       /* white where it is young and dense, greying as it thins out */
       vec3 c = mix(uDark, uLit, clamp(0.55 + vSide*1.1, 0.0, 1.0)*(1.0 - 0.30*vLife));
       vec3 air = fogColor(normalize(uCam - vW));
-      c = mix(c, air, 0.10 + 0.35*vLife);
+      c = mix(c, air, 0.15 + 0.36*vLife);
       float f = fogAmt(vW, vDi);
       gl_FragColor = vec4(mix(c, air, f*0.6), a*(1.0 - f*0.35));
     }`;
@@ -5536,12 +5536,13 @@ const SPOUT = { t:-1, dur:44, since:0, wait:8, k:0, wk:0, form:0, touch:0, spin:
     g.setIndex(idx);
     return g;
   };
-  const plumeU = (ph, size, rate, spread, core) => ({ map:{value:PUFF}, uPH:{value:ph}, uSize:{value:size},
+  const plumeU = (ph, size, rate, spread, core, dark, lit) => ({ map:{value:PUFF}, uPH:{value:ph}, uSize:{value:size},
     uRate:{value:rate}, uSpread:{value:spread}, uCore:{value:core}, uI:{value:0},
-    uDark:{value:Cs(0x7a868e, 1.0)}, uLit:{value:Cs(0xeef3f5, 1.0)} });
+    uDark:{value:Cs(dark, 1.0)}, uLit:{value:Cs(lit, 1.0)} });
   /* the tall veil, then the burst at the waterline drawn over it */
-  SPOUT.plume = add(puffs(170), SP_PLUME_VS, SP_PLUME_FS, plumeU(112, 12.5, 0.15, 24, 6), T.DoubleSide, 11);
-  SPOUT.burst = add(puffs(64), SP_PLUME_VS, SP_PLUME_FS, plumeU(22, 10, 0.42, 22, 5), T.DoubleSide, 12);
+  /* the veil is grey spray in grey air; only the burst at the waterline is white */
+  SPOUT.plume = add(puffs(170), SP_PLUME_VS, SP_PLUME_FS, plumeU(112, 12.5, 0.15, 24, 6, 0x6d7981, 0xc6cfd4), T.DoubleSide, 11);
+  SPOUT.burst = add(puffs(64), SP_PLUME_VS, SP_PLUME_FS, plumeU(22, 10, 0.42, 22, 5, 0x7c8890, 0xdce3e6), T.DoubleSide, 12);
   SPOUT.collarM = add(new T.CircleGeometry(1, 64), SP_COLLAR_VS, SP_COLLAR_FS,
     { uY:{value:SPOUT_H - 36}, uR:{value:230}, uI:{value:0}, uDark:{value:Cs(0x20262c, 1.0)} }, T.DoubleSide, 8);
 }
