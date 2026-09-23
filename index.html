@@ -5427,9 +5427,9 @@ const SPOUT = { t:-1, dur:44, since:0, wait:8, k:0, wk:0, form:0, touch:0, spin:
       vec3 air = fogColor(V);
       /* dark where it hangs from the cloud, paler where it feeds on the spray */
       float low = 1.0 - smoothstep(0.0, 0.45, vH);
-      /* condensation is pale: a grey where it enters the cloud, near white below */
-      vec3 c = mix(uDark, uLit, clamp(0.35 + lit*0.35 + low*0.40 + (st - 0.5)*0.25, 0.0, 1.0));
-      c = mix(c, air, 0.12);
+      /* condensation is pale grey: darker where it enters the cloud, lighter below */
+      vec3 c = mix(uDark, uLit, clamp(0.25 + lit*0.35 + low*0.40 + (st - 0.5)*0.25, 0.0, 1.0));
+      c = mix(c, air, 0.20);
       float f = fogAmt(vW, vDi);
       gl_FragColor = vec4(mix(c, air, f*0.55), min(1.0, a*(1.0 - f*0.30)));
     }`;
@@ -5519,7 +5519,7 @@ const SPOUT = { t:-1, dur:44, since:0, wait:8, k:0, wk:0, form:0, touch:0, spin:
   const tube = new T.CylinderGeometry(1, 1, 1, 64, 120, true);
   const ropeU = back => ({ uR0:{value:2.5}, uR1:{value:44.0}, uTall:{value:5.4}, uThin:{value:0}, uRag:{value:0.20},
     uI:{value:0}, uForm:{value:0}, uSpin:{value:1.4}, uBack:{value:back},
-    uDark:{value:Cs(0x5d6870, 1.0)}, uLit:{value:Cs(0xdfe6ea, 1.0)} });
+    uDark:{value:Cs(0x505b63, 1.0)}, uLit:{value:Cs(0xaab4ba, 1.0)} });
   SPOUT.back  = add(tube, SP_VS, SP_ROPE, ropeU(1), T.BackSide, 9);
   SPOUT.front = add(tube, SP_VS, SP_ROPE, ropeU(0), T.FrontSide, 10);
   const puffs = N => {
