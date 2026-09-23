@@ -1250,7 +1250,7 @@
       <button data-cam="0">Cam 01</button><button data-cam="1">Cam 02</button><button data-cam="2">Cam 03</button><button data-cam="3">Cam 04</button>
     </div>
     <h5>Théâtre</h5><div class="drow">
-      <button data-e="0">Morning</button><button data-e="1">Squall</button><button data-e="2">Night</button><button data-e="3">Storm</button>
+      <button data-e="0">Morning</button><button data-e="1">Squall</button><button data-e="2">Night</button><button data-e="3">Storm</button><button data-a="spout">Waterspout</button>
     </div>
 
     <div class="cam" id="camro"></div>
@@ -1613,6 +1613,7 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
   uniform vec3 uFlareP, uFlareCol; uniform float uFlareI;
   uniform vec4 uLitR; uniform vec3 uLitCol; uniform float uLitI;
   uniform float uRainI;
+  uniform vec4 uSpout;
 
   /* ONE RING PER CELL of a jittered grid: a drop lands, its ring opens and
      dies, and every cell keeps its own clock so the sea does not beat in
@@ -1936,6 +1937,25 @@ const WATER_FS = G_HEAD + G_NOISE + G_SKY + G_SHADOW + G_FOG + `
       col += uFlareCol*pool*uFlareI*swing*(0.20 + 1.30*fres);
     }
 
+    /* ---- the waterspout's foot: the sea torn white where it touches, a
+       spiral of foam drawn in round it, and a dark ring where the water is
+       pulled down. xy = where, z = how wide the foot is, w = how hard. ---- */
+    if(uSpout.w > 0.002){
+      vec2 sd = vW.xz - uSpout.xy;
+      float sr = length(sd), R = uSpout.z;
+      if(sr < R*7.5){
+        float sa = atan(sd.y, sd.x);
+        float arm = smoothstep(0.15, 1.0, sin(sa*3.0 + log(sr + 1.0)*5.2 - uTime*3.6));
+        float band = arm*exp(-pow(sr/(R*3.4), 1.5));
+        float churn = exp(-pow(sr/(R*1.3), 2.0));
+        float torn = 0.50 + 0.95*fbm(sd*0.085 + vec2(uTime*0.6, -uTime*0.4));
+        float fm = clamp((churn*1.15 + band*0.80)*torn, 0.0, 1.0)*uSpout.w;
+        float pull = exp(-pow((sr - R*2.1)/(R*1.0), 2.0))*0.30*uSpout.w;
+        col *= 1.0 - pull;
+        col = mix(col, uFoam*(0.55 + 0.45*sh), fm*0.86);
+      }
+    }
+
     float mist = smoothstep(620.0, 1350.0, vD)*(1.0 - smoothstep(1400.0, 2500.0, vD));
     mist *= 0.30 + 0.95*fbm(vec2(vW.x*0.0017 + uTime*0.0055, vW.z*0.0011));
     col += uHazeWarm*mist*0.20;
@@ -1997,6 +2017,7 @@ const waterUnis = U({
   uLitCol :{value:Cs(0xd6e6ff, 1.0)},
   uLitI   :{value:0.0},
   uRainI  :{value:0.0},
+  uSpout  :{value:new T.Vector4(0, 0, 17, 0)},
   uSkip   :{value:new T.Vector2(999,999)}
 });
 
@@ -5298,6 +5319,232 @@ const SPRAY = { mesh:null, k:0 };
 }
 
 /* ------------------------------------------------------------
+   THE WATERSPOUT — Storm's one visitor.
+   ------------------------------------------------------------
+   A rope of cloud let down onto the sea, walked across the water
+   and drawn back up. It belongs to her own water only: the plot
+   is read from straight above, where a spout is a smudge, and the
+   two boards are two seas. It changes the light, never the rule —
+   nothing it crosses is touched.
+   Four pieces, one clock: the funnel (drawn twice, the far wall
+   before the near one, so the tube has an inside), the spray it
+   throws at its foot, a wider mist round that, and the collar of
+   cloud it hangs from. The water under it gets its own term in
+   the sea shader — a churn and a spiral — see uSpout.
+   ------------------------------------------------------------ */
+const SPOUT_H = 460;
+const SPOUT = { t:-1, dur:66, next:14, k:0, wk:0, form:0, touch:0, thin:0, collar:0,
+                A:new T.Vector2(), B:new T.Vector2(), p:new T.Vector2(), roar:null, parts:[] };
+{
+  const SP_VS = G_HEAD + `
+    uniform vec2 uPos, uLean;
+    uniform float uH, uR0, uR1, uTall, uThin, uFlare, uSnake;
+    varying vec3 vW, vNr; varying float vDi, vH, vA;
+    void main(){
+      float h = position.y + 0.5;
+      float a = atan(position.z, position.x);
+      float t = uTime;
+      /* the rope: its line snakes, more the higher it goes, and leans with the wind */
+      vec2 c = (uLean*h*h*uH*0.22
+             + vec2(sin(h*3.1 + t*0.23), cos(h*2.6 - t*0.19))*20.0*h
+             + vec2(sin(h*7.3 - t*0.52), cos(h*6.1 + t*0.47))*5.5*h
+             /* and low down, where the eye sees it, an S that travels up the rope */
+             + vec2(sin(h*9.0 - t*0.9), cos(h*8.0 + t*0.7))*7.0*smoothstep(0.0, 0.32, h))*uSnake;
+      float r = mix(uR0, uR1, pow(h, uTall));
+      /* roping out: the tube thins, the top least */
+      r *= 1.0 - uThin*(0.66 - 0.42*h);
+      r += uFlare*exp(-h*22.0);
+      /* it breathes: two lobes chasing round it at different rates */
+      r *= 1.0 + 0.07*sin(a*3.0 + h*15.0 - t*3.2) + 0.04*sin(a*5.0 - h*23.0 + t*2.1);
+      vec3 nr = vec3(cos(a), 0.0, sin(a));
+      vec3 p = vec3(uPos.x + c.x, h*uH - 1.2, uPos.y + c.y) + nr*r;
+      vNr = nr; vH = h; vA = a;
+      vW = p; vDi = length(uCam - p);
+      gl_Position = projectionMatrix*viewMatrix*vec4(p, 1.0);
+    }`;
+  /* the funnel: condensation, grey, banded in a helix that climbs as it turns */
+  const SP_FUNNEL = G_HEAD + G_NOISE + G_SKY + G_FOG + `
+    uniform float uI, uForm, uSpin, uBack;
+    uniform vec3 uDark, uLit;
+    varying vec3 vW, vNr; varying float vDi, vH, vA;
+    void main(){
+      /* it is let down from the cloud: below the cut there is nothing yet */
+      float cut = (1.0 - uForm)*0.94;
+      float fade = smoothstep(cut, cut + 0.09, vH)*(1.0 - smoothstep(0.74, 1.0, vH));
+      /* the bands are read on a circle, so the tube has no seam */
+      float ang = vA + vH*9.0 - uTime*uSpin;
+      vec2 q = vec2(cos(ang), sin(ang))*1.6 + vec2(vH*6.0 - uTime*0.55, vH*3.0);
+      float band = smoothstep(0.30, 0.78, fbm(q*1.7));
+      vec3 V = normalize(uCam - vW);
+      float rim = 1.0 - abs(dot(vNr, V));
+      float a = uI*fade*(0.55 + 0.40*rim)*(0.60 + 0.62*band)*mix(1.0, 0.5, uBack);
+      if(a < 0.004) discard;
+      vec3 sd = normalize(vec3(uSunDir.x, 0.0, uSunDir.z) + 1e-4);
+      float lit = clamp(0.5 + 0.5*dot(vNr, sd), 0.0, 1.0);
+      vec3 air = fogColor(V);
+      vec3 c = mix(uDark, uLit, lit*0.78 + band*0.22);
+      c = mix(c, air, 0.14);
+      /* a spout in a gale is a dark column against lighter murk: the fog takes
+         some of its colour but never all of it, or it is not there at all */
+      float f = fogAmt(vW, vDi);
+      gl_FragColor = vec4(mix(c, air, f*0.55), min(1.0, a*(1.0 - f*0.30)));
+    }`;
+  /* the spray at its foot: white, torn, spun faster than the cloud above */
+  const SP_SPRAY = G_HEAD + G_NOISE + G_SKY + G_FOG + `
+    uniform float uI, uSpin, uTop;
+    uniform vec3 uDark, uLit;
+    varying vec3 vW, vNr; varying float vDi, vH, vA;
+    void main(){
+      float fade = smoothstep(0.0, 0.10, vH)*(1.0 - smoothstep(uTop, 1.0, vH));
+      float ang = vA - uTime*uSpin + vH*4.0;
+      vec2 q = vec2(cos(ang), sin(ang))*2.2 + vec2(vH*5.0 - uTime*1.3, vH*2.0);
+      float n = fbm(q*2.1);
+      vec3 V = normalize(uCam - vW);
+      float rim = 1.0 - abs(dot(vNr, V));
+      float a = uI*fade*smoothstep(0.26, 0.84, n)*(0.40 + 0.60*rim);
+      if(a < 0.004) discard;
+      vec3 sd = normalize(vec3(uSunDir.x, 0.0, uSunDir.z) + 1e-4);
+      float lit = clamp(0.5 + 0.5*dot(vNr, sd), 0.0, 1.0);
+      vec3 air = fogColor(V);
+      vec3 c = mix(uDark, uLit, lit*0.7 + n*0.3);
+      float f = fogAmt(vW, vDi);
+      gl_FragColor = vec4(mix(c, air, f*0.6), a*(1.0 - f*0.35));
+    }`;
+  /* the collar: the underside of the cloud it hangs from, turning slowly */
+  const SP_COLLAR_VS = G_HEAD + `
+    uniform vec2 uPos; uniform float uY, uR;
+    varying vec3 vW; varying float vDi; varying vec2 vL;
+    void main(){
+      vL = position.xy;
+      vec3 p = vec3(uPos.x + position.x*uR, uY, uPos.y + position.y*uR);
+      vW = p; vDi = length(uCam - p);
+      gl_Position = projectionMatrix*viewMatrix*vec4(p, 1.0);
+    }`;
+  const SP_COLLAR_FS = G_HEAD + G_NOISE + G_SKY + G_FOG + `
+    uniform float uI; uniform vec3 uDark;
+    varying vec3 vW; varying float vDi; varying vec2 vL;
+    void main(){
+      float r = length(vL);
+      float ang = atan(vL.y, vL.x) + r*4.2 - uTime*0.32;
+      float n = fbm(vec2(cos(ang), sin(ang))*1.8 + r*3.0);
+      float a = uI*(1.0 - smoothstep(0.12, 1.0, r))*(0.42 + 0.58*smoothstep(0.30, 0.80, n))*0.82;
+      if(a < 0.004) discard;
+      vec3 V = normalize(uCam - vW);
+      vec3 air = fogColor(V);
+      vec3 c = mix(uDark, air, 0.45 + 0.25*n);
+      float f = fogAmt(vW, vDi);
+      gl_FragColor = vec4(mix(c, air, f*0.8), a);
+    }`;
+
+  const tube = new T.CylinderGeometry(1, 1, 1, 48, 72, true);
+  const short = new T.CylinderGeometry(1, 1, 1, 40, 18, true);
+  const mk = (geo, fs, u, side, order, vs) => {
+    const m = new T.Mesh(geo, new T.ShaderMaterial({
+      uniforms: U(Object.assign({ uPos:{value:new T.Vector2()} }, u)),
+      vertexShader: vs || SP_VS, fragmentShader: fs,
+      transparent:true, depthWrite:false, side, blending:T.NormalBlending
+    }));
+    m.frustumCulled = false; m.renderOrder = order;
+    scene.add(m); onBoard(BOARD_OWN, m, false);
+    SPOUT.parts.push(m);
+    return m;
+  };
+  const tubeU = back => ({ uLean:{value:new T.Vector2(0.93, 0.37)}, uH:{value:SPOUT_H},
+    uR0:{value:8.5}, uR1:{value:74.0}, uTall:{value:3.6}, uThin:{value:0}, uFlare:{value:6.5}, uSnake:{value:1.0},
+    uI:{value:0}, uForm:{value:0}, uSpin:{value:1.35}, uBack:{value:back},
+    uDark:{value:Cs(0x171c21, 1.0)}, uLit:{value:Cs(0x57636c, 1.0)} });
+  SPOUT.back  = mk(tube, SP_FUNNEL, tubeU(1), T.BackSide, 9);
+  SPOUT.front = mk(tube, SP_FUNNEL, tubeU(0), T.FrontSide, 10);
+  const sprayU = (h, r0, r1, spin, top, i) => ({ uLean:{value:new T.Vector2()}, uH:{value:h},
+    uR0:{value:r0}, uR1:{value:r1}, uTall:{value:0.7}, uThin:{value:0}, uFlare:{value:0}, uSnake:{value:0.12},
+    uI:{value:0}, uSpin:{value:spin}, uTop:{value:top}, uMax:{value:i},
+    uDark:{value:Cs(0x7d8990, 1.0)}, uLit:{value:Cs(0xe8eff1, 1.0)} });
+  SPOUT.spray = mk(short, SP_SPRAY, sprayU(52, 30, 13, 2.4, 0.30, 0.95), T.DoubleSide, 11);
+  SPOUT.mist  = mk(short, SP_SPRAY, sprayU(30, 64, 44, 1.1, 0.10, 0.55), T.DoubleSide, 11);
+  SPOUT.collarM = mk(new T.CircleGeometry(1, 64), SP_COLLAR_FS,
+    { uY:{value:SPOUT_H - 36}, uR:{value:230}, uI:{value:0}, uDark:{value:Cs(0x20262c, 1.0)} },
+    T.DoubleSide, 8, SP_COLLAR_VS);
+}
+/* one across the water: it crosses the eye's view rather than coming at it,
+   level with the plot or beyond it, so it walks over the board or behind it */
+function spoutStart(){
+  const fx = -Math.sin(CAM.az), fz = -Math.cos(CAM.az);
+  const tw = (Math.random()*2 - 1)*0.55, s = Math.random() < 0.5 ? -1 : 1;
+  const dx = (-fz*Math.cos(tw) - fx*Math.sin(tw))*s, dz = (fx*Math.cos(tw) - fz*Math.sin(tw))*s;
+  const o = -60 + Math.random()*300, L = 470;
+  const mx = CAM.tgt.x + fx*o, mz = CAM.tgt.z + fz*o;
+  SPOUT.A.set(mx - dx*L, mz - dz*L);
+  SPOUT.B.set(mx + dx*L, mz + dz*L);
+  SPOUT.t = 0; SPOUT.dur = 60 + Math.random()*16;
+}
+function spoutRoar(level){
+  if(!SPOUT.roar){
+    if(level < 0.002 || !ANIM.snd || !SND.ready) return;
+    const ctx = SND.ctx;
+    const s = ctx.createBufferSource(); s.buffer = SND.buf; s.loop = true;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 340; lp.Q.value = 0.8;
+    const g = ctx.createGain(); g.gain.value = 0.0001;
+    s.connect(lp); lp.connect(g); g.connect(SND.amb || SND.master); s.start();
+    SPOUT.roar = { s, lp, g };
+  }
+  const R = SPOUT.roar, now = SND.ctx.currentTime;
+  R.g.gain.setTargetAtTime(ANIM.snd ? level : 0, now, 0.5);
+  /* a roar is not a steady hiss: it surges */
+  R.lp.frequency.setTargetAtTime(260 + 220*(0.5 + 0.5*Math.sin(now*0.9) * Math.sin(now*0.37)), now, 0.3);
+  if(level < 0.0015 && SPOUT.t < 0){ try{ R.s.stop(now + 1.5); }catch(e){} SPOUT.roar = null; }
+}
+function spoutTick(dt){
+  const storm = !!ENVS[ANIM.env].bolt;
+  /* the next one is only counted down while the storm is actually up */
+  if(SPOUT.t < 0){
+    if(storm && RAIN.k > 0.6){ SPOUT.next -= dt; if(SPOUT.next <= 0) spoutStart(); }
+    else if(!storm) SPOUT.next = 10 + Math.random()*8;
+  }
+  let want = 0;
+  if(SPOUT.t >= 0){
+    SPOUT.t += dt;
+    const t = SPOUT.t, D = SPOUT.dur, sm = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a)/(b - a))); return u*u*(3 - 2*u); };
+    SPOUT.collar = sm(0, 5, t)*(1 - sm(D - 5, D, t));
+    /* let down from the cloud, walked, then drawn back up */
+    SPOUT.form  = sm(2, 10, t)*(1 - sm(D - 10, D - 2, t));
+    SPOUT.touch = sm(0.88, 1, SPOUT.form);
+    SPOUT.thin  = sm(D - 14, D - 4, t);
+    const u = sm(0, D, t)*0.18 + (t/D)*0.82;
+    SPOUT.p.lerpVectors(SPOUT.A, SPOUT.B, u);
+    /* the foot wanders off the line: nobody steers it */
+    SPOUT.p.x += Math.sin(t*0.21)*26 + Math.sin(t*0.53 + 1.3)*9;
+    SPOUT.p.y += Math.cos(t*0.17)*24 + Math.sin(t*0.61)*8;
+    want = 1;
+    if(t >= D){ SPOUT.t = -1; SPOUT.next = 30 + Math.random()*30; }
+  }
+  /* it goes with the storm: a theatre that turns takes it away with the rain */
+  SPOUT.k += ((storm ? want : 0) - SPOUT.k)*(1 - Math.exp(-dt*(storm ? 2.0 : 0.9)));
+  const k = SPOUT.k*Math.min(1, RAIN.k*1.4);
+  const on = k > 0.003;
+  for(const m of SPOUT.parts) m.userData.want = on;
+  SPOUT.wk = k*SPOUT.touch;
+  waterUnis.uSpout.value.set(SPOUT.p.x, SPOUT.p.y, 17, SPOUT.wk);
+  if(on){
+    for(const m of [SPOUT.back, SPOUT.front]){
+      const w = m.material.uniforms;
+      w.uPos.value.copy(SPOUT.p); w.uI.value = k*0.92; w.uForm.value = SPOUT.form; w.uThin.value = SPOUT.thin;
+    }
+    for(const m of [SPOUT.spray, SPOUT.mist]){
+      const w = m.material.uniforms;
+      w.uPos.value.copy(SPOUT.p); w.uI.value = k*SPOUT.touch*(1 - SPOUT.thin*0.6)*w.uMax.value;
+    }
+    const cw = SPOUT.collarM.material.uniforms;
+    cw.uPos.value.copy(SPOUT.p); cw.uI.value = k*SPOUT.collar;
+  }
+  /* heard as much as it is near what the eye is working */
+  if(SND.ready){
+    const d = Math.hypot(SPOUT.p.x - CAM.tgt.x, SPOUT.p.y - CAM.tgt.z);
+    const near = 1 - Math.min(1, Math.max(0, (d - 120)/680));
+    spoutRoar(on ? 0.22*k*Math.max(SPOUT.form*0.45, SPOUT.touch)*(0.35 + 0.65*near) : 0);
+  }
+}
+
+/* ------------------------------------------------------------
    THE STAR SHELL — the fourth projectile, and the only one that
    does not damage. It climbs, bursts, and then hangs under a
    canopy burning magnesium while it drifts down, laying a pool of
@@ -6626,6 +6873,9 @@ function updateFX(dt){
     }
   }
 
+  /* the waterspout: Storm's, and her own water's */
+  spoutTick(dt);
+
   /* the star shell leaving her board, then — after a moment between the
      boards — the same shell arriving over the plot */
   if(ANIM.flrOut >= 0){
@@ -7290,6 +7540,11 @@ function onCtl(e){
       const x = Math.floor(Math.random()*10), z = Math.floor(Math.random()*10);
       if(lurePlace('us', x, z)) break;
     }
+  }
+  /* a waterspout now: it only lives in a storm, so it brings one */
+  if(a === 'spout'){
+    if(!ENVS[ANIM.env].bolt){ ANIM.env = 3; SETUP.th = 3; ENV_FADE = null; ANIM.hour = -1; setEra(ENVS[3].era); }
+    spoutStart(); refreshUI(); hideHint(); return;
   }
   if(a === 'sink') setSink(ANIM.sink < 0);
   if(a === 'reset'){ setStrike(false); setSink(false); clearDamage(); setStrike(true); firesOut();
@@ -8752,6 +9007,8 @@ function boardVis(enemy){
   else if(!enemy && ETORP.aim > 0.002) aimC.set(ETORP.cell[0], ETORP.cell[1], 1);
   else if(!enemy && EAIR.aim >= 0) aimC.set(EAIR.cells[EAIR.aim][0], EAIR.cells[EAIR.aim][1], 1);
   waterUnis.uHitCell.value.set(OWN_HIT[0], OWN_HIT[1], enemy ? 0 : ANIM.fire);
+  /* the waterspout walks her sea, not theirs */
+  waterUnis.uSpout.value.w = enemy ? 0 : SPOUT.wk;
   /* the star shell hangs over their plot: its pool of light and the nine
      squares it reads are drawn there and nowhere else */
   /* theirs over her board, hers over their plot: each board has its own */
